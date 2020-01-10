@@ -1,0 +1,26 @@
+[scheduling]
+  [[dependencies]]
+      graph = "check_files_exist" # => combine_files
+
+[runtime]
+  #[[root]]  # Inherited by all tasks.
+  #  script = 
+  # [[[environment]]]
+  #  [[[job]]]
+    
+  [[check_files_exist]]
+    script = "/home/h06/ojamil/analysis_tools/ML/CRM/caramel/data_preprocess_oj/cylc/run_python.sh 1 50S69W"
+    [[[job]]]
+            batch system = "slurm"
+    [[[directives]]]
+            --mem=1000
+            --ntasks=2
+            --export=NONE
+            --qos=normal
+  [[combine_files]]
+    script = "/home/h06/ojamil/analysis_tools/ML/CRM/caramel/data_preprocess_oj/cylc/run_python.sh 2 50S69W"
+  [[combine_day_series]]
+    script = "/home/h06/ojamil/analysis_tools/ML/CRM/caramel/data_preprocess_oj/cylc/run_python.sh 3 50S69W"
+
+
+    

@@ -1,0 +1,59 @@
+#!/bin/bash -l
+#
+# Usage scitool-run CMD_WITHOPTS
+#
+# ENVIRONMENT
+#   SCITOOLS_PATH   The version of the software stack you want to run
+#   SCITOOL_PREPEND Path to a library you want to prepend to PYTHONPATH
+#   UM_UTILS_PATH   The version of the UM_UTILS module you want to run (if any)
+#                   Use this to load mule in on top of the scitool stack
+#   QUIET_MODE      Use this when you don't want confirmation messages being
+#                   printed to stdout, for example when running an eval script
+#
+# OPTIONS
+#   CMD_WITHOPTS    The command you want to invoke with options
+set -eu
+
+PRE_LOAD_COUNT=$(module list -t 2>&1 | wc -l)
+module load $SCITOOLS_PATH
+
+# module load doesn't fail on failure to load in a version of the stack, so
+# compare the length of the list of loaded modules against the length before
+# loading.
+#
+# N.B. module load scitools won't necessarily load a module named
+# scitools, all you can sensibly automatically do is check that the number of
+# loaded things has changed.
+if (( $PRE_LOAD_COUNT == $(module list -t 2>&1 | wc -l) )); then
+    echo "[ERROR] Failed to load:" $SCITOOLS_PATH
+    exit 1
+fi
+
+# If a UM_UTILS_PATH has been set for purposes of loading Mule then that module
+# should be loaded in too.
+if [[ ! -z ${UM_UTILS_PATH:-} ]]; then
+    PRE_LOAD_COUNT=$(module list -t 2>&1 | wc -l)
+    module load $UM_UTILS_PATH
+    if (( $PRE_LOAD_COUNT == $(module list -t 2>&1 | wc -l ) )); then
+        echo "[ERROR] Failed to load: " $UM_TOOLS_MODULE
+        exit 1
+    fi
+
+    if [[ -z ${QUIET_MODE:-} ]]; then
+        # Report Mule loaded and print version info.
+        echo "[INFO] Mule version loaded was:"
+        mule-version
+    fi
+fi
+
+# If it has been set then prepend SCITOOL_PREPEND to PYTHONPATH
+if [[ ! -z ${SCITOOL_PREPEND:-} ]]; then
+    echo "[INFO] Prepending the following to PYTHONPATH:" $SCITOOL_PREPEND
+    export PYTHONPATH=$SCITOOL_PREPEND:${PYTHONPATH:-}
+fi
+
+if [[ -z ${QUIET_MODE:-} ]]; then
+    echo "[OK] Modules loaded."
+fi
+
+exec "$@"
