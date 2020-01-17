@@ -38,5 +38,6 @@ def visualise_predictions_q(pred_file, figname):
     data.close()
 
 if __name__ == "__main__":
-    prediction_file = 'qcomb_add_dot_qloss_predict.hdf5'
-    visualise_predictions_q(prediction_file,'q_predict_qloss.png')
+
+    prediction_file = 'qloss_qphys_predict_006deep_epoch_050_std.hdf5'
+    visualise_predictions_q(prediction_file,prediction_file.replace('hdf5','png'))

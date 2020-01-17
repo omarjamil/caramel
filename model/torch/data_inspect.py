@@ -43,26 +43,27 @@ qcomb_test  = np.concatenate((qadv_norm_test,q_norm_test),axis=1)
 # qcomb_dot_test  = np.concatenate((qadv_dot_norm_test,q_norm_test),axis=1)
 qcomb_dot_train = np.concatenate((qadd_dot_train,q_norm_train),axis=1)
 qcomb_dot_test  = np.concatenate((qadd_dot_test,q_norm_test),axis=1)
-# Data normalisers
-qphys_normaliser = h5py.File('{0}/minmax_qphystot.hdf5'.format(locations['normaliser_loc']),'r')
-q_normaliser = h5py.File('{0}/minmax_qtot.hdf5'.format(locations['normaliser_loc']),'r')
-qadd_normaliser = h5py.File('{0}/minmax_qadd_dot.hdf5'.format(locations['normaliser_loc']),'r')
-qphys_feature_min = torch.tensor(qphys_normaliser['feature_range'][0])
-qphys_feature_max = torch.tensor(qphys_normaliser['feature_range'][1])
-qadd_feature_min  = torch.tensor(qadd_normaliser['feature_range'][0])
-q_feature_max = torch.tensor(q_normaliser['feature_range'][1])
-q_feature_min  = torch.tensor(q_normaliser['feature_range'][0])
-qadd_feature_max = torch.tensor(qadd_normaliser['feature_range'][1])
-qphys_scale = torch.from_numpy(qphys_normaliser['scale_'][:])
-qadd_scale = torch.from_numpy(qadd_normaliser['scale_'][:])
-q_scale = torch.from_numpy(q_normaliser['scale_'][:])
-qphys_data_min = torch.from_numpy(qphys_normaliser['data_min_'][:])
-qadd_data_min = torch.from_numpy(qadd_normaliser['data_min_'][:])
-q_data_min = torch.from_numpy(q_normaliser['data_min_'][:])
-qadd_normaliser_sk = joblib.load('{0}/minmax_qadd_dot.joblib'.format(locations['normaliser_loc']))
+
 
 def view_minmax_data():
     
+    # Data normalisers
+    qphys_normaliser = h5py.File('{0}/minmax_qphystot.hdf5'.format(locations['normaliser_loc']),'r')
+    q_normaliser = h5py.File('{0}/minmax_qtot.hdf5'.format(locations['normaliser_loc']),'r')
+    qadd_normaliser = h5py.File('{0}/minmax_qadd_dot.hdf5'.format(locations['normaliser_loc']),'r')
+    qphys_feature_min = torch.tensor(qphys_normaliser['feature_range'][0])
+    qphys_feature_max = torch.tensor(qphys_normaliser['feature_range'][1])
+    qadd_feature_min  = torch.tensor(qadd_normaliser['feature_range'][0])
+    q_feature_max = torch.tensor(q_normaliser['feature_range'][1])
+    q_feature_min  = torch.tensor(q_normaliser['feature_range'][0])
+    qadd_feature_max = torch.tensor(qadd_normaliser['feature_range'][1])
+    qphys_scale = torch.from_numpy(qphys_normaliser['scale_'][:])
+    qadd_scale = torch.from_numpy(qadd_normaliser['scale_'][:])
+    q_scale = torch.from_numpy(q_normaliser['scale_'][:])
+    qphys_data_min = torch.from_numpy(qphys_normaliser['data_min_'][:])
+    qadd_data_min = torch.from_numpy(qadd_normaliser['data_min_'][:])
+    q_data_min = torch.from_numpy(q_normaliser['data_min_'][:])
+    qadd_normaliser_sk = joblib.load('{0}/minmax_qadd_dot.joblib'.format(locations['normaliser_loc']))
     
     qadd_dot = qcomb_dot_train[:100,:70]
     qadd_dot_denorm = qadd_normaliser_sk.inverse_transform(qadd_dot)
@@ -98,5 +99,51 @@ def view_minmax_data():
     #c = ax.plot(qphys_range)
     plt.show()
 
+def view_std_data():
+    
+    # Data normalisers
+    qphys_normaliser = h5py.File('{0}/std_qphystot.hdf5'.format(locations['normaliser_loc']),'r')
+    q_normaliser = h5py.File('{0}/std_qtot.hdf5'.format(locations['normaliser_loc']),'r')
+    qadd_normaliser = h5py.File('{0}/std_qadd_dot.hdf5'.format(locations['normaliser_loc']),'r')
+    qphys_scale = torch.from_numpy(qphys_normaliser['scale_'][:])
+    qadd_scale = torch.from_numpy(qadd_normaliser['scale_'][:])
+    q_scale = torch.from_numpy(q_normaliser['scale_'][:])
+    qphys_data_mean = torch.from_numpy(qphys_normaliser['mean_'][:])
+    qadd_data_mean = torch.from_numpy(qadd_normaliser['mean_'][:])
+    q_data_mean = torch.from_numpy(q_normaliser['mean_'][:])
+
+    qadd_dot = qcomb_dot_train[:100,:70]
+    qadd_dot_denorm = nt.inverse_std(torch.from_numpy(qadd_dot), qadd_scale, qadd_data_mean)
+    qphys_denorm = nt.inverse_std(torch.from_numpy(qphys_norm_train[:]), qphys_scale, qphys_data_mean)
+    q_denorm = nt.inverse_std(torch.from_numpy(q_norm_train[:]), q_scale, q_data_mean)
+    #print(qadd_dot_denorm)
+    #print(qadd_dot[:100,:70])
+    #print(qadd_dot_denorm_tensor.data)
+    qphys_norm_var = np.var(qphys_norm_train, axis=0)
+    qphys_var = np.var(qphys_denorm.data.numpy(), axis=0)
+    qphys_range = np.amax(qphys_denorm.data.numpy(), axis=0) - np.amin(qphys_denorm.data.numpy(),axis=0)
+    qadd_norm_var = np.var(qadd_dot, axis=0)
+    qadd_var = np.var(qadd_dot_denorm.data.numpy(), axis=0)
+    qadd_range = np.amax(qadd_dot_denorm.data.numpy(), axis=0) - np.amin(qadd_dot_denorm.data.numpy(),axis=0)
+    q_norm_var = np.var(q_norm_train, axis=0)
+    q_var = np.var(q_denorm.data.numpy(), axis=0)
+    qadd_range = np.amax(q_denorm.data.numpy(), axis=0) - np.amin(q_denorm.data.numpy(), axis=0)
+
+    fig, axs = plt.subplots(2,1,figsize=(14, 10))
+    ax = axs[0]
+    c = ax.plot(qphys_norm_var, 'k-')
+    c = ax.plot(qadd_norm_var,'r-')
+    c = ax.plot(q_norm_var,'b-')
+
+    ax = axs[1]
+    c = ax.plot(qphys_var, 'k-')
+    c = ax.plot(qadd_var,'r-')
+    c = ax.plot(q_var,'b-')
+    
+
+    #c = ax.plot(qphys_range)
+    plt.show()
+
 if __name__ == "__main__":
-    view_minmax_data()
+    # view_minmax_data()
+    view_std_data()

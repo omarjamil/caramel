@@ -10,8 +10,75 @@ import argparse
 
 import model
 import data_io
-import normalize_tensors as nt
+import normalize
 
+parser = argparse.ArgumentParser(description='Train Q')
+parser.add_argument('--batch-size', type=int, default=128, metavar='N',
+                    help='input batch size for training (default: 128)')
+parser.add_argument('--epochs', type=int, default=10, metavar='N',
+                    help='number of epochs to train (default: 10)')
+parser.add_argument('--with-cuda', action='store_true', default=False,
+                    help='enables CUDA training')
+parser.add_argument('--seed', type=int, default=1, metavar='S',
+                    help='random seed (default: 1)')
+parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+                    help='how many batches to wait before logging training status')
+parser.add_argument('--chkpt-interval', type=int, default=10, metavar='N',
+                    help='how many epochs before saving a checkpoint')
+parser.add_argument('--isambard', action='store_true', default=False,
+                    help='Run on Isambard GPU')
+    
+args = parser.parse_args()
+args.cuda = args.with_cuda and torch.cuda.is_available()
+
+torch.manual_seed(args.seed)
+
+device = torch.device("cuda" if args.cuda else "cpu")
+
+kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+
+# Define the Model
+# n_inputs,n_outputs=140,70
+n_inputs,n_outputs=70,70
+n_layers = 6
+mlp = model.MLP_06(n_inputs,n_outputs)
+mlp.to(device)
+optimizer =  torch.optim.Adam(mlp.parameters())
+loss_function = torch.nn.MSELoss()
+
+# Get the data
+region="50S69W"
+
+if args.isambard:
+    locations={ "train_test_datadir":"/home/mo-ojamil/ML/CRM/data",
+            "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/chkpts",
+            "hist_loc":"/home/mo-ojamil/ML/CRM/data/models",
+            "model_loc":"/home/mo-ojamil/ML/CRM/data/models/torch",
+            "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser"}
+else:
+    locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
+            "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
+            "hist_loc":"/project/spice/radiation/ML/CRM/data/models/history",
+            "model_loc":"/project/spice/radiation/ML/CRM/data/models/torch",
+            "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser"}
+
+# Data normalizer class
+nt = normalize.Normalizers(locations)
+# Training and testing data class
+nn_data = data_io.Data_IO(region, locations)
+
+# qcomb_train = np.concatenate((nn_data.qadv_norm_train,nn_data.q_norm_train),axis=1)
+# qcomb_test  = np.concatenate((nn_data.qadv_norm_test,nn_data.q_norm_test),axis=1)
+
+# comb_dot_train = np.concatenate((nn_data.qadd_dot_train,nn_data.q_norm_train),axis=1)
+# comb_dot_test  = np.concatenate((nn_data.qadd_dot_test,nn_data.q_norm_test),axis=1)
+qcomb_dot_train = nn_data.qadd_dot_train
+qcomb_dot_test  = nn_data.qadd_dot_test
+
+#train_in, train_out = qcomb_dot_train, qphys_norm_train
+#test_in, test_out = qcomb_dot_test, qphys_norm_test
+x,y,z = torch.from_numpy(qcomb_dot_train[:]).to(device), torch.from_numpy(nn_data.qphys_norm_train[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train[:]).to(device)
+x_t,y_t = torch.from_numpy(qcomb_dot_test[:]).to(device), torch.from_numpy(nn_data.qphys_norm_test[:]).to(device)
 
 class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, *datasets):
@@ -23,79 +90,6 @@ class ConcatDataset(torch.utils.data.Dataset):
     def __len__(self):
         return min(len(d) for d in self.datasets)
 
-parser = argparse.ArgumentParser(description='Train Q')
-parser.add_argument('--batch-size', type=int, default=128, metavar='N',
-                    help='input batch size for training (default: 128)')
-parser.add_argument('--epochs', type=int, default=10, metavar='N',
-                    help='number of epochs to train (default: 10)')
-parser.add_argument('--no-cuda', action='store_true', default=True,
-                    help='enables CUDA training')
-parser.add_argument('--seed', type=int, default=1, metavar='S',
-                    help='random seed (default: 1)')
-parser.add_argument('--log-interval', type=int, default=10, metavar='N',
-                    help='how many batches to wait before logging training status')
-parser.add_argument('--chkpt-interval', type=int, default=10, metavar='N',
-                    help='how many epochs before saving a checkpoint')
-
-args = parser.parse_args()
-args.cuda = not args.no_cuda and torch.cuda.is_available()
-
-torch.manual_seed(args.seed)
-
-device = torch.device("cuda" if args.cuda else "cpu")
-
-kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
-
-locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
-                "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
-                "hist_loc":"/project/spice/radiation/ML/CRM/data/models/history",
-                "model_loc":"/project/spice/radiation/ML/CRM/data/models/torch",
-                "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser"}
-
-# Data normalisers
-# qphys_normaliser = joblib.load('{0}/minmax_qphystot.joblib'.format(locations['normaliser_loc']))
-# q_normaliser = joblib.load('{0}/minmax_qtot.joblib'.format(locations['normaliser_loc']))
-# qadd_normaliser = joblib.load('{0}/minmax_qadd_dot.joblib'.format(locations['normaliser_loc']))
-qphys_normaliser = h5py.File('{0}/minmax_qphystot.hdf5'.format(locations['normaliser_loc']),'r')
-q_normaliser = h5py.File('{0}/minmax_qtot.hdf5'.format(locations['normaliser_loc']),'r')
-qadd_normaliser = h5py.File('{0}/minmax_qadd_dot.hdf5'.format(locations['normaliser_loc']),'r')
-# Define the Model
-n_inputs,n_outputs=140,70
-mlp = model.MLP(n_inputs,n_outputs)
-optimizer =  torch.optim.Adam(mlp.parameters())
-loss_function = torch.nn.MSELoss()
-
-# Get the data
-region="50S69W"
-
-train_data_in, train_data_out, test_data_in, test_data_out = data_io.scm_model_data(region)
-q_norm_train = train_data_in["qtot"]
-qnext_norm_train = train_data_in["qtot_next"]
-qadv_norm_train = train_data_in["qadv"]
-qadv_dot_norm_train = train_data_in["qadv_dot"]
-qphys_norm_train = train_data_out["qphys_tot"]
-
-q_norm_test = test_data_in["qtot_test"]
-qnext_norm_test = test_data_in["qtot_next_test"]
-qadv_norm_test = test_data_in["qadv_test"]
-qadv_dot_norm_test = test_data_in["qadv_dot_test"]
-qphys_norm_test = test_data_out["qphys_test"]
-qadd_train = train_data_in["qadd"]
-qadd_dot_train = train_data_in["qadd_dot"]
-qadd_test = test_data_in["qadd_test"]
-qadd_dot_test = test_data_in["qadd_dot_test"]
-qcomb_train = np.concatenate((qadv_norm_train,q_norm_train),axis=1)
-qcomb_test  = np.concatenate((qadv_norm_test,q_norm_test),axis=1)
-# qcomb_dot_train = np.concatenate((qadv_dot_norm_train,q_norm_train),axis=1)
-# qcomb_dot_test  = np.concatenate((qadv_dot_norm_test,q_norm_test),axis=1)
-qcomb_dot_train = np.concatenate((qadd_dot_train,q_norm_train),axis=1)
-qcomb_dot_test  = np.concatenate((qadd_dot_test,q_norm_test),axis=1)
-
-#train_in, train_out = qcomb_dot_train, qphys_norm_train
-#test_in, test_out = qcomb_dot_test, qphys_norm_test
-x,y,z = qcomb_dot_train, qphys_norm_train, qnext_norm_train
-x_t,y_t = qcomb_dot_test, qphys_norm_test
-
 train_loader = torch.utils.data.DataLoader(
              ConcatDataset(x,y,z),
              batch_size=args.batch_size, shuffle=True)
@@ -104,34 +98,27 @@ test_loader = torch.utils.data.DataLoader(
              ConcatDataset(x_t,y_t),
              batch_size=args.batch_size, shuffle=False)
 
-def q_loss(qphys_prediction, qnext, qin):
+def q_loss_tensors_mm(qphys_prediction, qnext, qin):
     """
     Extra loss for q predicted from the model
     """
-    global qphys_normaliser
-    global q_normaliser
-    global qadd_normaliser
-    qadd_dot = qin.data.numpy()[:,:70]
-    qadd_dot_denorm = qadd_normaliser.inverse_transform(qadd_dot)
-    qphys_prediction_denorm = qphys_normaliser.inverse_transform(qphys_prediction.data.numpy())
+    qadd_dot = qin.data[:,:70]
+    qadd_dot_denorm = nt.inverse_minmax(qadd_dot, nt.qadd_mmscale, nt.qadd_feature_min, nt.qadd_feature_max, nt.qadd_data_min)
+    qphys_prediction_denorm = nt.inverse_minmax(qphys_prediction, nt.qphys_mmscale, nt.qphys_feature_min, nt.qphys_feature_max, nt.qphys_data_min)
     qnext_calc = qadd_dot_denorm + qphys_prediction_denorm
-    qnext_calc_norm = q_normaliser.transform(qnext_calc)
-    qnext_calc_norm_tensor = torch.from_numpy(qnext_calc_norm)
-    loss = loss_function(qnext_calc_norm_tensor, qnext)
+    qnext_calc_norm = nt.minmax(qnext_calc, nt.q_mmscale, nt.q_feature_min, nt.q_feature_max, nt.q_data_min)
+    loss = loss_function(qnext_calc_norm, qnext)
     return loss
 
-def q_loss_tensors(qphys_prediction, qnext, qin):
+def q_loss_tensors_std(qphys_prediction, qnext, qin):
     """
     Extra loss for q predicted from the model
     """
-    global qphys_normaliser
-    global q_normaliser
-    global qadd_normaliser
     qadd_dot = qin.data[:,:70]
-    qadd_dot_denorm = nt.inverse_minmax_tensor(qadd_normaliser, qadd_dot)
-    qphys_prediction_denorm = nt.inverse_minmax_tensor(qphys_normaliser, qphys_prediction)
+    qadd_dot_denorm = nt.inverse_std(qadd_dot, (nt.qadd_stdscale).to(device), (nt.qadd_mean).to(device))
+    qphys_prediction_denorm = nt.inverse_std(qphys_prediction, (nt.qphys_stdscale).to(device), (nt.qphys_mean).to(device))
     qnext_calc = qadd_dot_denorm + qphys_prediction_denorm
-    qnext_calc_norm = nt.minmax_tensor(q_normaliser, qnext_calc)
+    qnext_calc_norm = nt.std(qnext_calc, (nt.q_stdscale).to(device), (nt.q_mean).to(device))
     loss = loss_function(qnext_calc_norm, qnext)
     return loss
 
@@ -149,7 +136,8 @@ def train(epoch):
         optimizer.zero_grad()
         prediction = mlp(x)
         loss = loss_function(prediction, y)
-        qnext_loss = q_loss_tensors(prediction, z, x)
+        # qnext_loss = q_loss_tensors_mm(prediction, z, x)
+        qnext_loss = q_loss_tensors_std(prediction, z, x)
         loss += qnext_loss
         loss.backward()
         train_loss += loss.item()
@@ -193,16 +181,10 @@ if __name__ == "__main__":
         training_loss.append(train_loss)
         testing_loss.append(test_loss)
     # Save the final model
-    model_name = "qcomb_add_dot_qloss_qphys_deep_test.tar"
+    model_name = "qloss_qphys_{1}deep_epoch_{0}_qadd_std.tar".format(str(args.epochs).zfill(3), str(n_layers).zfill(2))
     torch.save({'epoch':epoch,
                 'model_state_dict':mlp.state_dict(),
                 'optimizer_state_dict':optimizer.state_dict(),
                 'loss':training_loss},
                 locations['model_loc']+'/'+model_name)
-
-    # Save model training history
-    # history={'training_loss':training_loss,'testing_loss':testing_loss}
-    # hfilename = '{0}/{1}'.format(locations['hist_loc'],'q_history.h5')
-    # with h5py.File(hfilename, 'w') as hfile:
-    #     for k, v in history.items():  
-    #         hfile.create_dataset(k,data=v)    
+ 
