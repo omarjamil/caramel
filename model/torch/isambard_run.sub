@@ -8,4 +8,4 @@ module load cuda10.1/blas/10.1.243
 module load cuda10.1/fft/10.1.243
 module load cuda10.1/toolkit/10.1.243
 module load cudnn/7.0
-/home/mo-ojamil/.conda/envs/torch/bin/python /home/mo-ojamil/ML/CRM/code/torch/q.py --epochs 50 --with-cuda --isambard
+/home/mo-ojamil/.conda/envs/torch/bin/python /home/mo-ojamil/ML/CRM/code/torch/q.py --epochs 100 --with-cuda --isambard

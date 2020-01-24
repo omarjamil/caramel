@@ -22,12 +22,14 @@ class Data_IO(object):
         self.qadv_norm_train = self.train_data_in["qadv"]
         self.qadv_dot_norm_train = self.train_data_in["qadv_dot"]
         self.qphys_norm_train = self.train_data_out["qphys_tot"]
+        self.qphys_dot_norm_train = self.train_data_out["qphys_dot"]
 
         self.q_norm_test = self.test_data_in["qtot_test"]
         self.qnext_norm_test = self.test_data_in["qtot_next_test"]
         self.qadv_norm_test = self.test_data_in["qadv_test"]
         self.qadv_dot_norm_test = self.test_data_in["qadv_dot_test"]
         self.qphys_norm_test = self.test_data_out["qphys_test"]
+        self.qphys_dot_norm_test = self.test_data_out["qphys_dot_test"]
         self.qadd_train = self.train_data_in["qadd"]
         self.qadd_dot_train = self.train_data_in["qadd_dot"]
         self.qadd_test = self.test_data_in["qadd_test"]
@@ -35,6 +37,8 @@ class Data_IO(object):
         self.q_test_raw = self.test_data_in["qtot_test_raw"]
         self.qadv_test_raw = self.test_data_in["qadv_test_raw"]
         self.qadv_dot_test_raw = self.test_data_in["qadv_dot_test_raw"]
+        self.qphys_test_raw = self.test_data_out["qphys_test_raw"]
+        self.qphys_dot_test_raw = self.test_data_out["qphys_dot_test_raw"]
         
     def scm_model_data(self):
         """
@@ -47,7 +51,8 @@ class Data_IO(object):
         
         qtot = dataset["qtot"]
         qtot_next = dataset["qtot_next"]
-        qphys_tot = dataset["qphys_tot"]   
+        qphys_tot = dataset["qphys_tot"]
+        qphys_dot = dataset["qphys_dot"]
         qadv = dataset["qadv"]
         qadv_dot = dataset["qadv_dot"]
         qadd = dataset["qadd"]
@@ -74,6 +79,7 @@ class Data_IO(object):
         qtot_test = dataset["qtot_test"]
         qtot_next_test = dataset["qtot_next_test"]
         qphys_test = dataset["qphys_test"]   
+        qphys_dot_test = dataset["qphys_dot_test"]   
         qadv_test = dataset["qadv_test"]
         qadv_dot_test = dataset["qadv_dot_test"]
         qadd_test = dataset["qadd_test"]
@@ -103,13 +109,14 @@ class Data_IO(object):
         tadd_test_raw = dataset["tadd_test_raw"]    
         tadd_dot_test_raw = dataset["tadd_dot_test_raw"]
         qphys_test_raw = dataset["qphys_test_raw"]
+        qphys_dot_test_raw = dataset["qphys_dot_test_raw"]
         qadd_test_raw = qtot_test_raw[:] + qadv_test_raw[:]  
         # test_model_data_in = np.concatenate((qtot_test, qadv_test, T_test, tadv_test, sw_toa_down_test, latent_up_test, sensible_up_test, mslp_test), axis=1)
         # test_model_data_out = np.concatenate((qphys_test, tphys_test, sw_toa_up_test, lw_toa_up_test, sw_down_test, lw_down_test, rain_test, snow_test), axis=1)
 
         train_data_in = {"qtot":qtot, "qtot_next":qtot_next, "qadv":qadv, "qadv_dot":qadv_dot, "qadd":qadd, "qadd_dot":qadd_dot, "T":T, "tadv":tadv, "tadv_dot":tadv_dot, "tadd":tadd, "tadd_dot":tadd_dot, "sw_toa_down":sw_toa_down, "latent_up":latent_up, "sensible_up":sensible_up, "mslp":mslp}
-        train_data_out = {"qphys_tot":qphys_tot, "tphys":tphys, "sw_toa_up":sw_toa_up, "low_toa_up":lw_toa_up, "sw_down":sw_down, "lw_down":lw_down, "rain":rain, "snow":snow}
+        train_data_out = {"qphys_tot":qphys_tot, "qphys_dot":qphys_dot, "tphys":tphys, "sw_toa_up":sw_toa_up, "low_toa_up":lw_toa_up, "sw_down":sw_down, "lw_down":lw_down, "rain":rain, "snow":snow}
         test_data_in = {"qtot_test":qtot_test, "qtot_next_test":qtot_next_test, "qadv_test":qadv_test, "qadv_dot_test":qadv_dot_test, "qadd_test":qadd_test, "qadd_dot_test":qadd_dot_test, "qadd_test_raw":qadd_test_raw, "qadd_dot_test_raw":qadd_dot_test_raw, "T_test":T_test, "tadv_test":tadv_test, "tadv_dot_test":tadv_dot_test, "tadd_test":tadd_test, "tadd_dot_test":tadd_dot_test, "tadd_test_raw":tadd_test_raw, "tadd_dot_test_raw":tadd_dot_test_raw, "sw_toa_down_test":sw_toa_down_test, "latent_up_test":latent_up_test, "sensible_up_test":sensible_up_test, "mslp":mslp_test, "qadv_test_raw":qadv_test_raw, "qadv_dot_test_raw":qadv_dot_test_raw, "qtot_test_raw":qtot_test_raw}
-        test_data_out = {"qphys_test":qphys_test, "tphys_test":tphys_test, "sw_toa_up_test":sw_toa_up_test, "low_toa_up_test":lw_toa_up_test, "sw_down_test":sw_down_test, "lw_down_test":lw_down_test, "rain_test":rain_test, "snow_test":snow_test, "qphys_test_raw":qphys_test_raw}
+        test_data_out = {"qphys_test":qphys_test, "qphys_dot_test":qphys_dot_test, "tphys_test":tphys_test, "sw_toa_up_test":sw_toa_up_test, "low_toa_up_test":lw_toa_up_test, "sw_down_test":sw_down_test, "lw_down_test":lw_down_test, "rain_test":rain_test, "snow_test":snow_test, "qphys_test_raw":qphys_test_raw, "qphys_dot_test_raw":qphys_dot_test_raw}
         
         return train_data_in, train_data_out, test_data_in, test_data_out

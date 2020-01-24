@@ -32,7 +32,7 @@ class MLP_06(torch.nn.Module):
 
 class MLP(torch.nn.Module):
     """
-    140 inputs and 70 outputs neural networks
+    Deep neural network
     """
     def __init__(self, n_inputs, n_outputs):
         super(MLP, self).__init__()
@@ -43,7 +43,11 @@ class MLP(torch.nn.Module):
         self.fc5 = torch.nn.Linear(512,512)
         self.fc6 = torch.nn.Linear(512,512)
         self.fc7 = torch.nn.Linear(512,512)
-        self.fc8 = torch.nn.Linear(512,256)
+        self.fc8 = torch.nn.Linear(512,512)
+        self.fc9 = torch.nn.Linear(512,512)
+        self.fc10 = torch.nn.Linear(512,512)
+        self.fc11 = torch.nn.Linear(512,512)
+        self.fc12 = torch.nn.Linear(512,256)
         self.out = torch.nn.Linear(256,n_outputs)
 
     def forward(self,x):
@@ -58,6 +62,10 @@ class MLP(torch.nn.Module):
         x = F.relu(self.fc6(x))
         x = F.relu(self.fc7(x))
         x = F.relu(self.fc8(x))
+        x = F.relu(self.fc9(x))
+        x = F.relu(self.fc10(x))
+        x = F.relu(self.fc11(x))
+        x = F.relu(self.fc12(x))
         # predict = torch.tanh(self.out(x))
         predict = self.out(x)
         

@@ -39,9 +39,9 @@ kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 # Define the Model
 # n_inputs,n_outputs=140,70
-n_inputs,n_outputs=70,70
-n_layers = 6
-mlp = model.MLP_06(n_inputs,n_outputs)
+n_inputs,n_outputs=140,70
+n_layers = 12
+mlp = model.MLP(n_inputs,n_outputs)
 mlp.to(device)
 optimizer =  torch.optim.Adam(mlp.parameters())
 loss_function = torch.nn.MSELoss()
@@ -70,15 +70,20 @@ nn_data = data_io.Data_IO(region, locations)
 # qcomb_train = np.concatenate((nn_data.qadv_norm_train,nn_data.q_norm_train),axis=1)
 # qcomb_test  = np.concatenate((nn_data.qadv_norm_test,nn_data.q_norm_test),axis=1)
 
-# comb_dot_train = np.concatenate((nn_data.qadd_dot_train,nn_data.q_norm_train),axis=1)
-# comb_dot_test  = np.concatenate((nn_data.qadd_dot_test,nn_data.q_norm_test),axis=1)
-qcomb_dot_train = nn_data.qadd_dot_train
-qcomb_dot_test  = nn_data.qadd_dot_test
+# qcomb_dot_train = np.concatenate((nn_data.qadd_dot_train,nn_data.q_norm_train),axis=1)
+# qcomb_dot_test  = np.concatenate((nn_data.qadd_dot_test,nn_data.q_norm_test),axis=1)
+# qcomb_dot_train = nn_data.qadd_dot_train
+# qcomb_dot_test  = nn_data.qadd_dot_test
+qcomb_dot_train = np.concatenate((nn_data.q_norm_train, nn_data.qadv_dot_norm_train),axis=1)
+qcomb_dot_test  = np.concatenate((nn_data.q_norm_test, nn_data.qadv_dot_norm_test),axis=1)
+
+# qcomb_dot_train = nn_data.q_norm_train
+# qcomb_dot_test  = nn_data.q_norm_test
 
 #train_in, train_out = qcomb_dot_train, qphys_norm_train
 #test_in, test_out = qcomb_dot_test, qphys_norm_test
-x,y,z = torch.from_numpy(qcomb_dot_train[:]).to(device), torch.from_numpy(nn_data.qphys_norm_train[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train[:]).to(device)
-x_t,y_t = torch.from_numpy(qcomb_dot_test[:]).to(device), torch.from_numpy(nn_data.qphys_norm_test[:]).to(device)
+x,y,z = torch.from_numpy(qcomb_dot_train[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_train[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train[:]).to(device)
+x_t,y_t = torch.from_numpy(qcomb_dot_test[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_test[:]).to(device)
 
 class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, *datasets):
@@ -116,10 +121,16 @@ def q_loss_tensors_std(qphys_prediction, qnext, qin):
     """
     qadd_dot = qin.data[:,:70]
     qadd_dot_denorm = nt.inverse_std(qadd_dot, (nt.qadd_stdscale).to(device), (nt.qadd_mean).to(device))
-    qphys_prediction_denorm = nt.inverse_std(qphys_prediction, (nt.qphys_stdscale).to(device), (nt.qphys_mean).to(device))
+    qphys_prediction_denorm = nt.inverse_std(qphys_prediction, (nt.qphys_dot_stdscale).to(device), (nt.qphys_dot_mean).to(device))
     qnext_calc = qadd_dot_denorm + qphys_prediction_denorm
     qnext_calc_norm = nt.std(qnext_calc, (nt.q_stdscale).to(device), (nt.q_mean).to(device))
+    qnext_calc_bool = qnext_calc < 0.
     loss = loss_function(qnext_calc_norm, qnext)
+    
+    # print(np.where(qnext_calc.data.numpy() < 0.))
+    # if True in qnext_calc_bool:
+    #     loss = 1.*loss
+        # print("-ve q :", loss)
     return loss
 
 def train(epoch):
@@ -135,10 +146,10 @@ def train(epoch):
         x = x.to(device)
         optimizer.zero_grad()
         prediction = mlp(x)
-        loss = loss_function(prediction, y)
+        phys_loss = loss_function(prediction, y)
         # qnext_loss = q_loss_tensors_mm(prediction, z, x)
         qnext_loss = q_loss_tensors_std(prediction, z, x)
-        loss += qnext_loss
+        loss = 1.*phys_loss + 0.*qnext_loss
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
@@ -181,7 +192,7 @@ if __name__ == "__main__":
         training_loss.append(train_loss)
         testing_loss.append(test_loss)
     # Save the final model
-    model_name = "qloss_qphys_{1}deep_epoch_{0}_qadd_std.tar".format(str(args.epochs).zfill(3), str(n_layers).zfill(2))
+    model_name = "qloss_0_qphys_dot_1_{1}deep_epoch_{0}_qcomb_std.tar".format(str(args.epochs).zfill(3), str(n_layers).zfill(2))
     torch.save({'epoch':epoch,
                 'model_state_dict':mlp.state_dict(),
                 'optimizer_state_dict':optimizer.state_dict(),

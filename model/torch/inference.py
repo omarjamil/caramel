@@ -58,14 +58,14 @@ nn_data = data_io.Data_IO(region, locations)
 
 # the Model
 # n_inputs,n_outputs=140,70
-n_inputs,n_outputs=70,70
-n_layers = 6
-mlp = model.MLP_06(n_inputs,n_outputs)
+n_inputs,n_outputs=140,70
+n_layers = 12
+mlp = model.MLP(n_inputs,n_outputs)
 optimizer =  torch.optim.Adam(mlp.parameters())
 loss_function = torch.nn.MSELoss()
 
-# Load the save model
-model_fname = "qloss_qphys_{1}deep_epoch_{0}_qadd_std.tar".format(str(args.epochs).zfill(3), str(n_layers).zfill(2))
+# Load the save model 
+model_fname = "qloss_0_qphys_dot_1_{1}deep_epoch_{0}_qcomb_std.tar".format(str(args.epochs).zfill(3), str(n_layers).zfill(2))
 checkpoint = torch.load(locations['model_loc']+'/'+model_fname, map_location=device)
 mlp.load_state_dict(checkpoint['model_state_dict'])
 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -97,7 +97,7 @@ def predict_q(q_in):
     qphys_predict = mlp(torch.from_numpy(q_in))
         
     # qphys_predict_denorm = nt.inverse_minmax(qphys_predict.data.numpy(), qphys_scale.data.numpy(), qphys_feature_min.data.numpy(), qphys_feature_max.data.numpy(), qphys_data_min.data.numpy())
-    qphys_predict_denorm = nt.inverse_std(qphys_predict.data.numpy(), nt.qphys_stdscale.data.numpy(), nt.qphys_mean.data.numpy())
+    qphys_predict_denorm = nt.inverse_std(qphys_predict.data.numpy(), nt.qphys_dot_stdscale.data.numpy(), nt.qphys_dot_mean.data.numpy())
     
     return qphys_predict_denorm.reshape(70)
 
@@ -107,26 +107,33 @@ def q_scm(region='50S69W'):
     create a timeseries of prediction to compare with validation data
     """
     
-    q_ = nn_data.q_norm_test
-    q_raw =  nn_data.q_test_raw 
-    qphys = nn_data.qphys_norm_test
-    qadv = nn_data.qadv_norm_test
-    qadv_dot = nn_data.qadv_dot_norm_test
-    qadv_raw = nn_data.qadv_test_raw # qadv_normaliser.inverse_transform(qadv)
-    qadv_dot_raw = nn_data.qadv_dot_test_raw
+    start = 0
+    end = 3000
+    q_ = nn_data.q_norm_test[start:end,:]
+    q_raw =  nn_data.q_test_raw[start:end,:] 
+    qphys = nn_data.qphys_dot_norm_test[start:end,:]
+    qadv = nn_data.qadv_norm_test[start:end,:]
+    qadv_dot = nn_data.qadv_dot_norm_test[start:end,:]
+    qadv_raw = nn_data.qadv_test_raw[start:end,:] # qadv_normaliser.inverse_transform(qadv)
+    qadv_dot_raw = nn_data.qadv_dot_test_raw[start:end,:]
     # qadv_inv = nt.inverse_minmax(qadv, qadv_scale.data.numpy(), qadv_feature_min.data.numpy(), qadv_feature_max.data.numpy(), qadv_data_min.data.numpy()) 
-    qadv_inv = nt.inverse_std(qadv, nt.qadv_stdscale.data.numpy(), nt.qadv_mean.data.numpy()) 
-    
-    qadv_dot_inv = qadv_dot_raw[:] * 600.
+    qadv_inv = nt.inverse_std(qadv, nt.qadv_stdscale.data.numpy(), nt.qadv_mean.data.numpy())
+    # qadv_inv = nn_data.qadv_test_raw[start:end,:]
+
+    # qadv_dot_inv = qadv_dot_raw * 600.
+    qadv_dot_inv = qadv_dot_raw *600.
  
     qcomb_test  = np.concatenate((nn_data.qadv_norm_test,nn_data.q_norm_test),axis=1)
     # qcomb_dot_test  = np.concatenate((nn_data.qadd_dot_test,nn_data.q_norm_test),axis=1)
-    qcomb_dot_test  = nn_data.qadd_dot_test
-    
-    # qphys_inv = nt.inverse_minmax(qphys, qphys_scale.data.numpy(), qphys_feature_min.data.numpy(), qphys_feature_max.data.numpy(), qphys_data_min.data.numpy())
-    qphys_inv = nt.inverse_std(qphys, nt.qphys_stdscale.data.numpy(), nt.qphys_mean.data.numpy())
+    # qcomb_dot_test  = nn_data.qadd_dot_test[start:end,:]
+    qcomb_dot_test  = np.concatenate((nn_data.q_norm_test, nn_data.qadv_dot_norm_test),axis=1)
 
-    n_steps = len(q_[:1000,0])
+    # qphys_inv = nt.inverse_minmax(qphys, qphys_scale.data.numpy(), qphys_feature_min.data.numpy(), qphys_feature_max.data.numpy(), qphys_data_min.data.numpy())
+    qphys_inv = nt.inverse_std(qphys, nt.qphys_dot_stdscale.data.numpy(), nt.qphys_dot_mean.data.numpy())
+    # qphys_inv = nn_data.qphys_test_raw[start:end,:]
+
+    n_steps = len(range(start,end))
+    
     q_start = q_raw[0,:]
     q_ml = np.zeros((n_steps,70))
     q_sane = np.zeros((n_steps,70))
@@ -139,24 +146,23 @@ def q_scm(region='50S69W'):
     qphys_pred_drift[0,:] = qphys[0,:]
     
     printProgressBar(0, n_steps, prefix = 'Progress:', suffix = 'Complete', length = 50)
-    
     for t_step in range(1,n_steps):
-        # q_in = (qcomb_dot_test[t_step,:]).reshape((1,140))
-        q_in = (qcomb_dot_test[t_step,:]).reshape((1,70))
         
+        q_in = (qcomb_dot_test[t_step-1,:]).reshape((1,140))
+        # q_in = (qcomb_dot_test[t_step,:]).reshape((1,70))
         qphys_pred = predict_q(q_in)
         qphys_ml[t_step,:] = qphys_pred
         #q_ml[t_step,:] = q_ml[t_step-1,:] + qadv_inv[t_step,:] + qphys_pred
-        q_ml[t_step,:] = q_ml[t_step-1,:] + qadv_dot_inv[t_step,:] + qphys_pred
-        # q_sane[t_step,:] = q_sane[t_step-1,:] + qadv_dot_inv[t_step,:] + qphys_inv[t_step]
-        q_sane[t_step,:] = q_sane[t_step-1,:] + qadv_dot_inv[t_step,:] + qphys_inv[t_step]
+        q_ml[t_step,:] = q_ml[t_step-1,:] + qadv_dot_inv[t_step-1,:] + qphys_pred
+        q_sane[t_step,:] = q_sane[t_step-1,:] + qadv_dot_inv[t_step-1,:] + qphys_inv[t_step-1]
+        # q_sane[t_step,:] = q_sane[t_step-1,:] + qadv_inv[t_step,:] + qphys_inv[t_step]
         qphys_drift[t_step,:] = qphys_drift[t_step-1,:] + qphys_inv[t_step]
         qphys_pred_drift[t_step,:] = qphys_pred_drift[t_step-1,:] + qphys_pred
         printProgressBar(t_step, n_steps, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
     # qadv_un = qadv_inv #qadv_normaliser.inverse_transform(qadv_norm)
-    output_dict = {"q_ml":q_ml,"q":q_raw[:n_steps,:],"qphys_ml":qphys_ml,"qphys":qphys_inv[:n_steps,:],"qadv":qadv_inv[:n_steps,:], "qadv_dot":qadv_dot_inv[:n_steps,:], "qadv_raw":qadv_raw[:n_steps], "qadv_dot_raw":qadv_dot_raw[:n_steps], "q_sane":q_sane, "qphys_drift":qphys_drift, "qphys_pred_drift":qphys_pred_drift}
-    outfile_name='scm_predict_{0}_epoch_{1}_qadd_std.hdf5'.format('qloss',str(args.epochs).zfill(3))    
+    output_dict = {"q_ml":q_ml[:],"q":q_raw[:],"qphys_ml":qphys_ml,"qphys":qphys_inv[:],"qadv":qadv_inv[:], "qadv_dot":qadv_dot_inv[:], "qadv_raw":qadv_raw[:], "qadv_dot_raw":qadv_dot_raw[:], "q_sane":q_sane[:], "qphys_drift":qphys_drift[:], "qphys_pred_drift":qphys_pred_drift[:]}
+    outfile_name='scm_predict_{0}_epoch_{1}_qloss_0_qcomb_std.hdf5'.format('qloss',str(args.epochs).zfill(3))    
     with h5py.File(outfile_name,'w') as outfile:
         for k,v in output_dict.items():
             outfile.create_dataset(k,data=v)
@@ -166,7 +172,7 @@ def q_inference(region='50S69W'):
     q model inference/testing
     """
     # Testing data
-    qphys_norm_test = nn_data.qphys_norm_test
+    qphys_norm_test = nn_data.qphys_dot_norm_test
     # qcomb_test  = np.concatenate((nn_data.qadv_norm_test,nn_data.q_norm_test),axis=1)
     # qcomb_dot_test  = np.concatenate((nn_data.qadd_dot_test,nn_data.q_norm_test),axis=1)
     qcomb_dot_test  = nn_data.qadd_dot_test
@@ -177,8 +183,8 @@ def q_inference(region='50S69W'):
     prediction = mlp(x_t)
     # qphys_predict_denorm = nt.inverse_minmax_tensor(prediction, qphys_scale, qphys_feature_min, qphys_feature_max, qphys_data_min)
     # qphys_test_denorm = nt.inverse_minmax_tensor(torch.from_numpy(qphys_norm_test[:]), qphys_scale, qphys_feature_min, qphys_feature_max, qphys_data_min)
-    qphys_predict_denorm = nt.inverse_std(prediction, nt.qphys_stdscale, nt.qphys_mean)
-    qphys_test_denorm = nt.inverse_std(torch.from_numpy(qphys_norm_test[:]), nt.qphys_stdscale, nt.qphys_mean)
+    qphys_predict_denorm = nt.inverse_std(prediction, nt.qphys_dot_stdscale, nt.qphys_dot_mean)
+    qphys_test_denorm = nt.inverse_std(torch.from_numpy(qphys_norm_test[:]), nt.qphys_dot_stdscale, nt.qphys_dot_mean)
     hfilename='qloss_qphys_predict_{0}deep_epoch_{1}_std.hdf5'.format(str(n_layers).zfill(3),str(args.epochs).zfill(3))
     output={'qphys_predict':qphys_predict_denorm.data.numpy(),'qphys_test':qphys_test_denorm.data.numpy()}
     with h5py.File(hfilename, 'w') as hfile:

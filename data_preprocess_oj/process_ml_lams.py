@@ -68,12 +68,9 @@ if __name__ == "__main__":
     # list_stash_sec=[16,12,0,12]
     # list_stash_code=[4,181,10,182]
     # list_stream=['c','d','c','d']
-    # list_stash_sec=[0,16,12,0,12,0,12,0,12,0,12,0,12]
-    # list_stash_code=[4,4,181,10,182,254,183,12,184,272,189,273,190]
-    # list_stream=['c','c','d','c','d','c','d','c','d','c','d','c','d']
-    list_stash_sec=[0]
-    list_stash_code=[4]
-    list_stream=['c']
+    list_stash_sec=[0,16,12,0,12,0,12,0,12,0,12,0,12]
+    list_stash_code=[4,4,181,10,182,254,183,12,184,272,189,273,190]
+    list_stream=['c','c','d','c','d','c','d','c','d','c','d','c','d']
     
     ###############################################################
     # Below here are things you probably will not need to change.
