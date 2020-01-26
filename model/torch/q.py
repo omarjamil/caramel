@@ -39,12 +39,21 @@ kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 # Define the Model
 # n_inputs,n_outputs=140,70
+in_features, nb_classes=140,70
+nb_hidden_layer = 8 
+hidden_size = 256
 n_inputs,n_outputs=140,70
-n_layers = 12
-mlp = model.MLP(n_inputs,n_outputs)
-mlp.to(device)
+mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
+model_name = "qphys_loss_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_qcomb.tar".format(str(nb_hidden_layer).zfill(3),
+                                                                                    str(nb_classes).zfill(3),
+                                                                                    str(in_features).zfill(3),
+                                                                                    str(nb_classes).zfill(3),
+                                                                                    str(hidden_size).zfill(3),
+                                                                                    str(args.epochs).zfill(3))
 optimizer =  torch.optim.Adam(mlp.parameters())
 loss_function = torch.nn.MSELoss()
+mlp.to(device)
+
 
 # Get the data
 region="50S69W"
@@ -74,16 +83,20 @@ nn_data = data_io.Data_IO(region, locations)
 # qcomb_dot_test  = np.concatenate((nn_data.qadd_dot_test,nn_data.q_norm_test),axis=1)
 # qcomb_dot_train = nn_data.qadd_dot_train
 # qcomb_dot_test  = nn_data.qadd_dot_test
-qcomb_dot_train = np.concatenate((nn_data.q_norm_train, nn_data.qadv_dot_norm_train),axis=1)
-qcomb_dot_test  = np.concatenate((nn_data.q_norm_test, nn_data.qadv_dot_norm_test),axis=1)
+# qcomb_dot_train = np.concatenate((nn_data.q_norm_train, nn_data.qadv_dot_norm_train),axis=1)
+# qcomb_dot_test  = np.concatenate((nn_data.q_norm_test, nn_data.qadv_dot_norm_test),axis=1)
+qcomb_dot_train = np.concatenate((nn_data.q_norm_train_s, nn_data.qadv_dot_norm_train_s),axis=1)
+qcomb_dot_test  = np.concatenate((nn_data.q_norm_test_s, nn_data.qadv_dot_norm_test_s),axis=1)
 
 # qcomb_dot_train = nn_data.q_norm_train
 # qcomb_dot_test  = nn_data.q_norm_test
 
 #train_in, train_out = qcomb_dot_train, qphys_norm_train
 #test_in, test_out = qcomb_dot_test, qphys_norm_test
-x,y,z = torch.from_numpy(qcomb_dot_train[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_train[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train[:]).to(device)
-x_t,y_t = torch.from_numpy(qcomb_dot_test[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_test[:]).to(device)
+# x,y,z = torch.from_numpy(qcomb_dot_train[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_train[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train[:]).to(device)
+# x_t,y_t = torch.from_numpy(qcomb_dot_test[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_test[:]).to(device)
+x,y,z = torch.from_numpy(qcomb_dot_train[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_train_s[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train_s[:]).to(device)
+x_t,y_t = torch.from_numpy(qcomb_dot_test[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_test_s[:]).to(device)
 
 class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, *datasets):
@@ -149,7 +162,7 @@ def train(epoch):
         phys_loss = loss_function(prediction, y)
         # qnext_loss = q_loss_tensors_mm(prediction, z, x)
         qnext_loss = q_loss_tensors_std(prediction, z, x)
-        loss = 1.*phys_loss + 0.*qnext_loss
+        loss = 1.*phys_loss #+ 0.*qnext_loss
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
@@ -192,7 +205,6 @@ if __name__ == "__main__":
         training_loss.append(train_loss)
         testing_loss.append(test_loss)
     # Save the final model
-    model_name = "qloss_0_qphys_dot_1_{1}deep_epoch_{0}_qcomb_std.tar".format(str(args.epochs).zfill(3), str(n_layers).zfill(2))
     torch.save({'epoch':epoch,
                 'model_state_dict':mlp.state_dict(),
                 'optimizer_state_dict':optimizer.state_dict(),

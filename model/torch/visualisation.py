@@ -12,14 +12,14 @@ def visualise_predictions_q(pred_file, figname):
     vmin,vmax = np.min(qphys_test),np.max(qphys_test)
     fig, axs = plt.subplots(3,1,figsize=(14, 10))
     ax = axs[0]
-    c = ax.pcolor(qphys_predict[:,0:5000], vmin=vmin, vmax=vmax)
-    # c = ax.pcolor(qphys_predict[:,0:5000])
+    # c = ax.pcolor(qphys_predict[:,0:5000], vmin=vmin, vmax=vmax)
+    c = ax.pcolor(qphys_predict[:,0:5000])
     ax.set_title('q predict')
     fig.colorbar(c,ax=ax)
 
     ax = axs[1]
-    c = ax.pcolor(qphys_test[:,0:5000], vmin=vmin, vmax=vmax)
-    # c = ax.pcolor(qphys_test[:,0:5000])
+    # c = ax.pcolor(qphys_test[:,0:5000], vmin=vmin, vmax=vmax)
+    c = ax.pcolor(qphys_test[:,0:5000])
     ax.set_title('q Test')
     fig.colorbar(c,ax=ax)
 

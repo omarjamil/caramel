@@ -80,8 +80,8 @@ def visualise_tseries(npfile,level):
     ax.legend()
     
     ax = axs[3]
-    ax.plot(((q_ml[:,level] - q_[:,level])/q_[:,level])*100.,'.-', label='q (ML) - q')
-    # ax.plot(qphys_ml[:,level] - qphys[:,level],'.-', label='qphys (ML) - qphys')
+    # ax.plot(((q_ml[:,level] - q_[:,level])/q_[:,level])*100.,'.-', label='q (ML) - q')
+    ax.plot(qphys_ml[:,level] - qphys[:,level],'.-', label='qphys (ML) - qphys')
     # ax.plot(qphys_drift[:,level], '.-', label='qphys (drift)')
     # ax.plot(qphys_pred_drift[:,level], '.-', label='qphys_pred (drift)')
     ax.legend()
@@ -128,7 +128,7 @@ def visualise_tseries_qphys(np_file,level):
 if __name__ == "__main__":
     np_file = "scm_predict_qloss_epoch_100_qloss_0_qcomb_std.hdf5"
     figname = np_file.replace("hdf5","png")
-    visualise_scm_predictions_q(np_file,figname)
+    # visualise_scm_predictions_q(np_file,figname)
     for l in range(1,70,2):
         level=l
         visualise_tseries(np_file, level)

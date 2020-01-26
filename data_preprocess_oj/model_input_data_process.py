@@ -556,7 +556,7 @@ def driving_data_all_std(region: str):
     snow = snow.reshape(-1,1)
     # Smoothed vars
     # qtot_s, T_s, qadv_dot_s, tadv_s, qphys_dot_s
-    qadd_dot_s = qtot_s + qadv_dot_s*3600.
+    qadd_dot_s = qtot_s + qadv_dot_s
 
     # train_test_datadir="data/models/datain/"
     # np.savez(train_test_datadir+"data_tot_raw_"+region, qtot=qtot,qphys_tot=qphys_tot,qadv=qadv,T=T,tphys=tphys,tadv=tadv,sw_toa_down=sw_toa_down,latent_up=latent_up,sensible_up=sensible_up, mslp=mslp, sw_toa_up=sw_toa_up, lw_toa_up=lw_toa_up, sw_down=sw_down, lw_down=lw_down, rain=rain, snow=snow)

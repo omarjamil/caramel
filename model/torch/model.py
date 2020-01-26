@@ -1,6 +1,23 @@
 import torch
 from torch.nn import functional as F
 
+class MLP(torch.nn.Module):
+    def __init__(self, in_features, nb_classes, nb_hidden_layer, 
+        hidden_size, act=torch.nn.ReLU):
+        super(MLP, self).__init__()
+        self.act = act()
+        
+        self.fc1 = torch.nn.Linear(in_features, hidden_size)
+        self.fcs = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        self.out = torch.nn.Linear(hidden_size, nb_classes)
+        
+    def forward(self, x):
+        x = self.act(self.fc1(x))
+        for l in self.fcs:
+            x = F.relu(l(x))
+        x = self.out(x)
+        return x
+
 class MLP_06(torch.nn.Module):
     """
     140 inputs and 70 outputs neural networks
@@ -30,12 +47,14 @@ class MLP_06(torch.nn.Module):
         
         return predict
 
-class MLP(torch.nn.Module):
+
+
+class MLP_12(torch.nn.Module):
     """
     Deep neural network
     """
     def __init__(self, n_inputs, n_outputs):
-        super(MLP, self).__init__()
+        super(MLP_12, self).__init__()
         self.fc1 = torch.nn.Linear(n_inputs,256)
         self.fc2 = torch.nn.Linear(256,512)
         self.fc3 = torch.nn.Linear(512,512)
