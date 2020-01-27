@@ -6,9 +6,10 @@ class MLP(torch.nn.Module):
         hidden_size, act=torch.nn.ReLU):
         super(MLP, self).__init__()
         self.act = act()
-        
+        self.n_hidden_layers = nb_hidden_layer
         self.fc1 = torch.nn.Linear(in_features, hidden_size)
         self.fcs = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1, self.n_hidden_layers-1)] )
         self.out = torch.nn.Linear(hidden_size, nb_classes)
         
     def forward(self, x):

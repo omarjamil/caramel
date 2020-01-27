@@ -40,7 +40,7 @@ kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 # Define the Model
 # n_inputs,n_outputs=140,70
 in_features, nb_classes=140,70
-nb_hidden_layer = 8 
+nb_hidden_layer = 10 
 hidden_size = 256
 n_inputs,n_outputs=140,70
 mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
@@ -52,6 +52,9 @@ model_name = "qphys_loss_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_qcomb.tar".
                                                                                     str(args.epochs).zfill(3))
 optimizer =  torch.optim.Adam(mlp.parameters())
 loss_function = torch.nn.MSELoss()
+print("Model's state_dict:")
+for param_tensor in mlp.state_dict():
+    print(param_tensor, "\t", mlp.state_dict()[param_tensor].size())
 mlp.to(device)
 
 

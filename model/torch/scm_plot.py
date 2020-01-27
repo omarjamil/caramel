@@ -126,7 +126,7 @@ def visualise_tseries_qphys(np_file,level):
 
     
 if __name__ == "__main__":
-    np_file = "scm_predict_qloss_epoch_100_qloss_0_qcomb_std.hdf5"
+    np_file = "qphys_loss_008_lyr_070_in_140_out_070_hdn_256_epch_100_qcomb.hdf5"
     figname = np_file.replace("hdf5","png")
     # visualise_scm_predictions_q(np_file,figname)
     for l in range(1,70,2):

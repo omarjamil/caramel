@@ -56,17 +56,24 @@ nt = normalize.Normalizers(locations)
 # Training and testing data class
 nn_data = data_io.Data_IO(region, locations)
 
-# the Model
+# Define the Model
 # n_inputs,n_outputs=140,70
+in_features, nb_classes=140,70
+nb_hidden_layer = 10 
+hidden_size = 256
 n_inputs,n_outputs=140,70
-n_layers = 6
-mlp = model.MLP_06(n_inputs,n_outputs)
+mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
+model_name = "qphys_loss_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_qcomb.tar".format(str(nb_hidden_layer).zfill(3),
+                                                                                    str(nb_classes).zfill(3),
+                                                                                    str(in_features).zfill(3),
+                                                                                    str(nb_classes).zfill(3),
+                                                                                    str(hidden_size).zfill(3),
+                                                                                    str(args.epochs).zfill(3))
 optimizer =  torch.optim.Adam(mlp.parameters())
 loss_function = torch.nn.MSELoss()
 
 # Load the save model 
-model_fname = "qloss_0_qphys_dot_1_{1}deep_epoch_{0}_qcomb_std_Smth.tar".format(str(args.epochs).zfill(3), str(n_layers).zfill(2))
-checkpoint = torch.load(locations['model_loc']+'/'+model_fname, map_location=device)
+checkpoint = torch.load(locations['model_loc']+'/'+model_name, map_location=device)
 mlp.load_state_dict(checkpoint['model_state_dict'])
 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 loss = checkpoint['loss']
@@ -164,7 +171,7 @@ def q_scm(region='50S69W'):
 
     # qadv_un = qadv_inv #qadv_normaliser.inverse_transform(qadv_norm)
     output_dict = {"q_ml":q_ml[:],"q":q_raw[:],"qphys_ml":qphys_ml,"qphys":qphys_inv[:],"qadv":qadv_inv[:], "qadv_dot":qadv_dot_inv[:], "qadv_raw":qadv_raw[:], "qadv_dot_raw":qadv_dot_raw[:], "q_sane":q_sane[:], "qphys_drift":qphys_drift[:], "qphys_pred_drift":qphys_pred_drift[:]}
-    outfile_name='scm_predict_{0}_epoch_{1}_qloss_0_qcomb_std.hdf5'.format('qloss',str(args.epochs).zfill(3))    
+    outfile_name = model_name.replace('.tar','.hdf5')    
     with h5py.File(outfile_name,'w') as outfile:
         for k,v in output_dict.items():
             outfile.create_dataset(k,data=v)
@@ -187,8 +194,9 @@ def q_inference(region='50S69W'):
     # qphys_test_denorm = nt.inverse_minmax_tensor(torch.from_numpy(qphys_norm_test[:]), qphys_scale, qphys_feature_min, qphys_feature_max, qphys_data_min)
     qphys_predict_denorm = nt.inverse_std(prediction, nt.qphys_dot_stdscale, nt.qphys_dot_mean)
     qphys_test_denorm = nt.inverse_std(torch.from_numpy(qphys_norm_test[:]), nt.qphys_dot_stdscale, nt.qphys_dot_mean)
-    hfilename='qloss_qphys_predict_{0}deep_epoch_{1}_std.hdf5'.format(str(n_layers).zfill(3),str(args.epochs).zfill(3))
+    hfilename = model_name.replace('.tar','.hdf5')
     output={'qphys_predict':qphys_predict_denorm.data.numpy(),'qphys_test':qphys_test_denorm.data.numpy()}
+    
     with h5py.File(hfilename, 'w') as hfile:
         for k, v in output.items():  
             hfile.create_dataset(k,data=v)
