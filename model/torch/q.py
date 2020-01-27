@@ -40,7 +40,7 @@ kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 # Define the Model
 # n_inputs,n_outputs=140,70
 in_features, nb_classes=140,70
-nb_hidden_layer = 10 
+nb_hidden_layer = 6 
 hidden_size = 256
 n_inputs,n_outputs=140,70
 mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
