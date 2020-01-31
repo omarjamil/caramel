@@ -171,7 +171,7 @@ def smoothed_vars(region:str):
 def read_combined_qT(region: str):
     """
     """
-    q_dir = "{0}/{1}/q_tot".format(data_path, region)
+    q_dir = "{0}/{1}/concat_stash_99982".format(data_path, region)
     t_dir = "{0}/{1}/concat_stash_16004".format(data_path, region)
     q_ = None
     t_ = None

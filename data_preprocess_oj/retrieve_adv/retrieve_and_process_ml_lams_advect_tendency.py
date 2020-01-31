@@ -80,17 +80,17 @@ for single_date in daterange(start_date, end_date):
                 # Loop over the various LAMs (this could be all 98 of them).
                 region=regions[region_number]
                 # Retrieve both files (with all variables)
-                for stream_number in np.arange(0,len(list_stream),1):
-                    stream=list_stream[stream_number]
-                    outcome=retrieve_a_file(single_date,vt,roseid,name_str,analysis_time,stream,region,1)
+                # for stream_number in np.arange(0,len(list_stream),1):
+                #     stream=list_stream[stream_number]
+                #     outcome=retrieve_a_file(single_date,vt,roseid,name_str,analysis_time,stream,region,1)
                 # Process both files at once
                 # (i.e. extract theta, qv, qcl, qcf, qrain, qgraup from file 'c' and u, v, w from file 'e'
                 # and write out to netcdf).
                 outcome=extract_fields_for_advective_tendencies(single_date,vt,roseid,name_str,analysis_time,region)
                 # Remove both pp files.
-                for stream_number in np.arange(0,len(list_stream),1):
-                    stream=list_stream[stream_number]
-                    outcome=retrieve_a_file(single_date,vt,roseid,name_str,analysis_time,stream,region,0)
+                # for stream_number in np.arange(0,len(list_stream),1):
+                #     stream=list_stream[stream_number]
+                #     outcome=retrieve_a_file(single_date,vt,roseid,name_str,analysis_time,stream,region,0)
 
      
           

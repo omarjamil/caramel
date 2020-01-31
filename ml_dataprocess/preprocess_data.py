@@ -11,20 +11,6 @@ import gc
 import iris
 import tendencies
 
-stash_dict = {
-    'q_v_adv':12182,
-    'q_v':10,
-    'T_adv':16004,
-    'T':16004,
-    'qcl_adv':12183,
-    'qcl':254,
-    'qcf_adv':12184,
-    'qcf':12,
-    'q_rain_adv':12189,
-    'q_rain':272,
-    'q_g_adv':12190,
-    'q_g':273}
-
 def combine_q_tednencies(region):
     """
     combine qcl, qv, qcf, qg, qrain tendencies into a single one
@@ -95,18 +81,18 @@ def combine_q(region):
     q_cubelist = []
     # Read in the first q stash 00010 and then append to that data array in the second loop
     for subdomain in range(64):
-        q = "/project/spice/radiation/ML/CRM/data/u-bj775_/{2}/concat_stash_{1}/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(10).zfill(5), region)
+        q = "/project/spice/radiation/ML/CRM/data/u-bj775_/{2}/concat_stash_{1}/30_days_{2}_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(10).zfill(5), region)
         q_cubelist.append(iris.load_cube(q))
     
     for q in q_stashes:
         print("Processing STASHES {0}".format(q))
         for subdomain in range(64):
-            q_file_name = "30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(q).zfill(5))
+            q_file_name = "30_days_{2}_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(q).zfill(5),region)
             q_file = "/project/spice/radiation/ML/CRM/data/u-bj775_/{2}/concat_stash_{0}/{1}".format(str(q).zfill(5),q_file_name, region)
             q_cube = iris.load_cube(q_file)
             (q_cubelist[subdomain]).data = q_cubelist[subdomain].data + q_cube.data
 
-    save_path="/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_99982/".format(region)         
+    save_path="/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_99821/".format(region)         
     try:
         os.makedirs(save_path)
     except OSError:
@@ -115,10 +101,12 @@ def combine_q(region):
     for q in q_cubelist:
         q.var_name = "q_tot"
         q.long_name = "combined_q_quantities"
-        q.attributes['STASH'] = '99982'
+        q.attributes={}
+        # q.attributes['STASH'] = ''
+        # q.attributes['um_stash_source'] = ''
         q.attributes['STASHES'] = '00010,00254,00012,00272,00273'
         print("Saving q total files for region {0} subdomain {1}".format(region, i))
-        iris.fileformats.netcdf.save(q,"{0}/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{1}_99982.nc".format(save_path, str(i).zfill(3)))
+        iris.fileformats.netcdf.save(q,"{0}/30_days_{2}_km1p5_ra1m_30x30_subdomain_{1}_99821.nc".format(save_path, str(i).zfill(3),region))
         i += 1
 
 def check_files_exist(region: str, date: datetime, subdomain: int, stash: int):
@@ -255,53 +243,30 @@ def main_combine_day_tseries(region: str, stashes: list):
         for subdomain in range(64):
             combine_day_tseries(start_date, end_date, region, subdomain, stash)
 
-def calc_tendencies_q(region: str):
-    # region='10N160E'
-    q_stashes = [10,254,12,272,273]
-    q_adv_stashes = [12182,12183,12184,12189,12190]
-    for q,qadv in zip(q_stashes, q_adv_stashes):
-        q_stash = q
-        qadv_stash = qadv
-        for subdomain in range(64):
-            tendencies.q_tendency(region, subdomain, q_stash, qadv_stash)
-        
 
-def calc_tendencies_t(region: str):
-    # region='10N160E'
-    # q_stash = 10
-    # qadv_stash = 12182
-    t_stash = 16004
-    tadv_stash = 12181
-    for subdomain in range(64):
-        tendencies.t_tendency(region, subdomain, t_stash, tadv_stash)   
-
-
-            
+def calc_tendencies(region: str):
+    tendencies.main_Q_dot(region)
+    tendencies.main_T_dot(region)            
     
 
         
 if __name__ == "__main__":
     argument = sys.argv[1]
     region = sys.argv[2]
-    
-    stashes = [16004, 12181, 10, 12182] # T, qv
-    stashes = [16004, 12181, 10, 12182, 254,12183,12,12184,272,12189,273,12190] #T, qv, qcl, qcf, qg
-    stashes = [4,24,1202,1205,1207,1208,1235,2201,2207,2205,3217,3225,3226,3234,3236,3245,4203,4204,9217,30405,30406,30461,16222,99181,99182]
-    #stashes = [99181, 99182]
-    
+    stash = sys.argv[3]
+
+    # stashes = [16004, 12181, 10, 12182, 254,12183,12,12184,272,12189,273,12190] #T, qv, qcl, qcf, qg
+    # stashes = [4,24,1202,1205,1207,1208,1235,2201,2207,2205,3217,3225,3226,3234,3236,3245,4203,4204,9217,30405,30406,30461,16222,99181,99182]
+    stashes = [int(stash)]
+
     if argument == '1':
         main_check_files_exist(region, stashes)
     elif argument == '2':
         main_combine_files(region, stashes)
-    elif argument == '21':
-        stash = int(sys.argv[3])
-        main_combine_files(region, [stash])
     elif argument == '3':
         main_combine_day_tseries(region, stashes)
     elif argument == '4':
         combine_q(region)
     elif argument == '5':
-        calc_tendencies_q(region)
-    elif argument == '51':
-        combine_q_tednencies(region)
+        calc_tendencies(region)
     

@@ -140,10 +140,10 @@ def q_tendency_qdot(region: str, subdomain: int):
     except OSError:
         pass
     
-    q_location='/project/spice/radiation/ML/CRM/data/u-bj775/{0}/q_tot/'.format(region)
+    q_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(99182).zfill(5))
     qadv_location='/project/spice/radiation/ML/CRM/data/u-bj775/{0}/concat_stash_{1}/'.format(region, str(99182).zfill(5))
     d='30_days'
-    q_file="{0}_{1}_km1p5_ra1m_30x30_subdomain_{2}_q_tot.nc".format(d,region,str(subdomain).zfill(3))
+    q_file="{0}_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(d,region,str(subdomain).zfill(3), str(99982).zfill(5))
     qadv_file="{0}_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(d,region,str(subdomain).zfill(3),str(99182).zfill(5))
     
     # q_dat = Dataset(q_file)

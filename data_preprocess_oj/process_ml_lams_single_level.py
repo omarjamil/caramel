@@ -85,9 +85,9 @@ if __name__ == "__main__":
     list_stash_code=[24,202,205,207,208,235,201,207,205,217,225,226,234,236,245,203,204,217,405,406,461,222]
     list_stream=['a','a','a','a','a','a','a','a','a','a','a','a','a','a','a','b','b','b','b','b','b','a']
     
-    list_stash_sec=[2]
-    list_stash_code=[207]
-    list_stream=['a']
+    # list_stash_sec=[2]
+    # list_stash_code=[207]
+    # list_stream=['a']
     
     list_analysis_time=['T0000Z','T1200Z']
     name_str='ra1m'

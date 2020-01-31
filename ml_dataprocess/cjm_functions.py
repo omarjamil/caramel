@@ -65,12 +65,17 @@ def generate_ml_filename_out(date,vt,ext,name_str,analysis_time,region,size,subr
 
 def process_ml_lam_file(date,vt,roseid,name_str,analysis_time,stream,region,stash_sec,stash_code,ndims):
     # Currently hard-coded for user "frme"
-    tmppath='/project/spice/radiation/ML/CRM/data/'+roseid+'/'+region+'/adv/'
+    tmppath='/project/spice/radiation/ML/CRM/data/'+roseid+'_/'+region+'/'
     filename=generate_ml_filename_in(date,vt,'.pp',stream,name_str,analysis_time,region)
     filein=tmppath+filename
-    
-    # Read in data
     result = make_stash_string(stash_sec,stash_code)
+    tmppath_out='/project/spice/radiation/ML/CRM/data/'+roseid+'_/'+region+'/stash_'+result['stashstr_fout']+'/'
+    try:
+        os.makedirs(tmppath_out)
+    except OSError:
+        pass
+    # Read in data
+    
     fieldin = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
     # Input array is 360 x 360
     # Take the central 240 x 240
@@ -82,7 +87,7 @@ def process_ml_lam_file(date,vt,roseid,name_str,analysis_time,stream,region,stas
         data=fieldin[:,:,60:300,60:300]
     # Now call the function that extracts and averages the LAM data onto GCM grid-boxes
     
-    outcome=mean_subdomains(data,date,vt,name_str,analysis_time,region,result['stashstr_fout'],ndims,tmppath)
+    outcome=mean_subdomains(data,date,vt,name_str,analysis_time,region,result['stashstr_fout'],ndims,tmppath_out)
     return outcome;
 
 def mean_subdomains(data,date,vt,name_str,analysis_time,region,output_label,ndims,tmppath):

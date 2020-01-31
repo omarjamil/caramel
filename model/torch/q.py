@@ -27,6 +27,10 @@ parser.add_argument('--chkpt-interval', type=int, default=10, metavar='N',
                     help='how many epochs before saving a checkpoint')
 parser.add_argument('--isambard', action='store_true', default=False,
                     help='Run on Isambard GPU')
+parser.add_argument('--warm-start', action='store_true', default=False,
+                    help='Continue training')
+parser.add_argument('--region', type=str, help='data region')
+
     
 args = parser.parse_args()
 args.cuda = args.with_cuda and torch.cuda.is_available()
@@ -39,67 +43,78 @@ kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 # Define the Model
 # n_inputs,n_outputs=140,70
-in_features, nb_classes=140,70
-nb_hidden_layer = 6 
-hidden_size = 256
-n_inputs,n_outputs=140,70
+region=args.region
+
+nlevs = 70
+in_features, nb_classes=283,70
+nb_hidden_layer = 10
+hidden_size = 512
 mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
-model_name = "qphys_loss_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_qcomb.tar".format(str(nb_hidden_layer).zfill(3),
+model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qphys_loss_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_x0.tar".format(str(nb_hidden_layer).zfill(3),
                                                                                     str(nb_classes).zfill(3),
                                                                                     str(in_features).zfill(3),
                                                                                     str(nb_classes).zfill(3),
                                                                                     str(hidden_size).zfill(3),
                                                                                     str(args.epochs).zfill(3))
 optimizer =  torch.optim.Adam(mlp.parameters())
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 loss_function = torch.nn.MSELoss()
-print("Model's state_dict:")
-for param_tensor in mlp.state_dict():
-    print(param_tensor, "\t", mlp.state_dict()[param_tensor].size())
-mlp.to(device)
-
 
 # Get the data
-region="50S69W"
-
 if args.isambard:
     locations={ "train_test_datadir":"/home/mo-ojamil/ML/CRM/data",
             "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/chkpts",
             "hist_loc":"/home/mo-ojamil/ML/CRM/data/models",
             "model_loc":"/home/mo-ojamil/ML/CRM/data/models/torch",
-            "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser"}
+            "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(region)}
 else:
     locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
             "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
             "hist_loc":"/project/spice/radiation/ML/CRM/data/models/history",
             "model_loc":"/project/spice/radiation/ML/CRM/data/models/torch",
-            "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser"}
+            "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(region)}
+
+if args.warm_start:
+# Load the save model 
+    checkpoint = torch.load(locations['model_loc']+'/'+model_name, map_location=device)
+    mlp.load_state_dict(checkpoint['model_state_dict'])
+    mlp.to(device)
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    loss = checkpoint['loss']
+    epoch = checkpoint['epoch']
+    model_name = model_name.replace('_x0.tar','_x1.tar')
+else:
+    mlp.to(device)
+print("Model's state_dict:")
+for param_tensor in mlp.state_dict():
+    print(param_tensor, "\t", mlp.state_dict()[param_tensor].size())
+
+
+
 
 # Data normalizer class
 nt = normalize.Normalizers(locations)
 # Training and testing data class
 nn_data = data_io.Data_IO(region, locations)
 
-# qcomb_train = np.concatenate((nn_data.qadv_norm_train,nn_data.q_norm_train),axis=1)
-# qcomb_test  = np.concatenate((nn_data.qadv_norm_test,nn_data.q_norm_test),axis=1)
+# qt_train = np.concatenate((nn_data.qadd_dot_train, nn_data.tadv_dot_train),axis=1)
+# qt_test  = np.concatenate((nn_data.qadd_dot_test, nn_data.tadv_dot_test),axis=1)
+# qt_train = np.concatenate((nn_data.qadv_dot_norm_train, nn_data.tadv_dot_train),axis=1)
+# qt_test  = np.concatenate((nn_data.qadv_dot_norm_test, nn_data.tadv_dot_test),axis=1) 
+# qt_train = np.concatenate((nn_data.q_norm_train, nn_data.qadv_dot_norm_train, nn_data.tadv_dot_train),axis=1)
+# qt_test  = np.concatenate((nn_data.q_norm_test, nn_data.qadv_dot_norm_test, nn_data.tadv_dot_test),axis=1)
+# qt_train = np.concatenate((nn_data.q_norm_train, nn_data.qadd_dot_train, nn_data.tadv_dot_train),axis=1)
+# qt_test  = np.concatenate((nn_data.q_norm_test, nn_data.qadd_dot_test, nn_data.tadv_dot_test),axis=1)
+# qt_train = np.concatenate((nn_data.q_norm_train, nn_data.qadv_dot_norm_train, nn_data.t_train, nn_data.tadv_dot_train),axis=1)
+# qt_test  = np.concatenate((nn_data.q_norm_test, nn_data.qadv_dot_norm_test, nn_data.t_test, nn_data.tadv_dot_test),axis=1)
+qt_train  = np.concatenate((nn_data.q_norm_train[:,:nlevs], nn_data.qadv_dot_norm_train[:,:nlevs], nn_data.t_train[:,:nlevs], nn_data.tadv_dot_train[:,:nlevs], nn_data.toa_swdown_train, nn_data.lhf_train, nn_data.shf_train),axis=1)
+qt_test  = np.concatenate((nn_data.q_norm_test[:,:nlevs], nn_data.qadv_dot_norm_test[:,:nlevs], nn_data.t_test[:,:nlevs], nn_data.tadv_dot_test[:,:nlevs], nn_data.toa_swdown_test, nn_data.lhf_test, nn_data.shf_test),axis=1)
 
-# qcomb_dot_train = np.concatenate((nn_data.qadd_dot_train,nn_data.q_norm_train),axis=1)
-# qcomb_dot_test  = np.concatenate((nn_data.qadd_dot_test,nn_data.q_norm_test),axis=1)
-# qcomb_dot_train = nn_data.qadd_dot_train
-# qcomb_dot_test  = nn_data.qadd_dot_test
-# qcomb_dot_train = np.concatenate((nn_data.q_norm_train, nn_data.qadv_dot_norm_train),axis=1)
-# qcomb_dot_test  = np.concatenate((nn_data.q_norm_test, nn_data.qadv_dot_norm_test),axis=1)
-qcomb_dot_train = np.concatenate((nn_data.q_norm_train_s, nn_data.qadv_dot_norm_train_s),axis=1)
-qcomb_dot_test  = np.concatenate((nn_data.q_norm_test_s, nn_data.qadv_dot_norm_test_s),axis=1)
+qt_train_out = nn_data.qphys_dot_norm_train[:,:nlevs]
+qt_test_out = nn_data.qphys_dot_norm_test[:,:nlevs]
 
-# qcomb_dot_train = nn_data.q_norm_train
-# qcomb_dot_test  = nn_data.q_norm_test
-
-#train_in, train_out = qcomb_dot_train, qphys_norm_train
-#test_in, test_out = qcomb_dot_test, qphys_norm_test
-# x,y,z = torch.from_numpy(qcomb_dot_train[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_train[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train[:]).to(device)
-# x_t,y_t = torch.from_numpy(qcomb_dot_test[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_test[:]).to(device)
-x,y,z = torch.from_numpy(qcomb_dot_train[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_train_s[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train_s[:]).to(device)
-x_t,y_t = torch.from_numpy(qcomb_dot_test[:]).to(device), torch.from_numpy(nn_data.qphys_dot_norm_test_s[:]).to(device)
+x,y,z = torch.from_numpy(qt_train[:]).to(device), torch.from_numpy(qt_train_out[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train[:]).to(device)
+x_t,y_t = torch.from_numpy(qt_test[:]).to(device), torch.from_numpy(qt_test_out[:]).to(device)
 
 class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, *datasets):
@@ -119,17 +134,6 @@ test_loader = torch.utils.data.DataLoader(
              ConcatDataset(x_t,y_t),
              batch_size=args.batch_size, shuffle=False)
 
-def q_loss_tensors_mm(qphys_prediction, qnext, qin):
-    """
-    Extra loss for q predicted from the model
-    """
-    qadd_dot = qin.data[:,:70]
-    qadd_dot_denorm = nt.inverse_minmax(qadd_dot, nt.qadd_mmscale, nt.qadd_feature_min, nt.qadd_feature_max, nt.qadd_data_min)
-    qphys_prediction_denorm = nt.inverse_minmax(qphys_prediction, nt.qphys_mmscale, nt.qphys_feature_min, nt.qphys_feature_max, nt.qphys_data_min)
-    qnext_calc = qadd_dot_denorm + qphys_prediction_denorm
-    qnext_calc_norm = nt.minmax(qnext_calc, nt.q_mmscale, nt.q_feature_min, nt.q_feature_max, nt.q_data_min)
-    loss = loss_function(qnext_calc_norm, qnext)
-    return loss
 
 def q_loss_tensors_std(qphys_prediction, qnext, qin):
     """
@@ -164,11 +168,12 @@ def train(epoch):
         prediction = mlp(x)
         phys_loss = loss_function(prediction, y)
         # qnext_loss = q_loss_tensors_mm(prediction, z, x)
-        qnext_loss = q_loss_tensors_std(prediction, z, x)
+        # qnext_loss = q_loss_tensors_std(prediction, z, x)
         loss = 1.*phys_loss #+ 0.*qnext_loss
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
+        # scheduler.step()
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, 
             batch_idx * len(x), len(train_loader.dataset),100. * batch_idx / len(train_loader),
@@ -199,7 +204,6 @@ def test(epoch):
 
 if __name__ == "__main__":
     
-
     training_loss = []
     testing_loss = []
     for epoch in range(1, args.epochs + 1):

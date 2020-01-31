@@ -10,7 +10,7 @@ regions_1=all_regions[:30]
 regions_2=all_regions[30:60]
 regions_3=all_regions[60:90]
 regions_4=all_regions[90:]
-regions=['10S160W']
+regions=['50S69W']
 
 def command(region, start_date, end_date):
     #script_call="{0} -r {1} -s {2} -e {3}".format("/home/h06/ojamil/analysis_tools/ML/CRM/CRM_code/data_preprocess/retrieve_ml_lams.py",region,start_date,end_date)

@@ -64,13 +64,15 @@ def generate_ml_filename_out(date,vt,ext,name_str,analysis_time,region,size,subr
 
 def process_ml_lam_file(date,vt,roseid,name_str,analysis_time,stream,region,stash_sec,stash_code,ndims):
     # Currently hard-coded for user "frme"
-    tmppath='/project/spice/radiation/ML/CRM/data/'+roseid+'/'+region+'/'
+    # tmppath='/project/spice/radiation/ML/CRM/data/'+roseid+'/'+region+'/'
+    tmppath='/project/spice/radiation/ML/CRM/data/'+roseid+'_/'+region+'/'
 
     filename=generate_ml_filename_in(date,vt,'.pp',stream,name_str,analysis_time,region)
     filein=tmppath+filename
     # Read in data
     result = make_stash_string(stash_sec,stash_code)
-    tmppath_out='/project/spice/radiation/ML/CRM/data/'+roseid+'/'+region+'/stash_'+result['stashstr_fout']+'/'
+    # tmppath_out='/project/spice/radiation/ML/CRM/data/'+roseid+'/'+region+'/stash_'+result['stashstr_fout']+'/'
+    tmppath_out='/project/spice/radiation/ML/CRM/data/'+roseid+'_/'+region+'/stash_'+result['stashstr_fout']+'/'
     print(filein, result['stashstr_iris'])
     # if os.path.exists(tmppath_out) method can create a race condition when several scripts launched
     try:
