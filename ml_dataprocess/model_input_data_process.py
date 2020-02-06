@@ -385,7 +385,7 @@ def train_test_data_save_all(region: str):
     
    
 if __name__ == "__main__":
-    region = "80S90W"
+    region = "10N80W"
     train_test_data_save_all(region)
     
     # qphys,qadv,tphys,tadv = read_tendencies(region)

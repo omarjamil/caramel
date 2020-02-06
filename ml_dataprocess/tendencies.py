@@ -32,7 +32,7 @@ def nooverlap_smooth(arrayin, window=6):
     averaged = np.mean(arrayin.reshape(window,x//window,y),axis=0)
     return averaged
 
-def t_tendency(region: str, subdomain: int):
+def t_tendency(region: str, subdomain: int, in_prefix:str="30"):
     """
     Physics tendency for q quantities
     specific humidity only to start
@@ -51,9 +51,8 @@ def t_tendency(region: str, subdomain: int):
     
     t_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(4).zfill(5))
     tadv_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(99181).zfill(5))
-    d='30_days'
-    t_file="{0}_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(d,region,str(subdomain).zfill(3),str(4).zfill(5))
-    tadv_file="{0}_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(d,region,str(subdomain).zfill(3),str(99181).zfill(5))
+    t_file="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3),str(4).zfill(5))
+    tadv_file="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3),str(99181).zfill(5))
     
     # t_dat = Dataset(t_file)
     # tadv_dat = Dataset(tadv_file)
@@ -73,14 +72,14 @@ def t_tendency(region: str, subdomain: int):
     time_coord = iris.coords.DimCoord(t_dat.coord('time').points[:-1],standard_name="time",units=t_dat.coord('time').units)
     model_lev_coord = iris.coords.DimCoord(t_dat.coord('model_level_number').points,standard_name="model_level_number")
     new_cube = iris.cube.Cube(t_phys,long_name="t_phys",dim_coords_and_dims=[(time_coord,0),(model_lev_coord,1)])
-    outfile="{0}_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(d,region,str(subdomain).zfill(3),str(99904).zfill(5))
+    outfile="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3),str(99904).zfill(5))
     print("Saving T tendency ... {0}".format(t_phys_location+outfile))
     iris.fileformats.netcdf.save(new_cube,t_phys_location+outfile)
     
 
 
 
-def q_tendency_qdot(region: str, subdomain: int):
+def q_tendency_qdot(region: str, subdomain: int, in_prefix: str="30"):
     """
     Physics tendency for q quantities using qadv_dot and qtot
 
@@ -99,9 +98,9 @@ def q_tendency_qdot(region: str, subdomain: int):
     
     q_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(99821).zfill(5))
     qadv_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(99182).zfill(5))
-    d='30_days'
-    q_file="{0}_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(d,region,str(subdomain).zfill(3), str(99821).zfill(5))
-    qadv_file="{0}_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(d,region,str(subdomain).zfill(3),str(99182).zfill(5))
+    
+    q_file="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3), str(99821).zfill(5))
+    qadv_file="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3),str(99182).zfill(5))
     
     # q_dat = Dataset(q_file)
     # qadv_dat = Dataset(qadv_file)
@@ -119,7 +118,7 @@ def q_tendency_qdot(region: str, subdomain: int):
     time_coord = iris.coords.DimCoord(q_dat.coord('time').points[:-1],standard_name="time",units=q_dat.coord('time').units)
     model_lev_coord = iris.coords.DimCoord(q_dat.coord('model_level_number').points,standard_name="model_level_number")
     new_cube = iris.cube.Cube(q_phys,long_name="q_phys",dim_coords_and_dims=[(time_coord,0),(model_lev_coord,1)])
-    outfile="{0}_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(d,region,str(subdomain).zfill(3), str(99983).zfill(5))
+    outfile="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3), str(99983).zfill(5))
     print("Saving q tendency ... {0}".format(q_phys_location+outfile))
     iris.fileformats.netcdf.save(new_cube,q_phys_location+outfile)
 
@@ -137,13 +136,13 @@ def q_tendency_qdot(region: str, subdomain: int):
     # print("Saving smoothed q tendency ... {0}".format(q_phys_location+outfile_s))
     # iris.fileformats.netcdf.save(new_cube_s,q_phys_location+outfile_s)
 
-def main_Q_dot(region):
+def main_Q_dot(region, in_prefix="30"):
     for subdomain in range(64):
-        q_tendency_qdot(region,subdomain)
+        q_tendency_qdot(region,subdomain, in_prefix=in_prefix)
 
-def main_T_dot(region):
+def main_T_dot(region, in_prefix="30"):
     for subdomain in range(64):
-        t_tendency(region,subdomain)
+        t_tendency(region,subdomain, in_prefix="30")
 
 if __name__ == "__main__":
     region="80S90W"

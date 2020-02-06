@@ -29,7 +29,9 @@ parser.add_argument('--isambard', action='store_true', default=False,
                     help='Run on Isambard GPU')
 parser.add_argument('--warm-start', action='store_true', default=False,
                     help='Continue training')
-parser.add_argument('--region', type=str, help='data region')
+parser.add_argument('--identifier', type=str, 
+                    help='Added to model name as a unique identifier;  also needed for warm start from a previous model')                    
+parser.add_argument('--data-region', type=str, help='data region')
 
     
 args = parser.parse_args()
@@ -43,19 +45,20 @@ kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 
 # Define the Model
 # n_inputs,n_outputs=140,70
-region=args.region
+region=args.data_region
 
 nlevs = 70
 in_features, nb_classes=283,70
 nb_hidden_layer = 10
 hidden_size = 512
 mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
-model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qphys_loss_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_x0.tar".format(str(nb_hidden_layer).zfill(3),
+model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_{6}.tar".format(str(nb_hidden_layer).zfill(3),
                                                                                     str(nb_classes).zfill(3),
                                                                                     str(in_features).zfill(3),
                                                                                     str(nb_classes).zfill(3),
                                                                                     str(hidden_size).zfill(3),
-                                                                                    str(args.epochs).zfill(3))
+                                                                                    str(args.epochs).zfill(3),
+                                                                                    args.identifier)
 optimizer =  torch.optim.Adam(mlp.parameters())
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 loss_function = torch.nn.MSELoss()
@@ -82,7 +85,7 @@ if args.warm_start:
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     loss = checkpoint['loss']
     epoch = checkpoint['epoch']
-    model_name = model_name.replace('_x0.tar','_x1.tar')
+    model_name = model_name.replace('.tar','_{0}.tar'.format(region))
 else:
     mlp.to(device)
 print("Model's state_dict:")

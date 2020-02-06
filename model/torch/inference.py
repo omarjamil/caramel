@@ -19,12 +19,13 @@ parser.add_argument('--epochs', type=int, default=10, metavar='N',
                     help='number of epochs to train (default: 10)')
 parser.add_argument('--with-cuda', action='store_true', default=False,
                     help='enables CUDA training')
-parser.add_argument('--region', type=str, help='data region')
-
+parser.add_argument('--data-region', type=str, help='data region')
+parser.add_argument('--identifier', type=str, 
+                    help='Added to model name as a unique identifier;  also needed for warm start from a previous model')
 args = parser.parse_args()
 args.cuda = args.with_cuda and torch.cuda.is_available()
 device = torch.device("cuda" if args.cuda else "cpu")
-region = args.region
+region = args.data_region
 
 locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
             "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
@@ -67,12 +68,13 @@ in_features, nb_classes=283,70
 nb_hidden_layer = 8 
 hidden_size = 512
 mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
-model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qphys_loss_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_cont.tar".format(str(nb_hidden_layer).zfill(3),
+model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_{6}.tar".format(str(nb_hidden_layer).zfill(3),
                                                                                     str(nb_classes).zfill(3),
                                                                                     str(in_features).zfill(3),
                                                                                     str(nb_classes).zfill(3),
                                                                                     str(hidden_size).zfill(3),
-                                                                                    str(args.epochs).zfill(3))
+                                                                                    str(args.epochs).zfill(3),
+                                                                                    args.identifier)
 optimizer =  torch.optim.Adam(mlp.parameters())
 loss_function = torch.nn.MSELoss()
 
@@ -119,7 +121,7 @@ def q_scm(region='50S69W'):
     create a timeseries of prediction to compare with validation data
     """
     
-    start = 1000
+    start = 0
     end = 2000
     nlevs = 70
     q_ = nn_data.q_norm_test[start:end,:nlevs]
@@ -179,7 +181,7 @@ def q_scm(region='50S69W'):
     for t_step in range(1,n_steps):
         
         # q_in = (qcomb_dot_test[t_step-1,:]).reshape((1,140))
-        q_in = (qt_test[t_step-1,:]).reshape((1,in_features))
+        q_in = (qt_test[t_step,:]).reshape((1,in_features))
         # q_in = (qcomb_dot_test[t_step,:]).reshape((1,70))
         qphys_pred = predict_q(q_in, nlevs)
         qphys_ml[t_step,:] = qphys_pred
@@ -194,7 +196,7 @@ def q_scm(region='50S69W'):
 
     # qadv_un = qadv_inv #qadv_normaliser.inverse_transform(qadv_norm)
     output_dict = {"q_ml":q_ml[:],"q":q_raw[:],"qphys_ml":qphys_ml,"qphys":qphys_inv[:],"qadv_dot":qadv_dot_inv[:], "qadv_dot_raw":qadv_dot_raw[:], "q_sane":q_sane[:], "qphys_drift":qphys_drift[:], "qphys_pred_drift":qphys_pred_drift[:], "tadv_dot":tadv_inv}
-    outfile_name = model_name.replace('.tar','_.hdf5')    
+    outfile_name = model_name.replace('.tar','.hdf5')    
     with h5py.File(outfile_name,'w') as outfile:
         for k,v in output_dict.items():
             outfile.create_dataset(k,data=v)
@@ -203,21 +205,25 @@ def q_inference(region='50S69W'):
     """
     q model inference/testing
     """
+    nlevs=70
     # Testing data
-    qphys_norm_test = nn_data.qphys_dot_norm_test_s
+    qphys_norm_test = nn_data.qphys_dot_norm_test[:,:nlevs]
     # qcomb_test  = np.concatenate((nn_data.qadv_norm_test,nn_data.q_norm_test),axis=1)
     # qcomb_dot_test  = np.concatenate((nn_data.qadd_dot_test,nn_data.q_norm_test),axis=1)
     # qcomb_dot_test  = nn_data.qadd_dot_test
-    qcomb_dot_test  = np.concatenate((nn_data.q_norm_test_s, nn_data.qadv_dot_norm_test_s),axis=1)
+    # qcomb_dot_test  = np.concatenate((nn_data.q_norm_test_s, nn_data.qadv_dot_norm_test_s),axis=1)
+    qt_test  = np.concatenate((nn_data.q_norm_test[:,:nlevs], nn_data.qadv_dot_norm_test[:,:nlevs], nn_data.t_test[:,:nlevs], nn_data.tadv_dot_test[:,:nlevs], nn_data.toa_swdown_test, nn_data.lhf_test, nn_data.shf_test),axis=1)
+    
     #train_in, train_out = qcomb_dot_train, qphys_norm_train
     #test_in, test_out = qcomb_dot_test, qphys_norm_test
-    x_t,y_t = torch.from_numpy(qcomb_dot_test[:]), qphys_norm_test[:]
+    x_t,y_t = torch.from_numpy(qt_test[:]), qphys_norm_test[:]
+
     prediction = mlp(x_t)
     # qphys_predict_denorm = nt.inverse_minmax_tensor(prediction, qphys_scale, qphys_feature_min, qphys_feature_max, qphys_data_min)
     # qphys_test_denorm = nt.inverse_minmax_tensor(torch.from_numpy(qphys_norm_test[:]), qphys_scale, qphys_feature_min, qphys_feature_max, qphys_data_min)
     qphys_predict_denorm = nt.inverse_std(prediction, nt.qphys_dot_stdscale, nt.qphys_dot_mean)
     qphys_test_denorm = nt.inverse_std(torch.from_numpy(qphys_norm_test[:]), nt.qphys_dot_stdscale, nt.qphys_dot_mean)
-    hfilename = model_name.replace('.tar','.hdf5')
+    hfilename = model_name.replace('.tar','_qphys.hdf5')
     output={'qphys_predict':qphys_predict_denorm.data.numpy(),'qphys_test':qphys_test_denorm.data.numpy()}
     
     with h5py.File(hfilename, 'w') as hfile:
@@ -225,5 +231,5 @@ def q_inference(region='50S69W'):
             hfile.create_dataset(k,data=v)
 
 if __name__ == "__main__":
-    # q_inference()
+    q_inference()
     q_scm()

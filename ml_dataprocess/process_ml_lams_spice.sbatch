@@ -1,9 +1,9 @@
 #!/bin/bash -l
-#SBATCH --mem=6000
-#SBATCH --ntasks=2
-#SBATCH --time=360
+#SBATCH --mem=12000
+#SBATCH --ntasks=4
+#SBATCH --time=1000
 #SBATCH --export=NONE
-#SBATCH --qos=normal
+#SBATCH --qos=long
 # module load scitools
 day=$1
 region=$2
