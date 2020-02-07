@@ -113,8 +113,6 @@ def q_tendency_qdot(region: str, subdomain: int, in_prefix: str="30"):
     q_diff = array_diff(q_array, 1)
     q_phys = q_diff - qadv_array[:-1]
     
-    # Save the data after normalising
-    
     time_coord = iris.coords.DimCoord(q_dat.coord('time').points[:-1],standard_name="time",units=q_dat.coord('time').units)
     model_lev_coord = iris.coords.DimCoord(q_dat.coord('model_level_number').points,standard_name="model_level_number")
     new_cube = iris.cube.Cube(q_phys,long_name="q_phys",dim_coords_and_dims=[(time_coord,0),(model_lev_coord,1)])
@@ -142,7 +140,7 @@ def main_Q_dot(region, in_prefix="30"):
 
 def main_T_dot(region, in_prefix="30"):
     for subdomain in range(64):
-        t_tendency(region,subdomain, in_prefix="30")
+        t_tendency(region,subdomain, in_prefix=in_prefix)
 
 if __name__ == "__main__":
     region="80S90W"

@@ -106,7 +106,7 @@ def combine_q(region, in_prefix="30"):
         # q.attributes['um_stash_source'] = ''
         q.attributes['STASHES'] = '00010,00254,00012,00272,00273'
         print("Saving q total files for region {0} subdomain {1}".format(region, i))
-        iris.fileformats.netcdf.save(q,"{0}/{3}_days_{2}_km1p5_ra1m_30x30_subdomain_{1}_99821.nc".format(save_path, str(i).zfill(3),region),in_prefix)
+        iris.fileformats.netcdf.save(q,"{0}/{3}_days_{2}_km1p5_ra1m_30x30_subdomain_{1}_99821.nc".format(save_path, str(i).zfill(3),region,in_prefix))
         i += 1
 
 def check_files_exist(region: str, date: datetime, subdomain: int, stash: int):
@@ -278,9 +278,9 @@ def main_combine_day_tseries(region: str, stashes: list):
             combine_day_tseries_dayrange(region, subdomain, stash, days_range=[3,15,25])
 
 
-def calc_tendencies(region: str):
-    tendencies.main_Q_dot(region)
-    tendencies.main_T_dot(region)            
+def calc_tendencies(region: str, in_prefix: str="30"):
+    tendencies.main_Q_dot(region, in_prefix=in_prefix)
+    tendencies.main_T_dot(region, in_prefix=in_prefix)            
     
 
         
@@ -300,7 +300,7 @@ if __name__ == "__main__":
     elif argument == '3':
         main_combine_day_tseries(region, stashes)
     elif argument == '4':
-        combine_q(region)
+        combine_q(region, in_prefix="031525")
     elif argument == '5':
-        calc_tendencies(region)
+        calc_tendencies(region, in_prefix="031525")
     
