@@ -100,23 +100,14 @@ nt = normalize.Normalizers(locations)
 # Training and testing data class
 nn_data = data_io.Data_IO(region, locations)
 
-# qt_train = np.concatenate((nn_data.qadd_dot_train, nn_data.tadv_dot_train),axis=1)
-# qt_test  = np.concatenate((nn_data.qadd_dot_test, nn_data.tadv_dot_test),axis=1)
-# qt_train = np.concatenate((nn_data.qadv_dot_norm_train, nn_data.tadv_dot_train),axis=1)
-# qt_test  = np.concatenate((nn_data.qadv_dot_norm_test, nn_data.tadv_dot_test),axis=1) 
-# qt_train = np.concatenate((nn_data.q_norm_train, nn_data.qadv_dot_norm_train, nn_data.tadv_dot_train),axis=1)
-# qt_test  = np.concatenate((nn_data.q_norm_test, nn_data.qadv_dot_norm_test, nn_data.tadv_dot_test),axis=1)
-# qt_train = np.concatenate((nn_data.q_norm_train, nn_data.qadd_dot_train, nn_data.tadv_dot_train),axis=1)
-# qt_test  = np.concatenate((nn_data.q_norm_test, nn_data.qadd_dot_test, nn_data.tadv_dot_test),axis=1)
-# qt_train = np.concatenate((nn_data.q_norm_train, nn_data.qadv_dot_norm_train, nn_data.t_train, nn_data.tadv_dot_train),axis=1)
-# qt_test  = np.concatenate((nn_data.q_norm_test, nn_data.qadv_dot_norm_test, nn_data.t_test, nn_data.tadv_dot_test),axis=1)
-qt_train  = np.concatenate((nn_data.q_norm_train[:,:nlevs], nn_data.qadv_dot_norm_train[:,:nlevs], nn_data.t_train[:,:nlevs], nn_data.tadv_dot_train[:,:nlevs], nn_data.toa_swdown_train, nn_data.lhf_train, nn_data.shf_train),axis=1)
-qt_test  = np.concatenate((nn_data.q_norm_test[:,:nlevs], nn_data.qadv_dot_norm_test[:,:nlevs], nn_data.t_test[:,:nlevs], nn_data.tadv_dot_test[:,:nlevs], nn_data.toa_swdown_test, nn_data.lhf_test, nn_data.shf_test),axis=1)
+qt_train  = np.concatenate((nn_data.q_tot_train[:,:nlevs], nn_data.q_tot_adv_train[:,:nlevs], nn_data.theta_train[:,:nlevs], nn_data.theta_adv_train[:,:nlevs], nn_data.sw_toa_train, nn_data.lhf_train, nn_data.shf_train),axis=1)
+qt_test  = np.concatenate((nn_data.q_tot_test[:,:nlevs], nn_data.q_tot_adv_test[:,:nlevs], nn_data.theta_test[:,:nlevs], nn_data.theta_adv_test[:,:nlevs], nn_data.sw_toa_test, nn_data.lhf_test, nn_data.shf_test),axis=1)
 
-qt_train_out = nn_data.qphys_dot_norm_train[:,:nlevs]
-qt_test_out = nn_data.qphys_dot_norm_test[:,:nlevs]
+qt_train_out = nn_data.qphys_train[:,:nlevs]
+qt_test_out = nn_data.qphys_test[:,:nlevs]
 
-x,y,z = torch.from_numpy(qt_train[:]).to(device), torch.from_numpy(qt_train_out[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train[:]).to(device)
+# x,y,z = torch.from_numpy(qt_train[:]).to(device), torch.from_numpy(qt_train_out[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train[:]).to(device)
+x,y = torch.from_numpy(qt_train[:]).to(device), torch.from_numpy(qt_train_out[:]).to(device)
 x_t,y_t = torch.from_numpy(qt_test[:]).to(device), torch.from_numpy(qt_test_out[:]).to(device)
 
 class ConcatDataset(torch.utils.data.Dataset):
@@ -130,7 +121,7 @@ class ConcatDataset(torch.utils.data.Dataset):
         return min(len(d) for d in self.datasets)
 
 train_loader = torch.utils.data.DataLoader(
-             ConcatDataset(x,y,z),
+             ConcatDataset(x,y),
              batch_size=args.batch_size, shuffle=True)
 
 test_loader = torch.utils.data.DataLoader(
@@ -138,23 +129,23 @@ test_loader = torch.utils.data.DataLoader(
              batch_size=args.batch_size, shuffle=False)
 
 
-def q_loss_tensors_std(qphys_prediction, qnext, qin):
-    """
-    Extra loss for q predicted from the model
-    """
-    qadd_dot = qin.data[:,:70]
-    qadd_dot_denorm = nt.inverse_std(qadd_dot, (nt.qadd_stdscale).to(device), (nt.qadd_mean).to(device))
-    qphys_prediction_denorm = nt.inverse_std(qphys_prediction, (nt.qphys_dot_stdscale).to(device), (nt.qphys_dot_mean).to(device))
-    qnext_calc = qadd_dot_denorm + qphys_prediction_denorm
-    qnext_calc_norm = nt.std(qnext_calc, (nt.q_stdscale).to(device), (nt.q_mean).to(device))
-    qnext_calc_bool = qnext_calc < 0.
-    loss = loss_function(qnext_calc_norm, qnext)
+# def q_loss_tensors_std(qphys_prediction, qnext, qin):
+#     """
+#     Extra loss for q predicted from the model
+#     """
+#     qadd_dot = qin.data[:,:70]
+#     qadd_dot_denorm = nt.inverse_std(qadd_dot, (nt.qadd_stdscale).to(device), (nt.qadd_mean).to(device))
+#     qphys_prediction_denorm = nt.inverse_std(qphys_prediction, (nt.qphys_dot_stdscale).to(device), (nt.qphys_dot_mean).to(device))
+#     qnext_calc = qadd_dot_denorm + qphys_prediction_denorm
+#     qnext_calc_norm = nt.std(qnext_calc, (nt.q_stdscale).to(device), (nt.q_mean).to(device))
+#     qnext_calc_bool = qnext_calc < 0.
+#     loss = loss_function(qnext_calc_norm, qnext)
     
-    # print(np.where(qnext_calc.data.numpy() < 0.))
-    # if True in qnext_calc_bool:
-    #     loss = 1.*loss
-        # print("-ve q :", loss)
-    return loss
+#     # print(np.where(qnext_calc.data.numpy() < 0.))
+#     # if True in qnext_calc_bool:
+#     #     loss = 1.*loss
+#         # print("-ve q :", loss)
+#     return loss
 
 def train(epoch):
     """
@@ -165,14 +156,14 @@ def train(epoch):
     mlp.train()
     train_loss = 0
     # x=data in, y=data out, z = extra loss qnext
-    for batch_idx, (x, y, z) in enumerate(train_loader):
+    for batch_idx, (x, y) in enumerate(train_loader):
         x = x.to(device)
         optimizer.zero_grad()
         prediction = mlp(x)
         phys_loss = loss_function(prediction, y)
         # qnext_loss = q_loss_tensors_mm(prediction, z, x)
         # qnext_loss = q_loss_tensors_std(prediction, z, x)
-        loss = 1.*phys_loss #+ 0.*qnext_loss
+        loss = phys_loss #+ 0.*qnext_loss
         loss.backward()
         train_loss += loss.item()
         optimizer.step()

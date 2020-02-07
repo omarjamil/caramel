@@ -253,7 +253,7 @@ def nn_dataset(region:str, in_prefix="031525"):
             print("Saving normalised data {0}".format(test_name))
             test_data = data_std_split[i]
             if test_data.ndim == 1:
-                test_data.reshape(-1,1)
+                test_data = test_data.reshape(-1,1)
             hfile.create_dataset(test_name,data=test_data)
             i+=1
 
