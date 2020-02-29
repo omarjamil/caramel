@@ -17,7 +17,7 @@ class Data_IO(object):
         self.region = region
         self.locations = locations
         
-        dataset_file = "{0}/train_test_data_{1}_std.hdf5".format(self.locations["train_test_datadir"],self.region)
+        dataset_file = "{0}/train_test_data_levs_{1}_std.hdf5".format(self.locations["train_test_datadir"],self.region)
         dataset=h5py.File(dataset_file,'r')
        
         self.q_tot_train = dataset["q_tot_train"]

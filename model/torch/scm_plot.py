@@ -106,19 +106,23 @@ def visualise_tseries_q(np_file,level):
     
 def visualise_tseries_qphys(np_file,level):
     data = h5py.File(np_file, 'r')
-    qphys_ml = data['qphys_predict'][:1000,:]
-    qphys = data['qphys_test'][:1000,:]
-    fig, axs = plt.subplots(2,1,figsize=(14, 10), sharex=True)
+    qphys_ml = data['qphys_predict'][:6000,:]
+    qphys = data['qphys_test'][:6000,:]
+    fig, axs = plt.subplots(2,1,figsize=(14, 10), sharex=False)
     ax = axs[0]
     ax.plot(qphys_ml[:,level],'.-',label='qphys (ML)')
-    ax.plot(qphys[:,level],'.-',label='qphys')
+    ax.plot(qphys[:,level],'.',label='qphys')
     ax.set_title('Level {0}'.format(level))
     ax.legend()
 
     ax = axs[1]
-    ax.plot(qphys_ml[:,level]-qphys[:,level],'.-',label='qphys (ML) -  qphys')
+    ax.scatter(qphys[:,level], qphys_ml[:,level])
+    ax.plot(qphys[:,level],qphys[:,level],'k-')
+    ax.set_xlabel('UM')
+    ax.set_ylabel('ML')
+    # ax.plot(qphys_ml[:,level]-qphys[:,level],'.-',label='qphys (ML) -  qphys')
     ax.set_title('Level {0}'.format(level))
-    ax.legend()
+    # ax.legend()
     
     plt.show()
 
@@ -150,9 +154,11 @@ def model_loss(model_file):
     Visualise model loss
     """
     checkpoint = torch.load(model_file, map_location=torch.device('cpu'))
-    loss = checkpoint['loss']
+    train_loss = checkpoint['training_loss']
+    test_loss = checkpoint['testing_loss']
     fig, ax = plt.subplots(1,1,figsize=(14, 10))
-    ax.plot(loss,'.-',label='Loss')
+    ax.plot(train_loss,'.-',label='Train Loss')
+    ax.plot(test_loss,'.-',label='Test Loss')
     ax.set_title('Model loss')
     ax.legend()
     plt.show()
@@ -184,7 +190,7 @@ def average_tseries(np_file):
         plt.show()
 
 if __name__ == "__main__":
-    model_name="q_qadv_t_tadv_swtoa_lhf_shf_qphys_010_lyr_070_in_283_out_070_hdn_512_epch_100_10N80W"
+    model_name="q_qadv_t_tadv_swtoa_lhf_shf_qphys_006_lyr_123_in_030_out_0256_hdn_100_epch_02000_btch_9999NEWS"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)
@@ -194,9 +200,9 @@ if __name__ == "__main__":
     # average_tseries(np_file)
     figname = np_file.replace("hdf5","png")
     # visualise_scm_predictions_q(np_file,figname)
-    for l in range(1,70,2):
+    for l in range(1,30,5):
         level=l
-        visualise_tseries(np_file, level)
+        # visualise_tseries(np_file, level)
     #     # visualise_tseries_q(np_file,level)
         visualise_tseries_qphys(np_file_2,level)
         # compare_qphys_predictions(np_file, np_file_2, level)

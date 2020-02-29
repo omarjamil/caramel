@@ -72,23 +72,30 @@ regions = ['50N144W','10S120W','10N120W','20S112W','0N90W','30N153W','80S90E','4
 
 crm_data = "/project/spice/radiation/ML/CRM/data"
 
-def standardise_data_transform(dataset: np.array([]), region: str, save_fname: str="std_fit.hdf5"):
+def standardise_data_transform(dataset: np.array([]), region: str, save_fname: str="std_fit.hdf5", levs: bool=False):
     """
     Manually standardise data based instead of using sklearn standarad scaler
     """
     save_location = "{0}/models/normaliser/{1}/".format(crm_data,region)
+    # save_location = "{0}/models/normaliser/{1}_noshuffle/".format(crm_data,region)
     try:
         os.makedirs(save_location)
     except OSError:
         pass
-    mean = np.array([np.mean(dataset)])
-    scale = np.array([np.std(dataset)])
+    # per level normalisation
+    if levs:
+        mean = np.array([np.mean(dataset, axis=0)])
+        scale = np.array([np.std(dataset, axis=0)])
+    else:
+        # Mean across the entire dataset and levels
+        mean = np.array([np.mean(dataset)])
+        scale = np.array([np.std(dataset)])
     params = {"mean_":mean, "scale_":scale}
     with h5py.File(save_location+save_fname, 'w') as hfile:
         for k, v in params.items():  
             hfile.create_dataset(k,data=v)
-    
-    return (dataset - mean)/scale
+    results = (dataset - mean)/scale
+    return results, dataset
 
 def combine_multi_level_files(in_prefix="031525"):
     """
@@ -222,6 +229,7 @@ def nn_dataset(region:str, in_prefix="031525"):
     # NN input data
     data_labels = []
     data = []
+    raw_data = []
     for s in nn_data_stashes:
         indir = "/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}".format(region, str(s).zfill(5))
         infile="{0}/{1}_days_{2}_km1p5_ra1m_30x30_{3}.nc".format(indir, in_prefix, region, str(s).zfill(5))
@@ -229,29 +237,53 @@ def nn_dataset(region:str, in_prefix="031525"):
         dataf = Dataset(infile)
         var = dataf[nn_data_stashes[s]][:]
         std_fname=nn_data_stashes[s]+".hdf5"
-        normed_var = standardise_data_transform(var, region, save_fname=std_fname)
+        normed_var, raw_var = standardise_data_transform(var, region, save_fname=std_fname)
         data_labels.append(nn_data_stashes[s])
         data.append(normed_var)
-
+        raw_data.append(raw_var)
     
-    data_std_split = train_test_split(*data, shuffle=True)
+    data_std_split = train_test_split(*data, shuffle=True, random_state=18)
+    raw_data_split = train_test_split(*raw_data, shuffle=True, random_state=18)
+    # data_std_split = train_test_split(*data, shuffle=False, random_state=18)
     data_labels = list(chain(*zip(data_labels,data_labels)))
 
     train_test_datadir = "{0}/models/datain/".format(crm_data)
-    fname = 'train_test_data_{0}_std.hdf5'.format(region)
+    
+    # fname = 'train_test_data_{0}_std.hdf5'.format(region)
+    # # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
+    # with h5py.File(train_test_datadir+fname, 'w') as hfile:
+    #     i = 0
+    #     while (i < len(data_std_split)):
+    #         train_name = data_labels[i]+"_train"
+    #         print("Saving normalised data {0}".format(train_name))
+    #         train_data = data_std_split[i]
+    #         if train_data.ndim == 1:
+    #             train_data = train_data.reshape(-1,1)
+    #         hfile.create_dataset(train_name,data=train_data)
+    #         i+=1
+    #         test_name = data_labels[i]+"_test"
+    #         print("Saving normalised data {0}".format(test_name))
+    #         test_data = data_std_split[i]
+    #         if test_data.ndim == 1:
+    #             test_data = test_data.reshape(-1,1)
+    #         hfile.create_dataset(test_name,data=test_data)
+    #         i+=1
+
+    fname = 'train_test_data_{0}_raw.hdf5'.format(region)
+    # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
     with h5py.File(train_test_datadir+fname, 'w') as hfile:
         i = 0
         while (i < len(data_std_split)):
             train_name = data_labels[i]+"_train"
             print("Saving normalised data {0}".format(train_name))
-            train_data = data_std_split[i]
+            train_data = raw_data_split[i]
             if train_data.ndim == 1:
                 train_data = train_data.reshape(-1,1)
             hfile.create_dataset(train_name,data=train_data)
             i+=1
             test_name = data_labels[i]+"_test"
             print("Saving normalised data {0}".format(test_name))
-            test_data = data_std_split[i]
+            test_data = raw_data_split[i]
             if test_data.ndim == 1:
                 test_data = test_data.reshape(-1,1)
             hfile.create_dataset(test_name,data=test_data)

@@ -65,11 +65,11 @@ def generate_ml_filename_out(date,vt,ext,name_str,analysis_time,region,size,subr
 
 def process_ml_lam_file(date,vt,roseid,name_str,analysis_time,stream,region,stash_sec,stash_code,ndims):
     # Currently hard-coded for user "frme"
-    tmppath='/project/spice/radiation/ML/CRM/data/'+roseid+'_/'+region+'/'
+    tmppath='/project/spice/radiation/ML/CRM/data/'+roseid+'/'+region+'/'
     filename=generate_ml_filename_in(date,vt,'.pp',stream,name_str,analysis_time,region)
     filein=tmppath+filename
     result = make_stash_string(stash_sec,stash_code)
-    tmppath_out='/project/spice/radiation/ML/CRM/data/'+roseid+'_/'+region+'/stash_'+result['stashstr_fout']+'/'
+    tmppath_out='/project/spice/radiation/ML/CRM/data/'+roseid+'/'+region+'/stash_'+result['stashstr_fout']+'/'
     try:
         os.makedirs(tmppath_out)
     except OSError:
@@ -120,7 +120,7 @@ def mean_subdomains(data,date,vt,name_str,analysis_time,region,output_label,ndim
 
 def extract_fields_for_advective_tendencies(date,vt,roseid,name_str,analysis_time,region):
     # Currently hard-coded for user "frme"
-    tmppath = '/project/spice/radiation/ML/CRM/data/'+roseid+'_/'+region+'/'
+    tmppath = '/project/spice/radiation/ML/CRM/data/'+roseid+'/'+region+'/'
     tmppath_nc = tmppath+'netcdf/'
     tmppath_99181 = tmppath+'stash_99181/'
     tmppath_99182 = tmppath+'stash_99182/'

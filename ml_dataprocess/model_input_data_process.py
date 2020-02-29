@@ -222,7 +222,7 @@ def standardise_data(dataset: np.array([]), save_fname: str="std_fit.joblib"):
     joblib.dump(scaler_fit,save_location+save_fname)
     return scaler_fit
 
-def standardise_data_transform(dataset: np.array([]), region: str, save_fname: str="std_fit.joblib"):
+def standardise_data_transform(dataset: np.array([]), region: str, save_fname: str="std_fit.joblib", axis: int=0):
     """
     Manually standardise data based instead of using sklearn standarad scaler
     """
@@ -231,14 +231,19 @@ def standardise_data_transform(dataset: np.array([]), region: str, save_fname: s
         os.makedirs(save_location)
     except OSError:
         pass
-    mean = np.array([np.mean(dataset)])
-    scale = np.array([np.std(dataset)])
+    if axis == 0:
+        mean = np.array([np.mean(dataset, axis=axis)])
+        scale = np.array([np.std(dataset, axis=axis)])
+    else:
+        # Mean across the entire dataset and levels
+        mean = np.array([np.mean(dataset)])
+        scale = np.array([np.std(dataset)])
     params = {"mean_":mean, "scale_":scale}
     with h5py.File(save_location+save_fname.replace('joblib','hdf5'), 'w') as hfile:
         for k, v in params.items():  
             hfile.create_dataset(k,data=v)
-    
-    return (dataset - mean)/scale
+    results = (dataset - mean)/scale
+    return results
 
 def minmax_data(dataset: np.array([]), save_fname: str="minmax_fit.joblib", frange: tuple=(-1,1)):
     """
@@ -377,7 +382,7 @@ def train_test_data_save_all(region: str):
 
     train_test_datadir = "{0}/models/datain/".format(crm_data)
     # Save in hdf5 format
-    filename='train_test_data_all_{0}_std.hdf5'.format(region)
+    filename='train_test_data_all_lev_{0}_std.hdf5'.format(region)
     with h5py.File(train_test_datadir+filename, 'w') as hfile:
         for k, v in variables.items():  
             hfile.create_dataset(k,data=v)
@@ -385,7 +390,7 @@ def train_test_data_save_all(region: str):
     
    
 if __name__ == "__main__":
-    region = "10N80W"
+    region = "9999NEWS"
     train_test_data_save_all(region)
     
     # qphys,qadv,tphys,tadv = read_tendencies(region)

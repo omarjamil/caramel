@@ -32,7 +32,8 @@ parser.add_argument('--warm-start', action='store_true', default=False,
 parser.add_argument('--identifier', type=str, 
                     help='Added to model name as a unique identifier;  also needed for warm start from a previous model')                    
 parser.add_argument('--data-region', type=str, help='data region')
-
+parser.add_argument('--nhdn-layers', type=int, default=6, metavar='N',
+                    help='Number of hidden layers (default: 6)')
     
 args = parser.parse_args()
 args.cuda = args.with_cuda and torch.cuda.is_available()
@@ -47,20 +48,21 @@ kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 # n_inputs,n_outputs=140,70
 region=args.data_region
 
-nlevs = 70
-in_features, nb_classes=283,70
-nb_hidden_layer = 10
-hidden_size = 512
+nlevs = 30
+in_features, nb_classes=123,30
+nb_hidden_layer = args.nhdn_layers
+hidden_size = 256
 mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
-model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_{6}.tar".format(str(nb_hidden_layer).zfill(3),
-                                                                                    str(nb_classes).zfill(3),
+model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}.tar".format(str(nb_hidden_layer).zfill(3),
                                                                                     str(in_features).zfill(3),
                                                                                     str(nb_classes).zfill(3),
-                                                                                    str(hidden_size).zfill(3),
+                                                                                    str(hidden_size).zfill(4),
                                                                                     str(args.epochs).zfill(3),
+                                                                                    str(args.batch_size).zfill(5),
                                                                                     args.identifier)
-optimizer =  torch.optim.Adam(mlp.parameters())
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+optimizer =  torch.optim.Adam(mlp.parameters(), lr=1.e-3)
+# optimizer =  torch.optim.SGD(mlp.parameters(), lr=0.01)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
 loss_function = torch.nn.MSELoss()
 
 # Get the data
@@ -124,7 +126,7 @@ train_loader = torch.utils.data.DataLoader(
              ConcatDataset(x,y),
              batch_size=args.batch_size, shuffle=True)
 
-test_loader = torch.utils.data.DataLoader(
+validate_loader = torch.utils.data.DataLoader(
              ConcatDataset(x_t,y_t),
              batch_size=args.batch_size, shuffle=False)
 
@@ -167,24 +169,30 @@ def train(epoch):
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
-        # scheduler.step()
+
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, 
             batch_idx * len(x), len(train_loader.dataset),100. * batch_idx / len(train_loader),
             loss.item() / len(x)))
+        
+        ##### Use this for finding learning rate 
+        # scheduler.step()
+        # for param_group in optimizer.param_groups:
+        #     print(param_group['lr'], loss.item() / len(x))
+        ###### LR finder end
     average_loss = train_loss / len(train_loader.dataset)
     print('====> Epoch: {} Average loss: {:.6f}'.format(epoch, average_loss))
     
     return average_loss
 
-def test(epoch):
+def validate(epoch):
     mlp.eval()
-    test_loss = 0
+    validation_loss = 0
     with torch.no_grad():
-        for i, (x,y) in enumerate(test_loader):
+        for i, (x,y) in enumerate(validate_loader):
             x = x.to(device)
             prediction = mlp(x)
-            test_loss += loss_function(prediction,y).item()
+            validation_loss += loss_function(prediction,y).item()
             # if i == 0:
             #     n = min(x.size(0), 8)
             #     comparison = torch.cat([data[:n],
@@ -192,23 +200,25 @@ def test(epoch):
             #     save_image(comparison.cpu(),
             #              'results/reconstruction_' + str(epoch) + '.png', nrow=n)
 
-    test_loss /= len(test_loader.dataset)
-    print('====> Test set loss: {:.6f}'.format(test_loss))
-    return test_loss
+    validation_loss /= len(validate_loader.dataset)
+    print('====> validation loss: {:.6f}'.format(validation_loss))
+    return validation_loss
 
 if __name__ == "__main__":
     
     training_loss = []
-    testing_loss = []
+    validation_loss = []
     for epoch in range(1, args.epochs + 1):
         train_loss = train(epoch)
-        test_loss = test(epoch)
+        validation_loss = validate(epoch)
+        scheduler.step()    
         training_loss.append(train_loss)
-        testing_loss.append(test_loss)
+        validation_loss.append(validation_loss)
     # Save the final model
     torch.save({'epoch':epoch,
                 'model_state_dict':mlp.state_dict(),
                 'optimizer_state_dict':optimizer.state_dict(),
-                'loss':training_loss},
+                'training_loss':training_loss,
+                'validation_loss':validation_loss},
                 locations['model_loc']+'/'+model_name)
  

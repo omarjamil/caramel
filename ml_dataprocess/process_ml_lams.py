@@ -57,7 +57,8 @@ def process_files(regions: list, start_date: date, end_date: date, list_analysis
 
 
 def single_level(start_day: int, region: str):
-    roseid='u-bj775'
+    # roseid='u-bj775'
+    roseid='u-br800'
        
     #roseid='u-bj967'
 
@@ -95,7 +96,8 @@ def single_level(start_day: int, region: str):
     process_files(regions, start_date, end_date, list_analysis_time, name_str, list_stream,  list_stash_sec, list_stash_code, roseid, ndims)
 
 def multi_level(start_day: int, region: str):
-    roseid='u-bj775'
+    # roseid='u-bj775'
+    roseid='u-br800'
     #roseid='u-bj967'
 
     # Probably worth ignoring the first 24 hours of the simulation
@@ -120,10 +122,14 @@ def multi_level(start_day: int, region: str):
     # list_stash_sec=[16,12,0,12]
     # list_stash_code=[4,181,10,182]
     # list_stream=['c','d','c','d']
-    list_stash_sec=[0,16,12,0,12,0,12,0,12,0,12,0,12]
-    list_stash_code=[4,4,181,10,182,254,183,12,184,272,189,273,190]
-    list_stream=['c','b','d','c','d','c','d','c','d','c','d','c','d']
-    
+    # Land and Ocean
+    # list_stash_sec=[0,16,12,0,12,0,12,0,12,0,12,0,12]
+    # list_stash_code=[4,4,181,10,182,254,183,12,184,272,189,273,190]
+    # list_stream=['c','b','d','c','d','c','d','c','d','c','d','c','d']
+    # Ocean only runs
+    list_stash_sec = [0, 16, 0, 0, 0, 0, 0]
+    list_stash_code = [4, 4, 10, 254, 12, 272, 273]
+    list_stream = ['c', 'd', 'c', 'c', 'c', 'c', 'c']
     ###############################################################
     # Below here are things you probably will not need to change.
     ###############################################################
@@ -144,7 +150,8 @@ def multi_level(start_day: int, region: str):
 
 def advect_process(start_day, region):
 
-    roseid='u-bj775'
+    # roseid='u-bj775'
+    roseid='u-br800'
     #roseid='u-bj967'
 
     # Probably worth ignoring the first 24 hours of the simulation
