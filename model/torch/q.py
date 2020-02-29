@@ -210,10 +210,10 @@ if __name__ == "__main__":
     validation_loss = []
     for epoch in range(1, args.epochs + 1):
         train_loss = train(epoch)
-        validation_loss = validate(epoch)
+        validate_loss = validate(epoch)
         scheduler.step()    
         training_loss.append(train_loss)
-        validation_loss.append(validation_loss)
+        validation_loss.append(validate_loss)
     # Save the final model
     torch.save({'epoch':epoch,
                 'model_state_dict':mlp.state_dict(),

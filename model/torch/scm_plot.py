@@ -155,7 +155,7 @@ def model_loss(model_file):
     """
     checkpoint = torch.load(model_file, map_location=torch.device('cpu'))
     train_loss = checkpoint['training_loss']
-    test_loss = checkpoint['testing_loss']
+    test_loss = checkpoint['validation_loss']
     fig, ax = plt.subplots(1,1,figsize=(14, 10))
     ax.plot(train_loss,'.-',label='Train Loss')
     ax.plot(test_loss,'.-',label='Test Loss')
