@@ -3,6 +3,8 @@ import iris
 import numpy as np
 import os
 
+suite_id="u-br800"
+
 def array_diff(inarray: np.array, step: int, axis: int=0):
     """
     Calculate element wise difference for 
@@ -42,15 +44,15 @@ def t_tendency(region: str, subdomain: int, in_prefix:str="30"):
     We want d(q_phi(t_n))/dt which is the physics
     driven change to the quantity
     """
-    t_phys_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(99904).zfill(5))
+    t_phys_location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(99904).zfill(5), suite_id)
     
     try:
         os.makedirs(t_phys_location)
     except OSError:
         pass
     
-    t_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(4).zfill(5))
-    tadv_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(99181).zfill(5))
+    t_location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(4).zfill(5), suite_id)
+    tadv_location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(99181).zfill(5), suite_id)
     t_file="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3),str(4).zfill(5))
     tadv_file="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3),str(99181).zfill(5))
     
@@ -90,14 +92,14 @@ def q_tendency_qdot(region: str, subdomain: int, in_prefix: str="30"):
     We want d(q_phi(t_n))/dt which is the physics
     driven change to the quantity
     """
-    q_phys_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(99983).zfill(5))
+    q_phys_location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(99983).zfill(5), suite_id)
     try:
         os.makedirs(q_phys_location)
     except OSError:
         pass
     
-    q_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(99821).zfill(5))
-    qadv_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(99182).zfill(5))
+    q_location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(99821).zfill(5), suite_id)
+    qadv_location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(99182).zfill(5), suite_id)
     
     q_file="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3), str(99821).zfill(5))
     qadv_file="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3),str(99182).zfill(5))

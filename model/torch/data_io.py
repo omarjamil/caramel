@@ -12,12 +12,33 @@ import h5py
 
 # locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain"}
 
+class Data_IO_validation(object):
+    def __init__(self, region, locations):
+        self.region = region
+        self.locations = locations
+
+    def get_data(self, subdomain):   
+        dataset_file = "{0}/validation_{1}/validation_data_{1}_{2}.hdf5".format(self.locations["train_test_datadir"],self.region, str(subdomain).zfill(3))
+        print("Reading dataset file: {0}".format(dataset_file))
+        dataset=h5py.File(dataset_file,'r')
+
+        self.q_tot_test = dataset["q_tot_test"]
+        self.q_tot_adv_test = dataset["q_adv_test"]
+        self.theta_test = dataset["air_potential_temperature_test"]
+        self.theta_adv_test = dataset["t_adv_test"]
+        self.sw_toa_test = dataset["toa_incoming_shortwave_flux_test"]
+        self.shf_test = dataset["surface_upward_sensible_heat_flux_test"]
+        self.lhf_test = dataset["surface_upward_latent_heat_flux_test"]
+        self.theta_phys_test = dataset["t_phys_test"]
+        self.qphys_test = dataset["q_phys_test"]
+
 class Data_IO(object):
     def __init__(self, region, locations):
         self.region = region
         self.locations = locations
         
-        dataset_file = "{0}/train_test_data_levs_{1}_std.hdf5".format(self.locations["train_test_datadir"],self.region)
+        dataset_file = "{0}/train_test_data_levs_{1}.hdf5".format(self.locations["train_test_datadir"],self.region)
+        print("Reading dataset file: {0}".format(dataset_file))
         dataset=h5py.File(dataset_file,'r')
        
         self.q_tot_train = dataset["q_tot_train"]

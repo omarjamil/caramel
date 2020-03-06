@@ -9,7 +9,7 @@ import os
 Datafeed for ML model
 """
 crm_data = "/project/spice/radiation/ML/CRM/data"
-data_path = "{0}/u-bj775_".format(crm_data)
+data_path = "{0}/u-bj775".format(crm_data)
 
 def nooverlap_smooth(arrayin, window=6):
     """
@@ -162,6 +162,7 @@ def read_combined_qT(region: str):
             qnext_ = np.concatenate((qnext_,qnext),axis=0)
     return q_,t_,qnext_
 
+
 def model_trainining_ios(region: str):
     """
     Reading ML training inputs and outputs
@@ -222,22 +223,34 @@ def standardise_data(dataset: np.array([]), save_fname: str="std_fit.joblib"):
     joblib.dump(scaler_fit,save_location+save_fname)
     return scaler_fit
 
-def standardise_data_transform(dataset: np.array([]), region: str, save_fname: str="std_fit.joblib", axis: int=0):
+def standardise_data_transform(dataset: np.array([]), region: str, save_fname: str="std_fit.joblib", levs: bool=True, robust: bool=False):
     """
     Manually standardise data based instead of using sklearn standarad scaler
     """
-    save_location = "{0}/models/normaliser/{1}/".format(crm_data,region)
+    save_location = "{0}/models/normaliser/{1}_levs/".format(crm_data,region)
     try:
         os.makedirs(save_location)
     except OSError:
         pass
-    if axis == 0:
-        mean = np.array([np.mean(dataset, axis=axis)])
-        scale = np.array([np.std(dataset, axis=axis)])
+    if levs:
+        if robust:
+            mean = np.median(dataset, axis=0)
+            q2 = np.quantile(dataset, 0.66, axis=0)
+            q1 = np.quantile(dataset, 0.33, axis=0)
+            scale = q2 - q1
+        else:
+            mean = np.mean(dataset, axis=0)
+            scale = np.std(dataset, axis=0)
     else:
         # Mean across the entire dataset and levels
-        mean = np.array([np.mean(dataset)])
-        scale = np.array([np.std(dataset)])
+        if robust:
+            mean = np.array([np.median(dataset)])
+            q2 = np.array([np.quantile(dataset, 0.66)])
+            q1 = np.array([np.quantile(dataset, 0.33)])
+            scale = q2 - q1
+        else:
+            mean = np.array([np.mean(dataset)])
+            scale = np.array([np.std(dataset)])
     params = {"mean_":mean, "scale_":scale}
     with h5py.File(save_location+save_fname.replace('joblib','hdf5'), 'w') as hfile:
         for k, v in params.items():  
@@ -356,7 +369,9 @@ def driving_data_all_std(region: str):
 
 
     #return qtot_raw, qphys_tot_raw, qadv_raw, qadv_dot_raw, qadd_raw, qadd_dot_raw, tadd_raw, tadd_dot_raw, T_raw, tphys_raw, tadv_raw, tadv_dot_raw, sw_toa_down_raw, latent_up_raw, sensible_up_raw, mslp_raw, sw_toa_up_raw, lw_toa_up_raw, sw_down_raw, lw_down_raw, rain_raw, snow_raw, qtot_test_raw, qphys_tot_test_raw, qadv_test_raw, qadv_dot_test_raw, qadd_test_raw, qadd_dot_test_raw, tadd_test_raw, tadd_dot_test_raw, T_test_raw, tphys_test_raw, tadv_test_raw, tadv_dot_test_raw, sw_toa_down_test_raw, latent_up_test_raw, sensible_up_test_raw, mslp_test_raw, sw_toa_up_test_raw, lw_toa_up_test_raw, sw_down_test_raw, lw_down_test_raw, rain_test_raw, snow_test_raw, std_qtot, std_qphys_tot, std_qadv, std_qadv_dot, std_qadd, std_qadd_dot, std_tadd, std_tadd_dot, std_T, std_tphys, std_tadv, std_tadv_dot, std_sw_toa_down,std_latent_up,std_sensible_up, std_mslp, std_sw_toa_up, std_lw_toa_up, std_sw_down, std_lw_down, std_rain, std_snow, std_qtot_test, std_qphys_tot_test, std_qadv_test, std_qadv_dot_test, std_qadd_test, std_qadd_dot_test, std_tadd_test, std_tadd_dot_test, std_T_test,std_tphys_test,std_tadv_test, std_tadv_dot_test, std_sw_toa_down_test,std_latent_up_test,std_sensible_up_test, std_mslp_test, std_sw_toa_up_test, std_lw_toa_up_test, std_sw_down_test, std_lw_down_test, std_rain_test, std_snow_test
-    variables = {"qtot":std_qtot,"qtot_next":std_qtot_next, "qtot_s":std_qtot_s,"qtot_next_s":std_qtot_next_s, "qphys_dot":std_qphys_dot, "qphys_dot_s":std_qphys_dot_s, "qadv_dot":std_qadv_dot, "qadv_dot_s":std_qadv_dot_s,  "qadd_dot":std_qadd_dot, "qadd_dot_s":std_qadd_dot_s, "tadd_dot":std_tadd_dot, "T":std_T, "tphys":std_tphys,  "tadv_dot":std_tadv_dot, "sw_toa_down":std_sw_toa_down, "latent_up":std_latent_up, "sensible_up":std_sensible_up, "mslp":std_mslp, "sw_toa_up":std_sw_toa_up, "lw_toa_up":std_lw_toa_up, "sw_down":std_sw_down, "lw_down":std_lw_down, "rain":std_rain, "snow":std_snow, "qtot_test":std_qtot_test, "qtot_next_test":std_qtot_next_test, "qtot_test_s":std_qtot_test_s, "qtot_next_test_s":std_qtot_next_test_s,  "qphys_dot_test":std_qphys_dot_test, "qphys_dot_test_s":std_qphys_dot_test_s,  "qadv_dot_test":std_qadv_dot_test, "qadv_dot_test_s":std_qadv_dot_test_s,  "qadd_dot_test":std_qadd_dot_test, "qadd_dot_test_s":std_qadd_dot_test_s, "tadd_dot_test":std_tadd_dot_test, "T_test":std_T_test, "tphys_test":std_tphys_test,  "tadv_dot_test":std_tadv_dot_test, "sw_toa_down_test":std_sw_toa_down_test, "latent_up_test":std_latent_up_test, "sensible_up_test":std_sensible_up_test, "mslp_test":std_mslp_test, "sw_toa_up_test":std_sw_toa_up_test, "lw_toa_up_test":std_lw_toa_up_test, "sw_down_test":std_sw_down_test, "lw_down_test":std_lw_down_test, "rain_test":std_rain_test, "snow_test":std_snow_test, "qtot_raw":qtot_raw, "qtot_raw_s":qtot_raw_s,  "qphys_dot_raw":qphys_dot_raw, "qphys_dot_raw_s":qphys_dot_raw_s,  "qadv_dot_raw":qadv_dot_raw, "qadv_dot_raw_s":qadv_dot_raw_s,  "qadd_dot_raw":qadd_dot_raw, "qadd_dot_raw_s":qadd_dot_raw_s,  "tadd_dot_raw":tadd_dot_raw, "T_raw":T_raw, "tphys_raw":tphys_raw,  "tadv_dot_raw":tadv_dot_raw, "sw_toa_down_raw":sw_toa_down_raw, "latent_up_raw":latent_up_raw, "sensible_up_raw":sensible_up_raw, "mslp_raw":mslp_raw, "sw_toa_up_raw":sw_toa_up_raw, "lw_toa_up_raw":lw_toa_up_raw, "sw_down_raw":sw_down_raw, "lw_down_raw":lw_down_raw, "rain_raw":rain_raw, "snow_raw":snow_raw, "qtot_test_raw":qtot_test_raw, "qtot_test_raw_s":qtot_test_raw_s, "qphys_dot_test_raw":qphys_dot_test_raw, "qphys_dot_test_raw_s":qphys_dot_test_raw_s,  "qadv_dot_test_raw":qadv_dot_test_raw, "qadv_dot_test_raw_s":qadv_dot_test_raw_s,  "qadd_dot_test_raw":qadd_dot_test_raw, "qadd_dot_test_raw_s":qadd_dot_test_raw_s,  "tadd_dot_test_raw":tadd_dot_test_raw, "T_test_raw":T_test_raw, "tphys_test_raw":tphys_test_raw,  "tadv_dot_test_raw":tadv_dot_test_raw, "sw_toa_down_test_raw":sw_toa_down_test_raw, "latent_up_test_raw":latent_up_test_raw, "sensible_up_test_raw":sensible_up_test_raw, "mslp_test_raw":mslp_test_raw, "sw_toa_up_test_raw":sw_toa_up_test_raw, "lw_toa_up_test_raw":lw_toa_up_test_raw, "sw_down_test_raw":sw_down_test_raw, "lw_down_test_raw":lw_down_test_raw, "rain_test_raw":rain_test_raw, "snow_test_raw":snow_test_raw}
+    # variables = {"qtot":std_qtot,"qtot_next":std_qtot_next, "qtot_s":std_qtot_s,"qtot_next_s":std_qtot_next_s, "qphys_dot":std_qphys_dot, "qphys_dot_s":std_qphys_dot_s, "qadv_dot":std_qadv_dot, "qadv_dot_s":std_qadv_dot_s,  "qadd_dot":std_qadd_dot, "qadd_dot_s":std_qadd_dot_s, "tadd_dot":std_tadd_dot, "T":std_T, "tphys":std_tphys,  "tadv_dot":std_tadv_dot, "sw_toa_down":std_sw_toa_down, "latent_up":std_latent_up, "sensible_up":std_sensible_up, "mslp":std_mslp, "sw_toa_up":std_sw_toa_up, "lw_toa_up":std_lw_toa_up, "sw_down":std_sw_down, "lw_down":std_lw_down, "rain":std_rain, "snow":std_snow, "qtot_test":std_qtot_test, "qtot_next_test":std_qtot_next_test, "qtot_test_s":std_qtot_test_s, "qtot_next_test_s":std_qtot_next_test_s,  "qphys_dot_test":std_qphys_dot_test, "qphys_dot_test_s":std_qphys_dot_test_s,  "qadv_dot_test":std_qadv_dot_test, "qadv_dot_test_s":std_qadv_dot_test_s,  "qadd_dot_test":std_qadd_dot_test, "qadd_dot_test_s":std_qadd_dot_test_s, "tadd_dot_test":std_tadd_dot_test, "T_test":std_T_test, "tphys_test":std_tphys_test,  "tadv_dot_test":std_tadv_dot_test, "sw_toa_down_test":std_sw_toa_down_test, "latent_up_test":std_latent_up_test, "sensible_up_test":std_sensible_up_test, "mslp_test":std_mslp_test, "sw_toa_up_test":std_sw_toa_up_test, "lw_toa_up_test":std_lw_toa_up_test, "sw_down_test":std_sw_down_test, "lw_down_test":std_lw_down_test, "rain_test":std_rain_test, "snow_test":std_snow_test, "qtot_raw":qtot_raw, "qtot_raw_s":qtot_raw_s,  "qphys_dot_raw":qphys_dot_raw, "qphys_dot_raw_s":qphys_dot_raw_s,  "qadv_dot_raw":qadv_dot_raw, "qadv_dot_raw_s":qadv_dot_raw_s,  "qadd_dot_raw":qadd_dot_raw, "qadd_dot_raw_s":qadd_dot_raw_s,  "tadd_dot_raw":tadd_dot_raw, "T_raw":T_raw, "tphys_raw":tphys_raw,  "tadv_dot_raw":tadv_dot_raw, "sw_toa_down_raw":sw_toa_down_raw, "latent_up_raw":latent_up_raw, "sensible_up_raw":sensible_up_raw, "mslp_raw":mslp_raw, "sw_toa_up_raw":sw_toa_up_raw, "lw_toa_up_raw":lw_toa_up_raw, "sw_down_raw":sw_down_raw, "lw_down_raw":lw_down_raw, "rain_raw":rain_raw, "snow_raw":snow_raw, "qtot_test_raw":qtot_test_raw, "qtot_test_raw_s":qtot_test_raw_s, "qphys_dot_test_raw":qphys_dot_test_raw, "qphys_dot_test_raw_s":qphys_dot_test_raw_s,  "qadv_dot_test_raw":qadv_dot_test_raw, "qadv_dot_test_raw_s":qadv_dot_test_raw_s,  "qadd_dot_test_raw":qadd_dot_test_raw, "qadd_dot_test_raw_s":qadd_dot_test_raw_s,  "tadd_dot_test_raw":tadd_dot_test_raw, "T_test_raw":T_test_raw, "tphys_test_raw":tphys_test_raw,  "tadv_dot_test_raw":tadv_dot_test_raw, "sw_toa_down_test_raw":sw_toa_down_test_raw, "latent_up_test_raw":latent_up_test_raw, "sensible_up_test_raw":sensible_up_test_raw, "mslp_test_raw":mslp_test_raw, "sw_toa_up_test_raw":sw_toa_up_test_raw, "lw_toa_up_test_raw":lw_toa_up_test_raw, "sw_down_test_raw":sw_down_test_raw, "lw_down_test_raw":lw_down_test_raw, "rain_test_raw":rain_test_raw, "snow_test_raw":snow_test_raw}
+
+    variables = {"q_tot_train":std_qtot,"q_adv_train":std_qadv_dot, "air_potential_temperature_train":std_T, "t_adv_train":std_tadv_dot, "toa_incoming_shortwave_flux_train":std_sw_toa_down, "surface_upward_sensible_heat_flux_train":std_sensible_up, "surface_upward_latent_heat_flux_train":std_latent_up, "t_phys_train":std_tphys, "q_phys_train":std_qphys_dot, "q_tot_test":std_qtot_test,"q_adv_test":std_qadv_dot_test, "air_potential_temperature_test":std_T_test, "t_adv_test":std_tadv_dot_test, "toa_incoming_shortwave_flux_test":std_sw_down_test, "surface_upward_sensible_heat_flux_test":std_sensible_up_test, "surface_upward_latent_heat_flux_test":std_latent_up_test, "t_phys_test":std_tphys_test, "q_phys_test":std_qphys_dot_test}
 
     return variables
 
@@ -390,7 +405,7 @@ def train_test_data_save_all(region: str):
     
    
 if __name__ == "__main__":
-    region = "9999NEWS"
+    region = "50S69W"
     train_test_data_save_all(region)
     
     # qphys,qadv,tphys,tadv = read_tendencies(region)

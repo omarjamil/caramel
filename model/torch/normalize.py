@@ -3,7 +3,7 @@ import h5py
 
 class Normalizers(object):
     def __init__(self, locations):
-        
+        print("Initialising normaliser to location: {0}".format(locations['normaliser_loc']))
         self.qphys_normaliser_std = h5py.File('{0}/q_phys.hdf5'.format(locations['normaliser_loc']),'r')
         self.q_normaliser_std = h5py.File('{0}/q_tot.hdf5'.format(locations['normaliser_loc']),'r')
         self.qadv_normaliser_std = h5py.File('{0}/q_adv.hdf5'.format(locations['normaliser_loc']),'r')

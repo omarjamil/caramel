@@ -11,6 +11,8 @@ import gc
 import iris
 import tendencies
 
+suite_id="u-br800"
+
 def combine_q_tednencies(region):
     """
     combine qcl, qv, qcf, qg, qrain tendencies into a single one
@@ -25,9 +27,9 @@ def combine_q_tednencies(region):
     adv_cubelist = []
     # Read in the first q stash and then append to that data array in the second loop
     for subdomain in range(64):
-        q = "/project/spice/radiation/ML/CRM/data/u-bj775/{2}/concat_stash_{1}/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(10).zfill(5), region)
-        q_phys = "/project/spice/radiation/ML/CRM/data/u-bj775/{2}/tend_q_{1}/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_q_phys_{1}.nc".format(str(subdomain).zfill(3), str(10).zfill(5), region)
-        q_adv = "/project/spice/radiation/ML/CRM/data/u-bj775/{2}/concat_stash_{1}/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(12182).zfill(5), region)
+        q = "/project/spice/radiation/ML/CRM/data/{3}/{2}/concat_stash_{1}/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(10).zfill(5), region,suite_id)
+        q_phys = "/project/spice/radiation/ML/CRM/data/{3}/{2}/tend_q_{1}/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_q_phys_{1}.nc".format(str(subdomain).zfill(3), str(10).zfill(5), region, suite_id)
+        q_adv = "/project/spice/radiation/ML/CRM/data/{3}/{2}/concat_stash_{1}/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(12182).zfill(5), region, suite_id)
         phys_cubelist.append(iris.load_cube(q_phys))
         adv_cubelist.append(iris.load_cube(q_adv))
         q_cubelist.append(iris.load_cube(q))
@@ -39,9 +41,9 @@ def combine_q_tednencies(region):
             q_phys_file_name = "30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_q_phys_{1}.nc".format(str(subdomain).zfill(3), str(q).zfill(5))
             q_adv_file_name = "30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(qadv).zfill(5))
 
-            q_file = "/project/spice/radiation/ML/CRM/data/u-bj775/{2}/concat_stash_{0}/{1}".format(str(q).zfill(5),q_file_name, region)
-            q_phys_file = "/project/spice/radiation/ML/CRM/data/u-bj775/{2}/tend_q_{0}/{1}".format(str(q).zfill(5),q_phys_file_name, region)
-            q_adv_file = "/project/spice/radiation/ML/CRM/data/u-bj775/{2}/concat_stash_{0}/{1}".format(str(qadv).zfill(5),q_adv_file_name, region)
+            q_file = "/project/spice/radiation/ML/CRM/data/{3}/{2}/concat_stash_{0}/{1}".format(str(q).zfill(5),q_file_name, region, suite_id)
+            q_phys_file = "/project/spice/radiation/ML/CRM/data/{3}/{2}/tend_q_{0}/{1}".format(str(q).zfill(5),q_phys_file_name, region, suite_id)
+            q_adv_file = "/project/spice/radiation/ML/CRM/data/{3}/{2}/concat_stash_{0}/{1}".format(str(qadv).zfill(5),q_adv_file_name, region, suite_id)
 
             q_cube = iris.load_cube(q_file)
             qphys_cube = iris.load_cube(q_phys_file)
@@ -65,9 +67,9 @@ def combine_q_tednencies(region):
         p.attributes['STASHES'] = '00010,00254,00012,00272,00273'
         a.attributes['STASHES'] = '12182,12183,12184,12189,12190'
         print("Saving q total files for region {0} subdomain {1}".format(region, i))
-        iris.fileformats.netcdf.save(p,"/project/spice/radiation/ML/CRM/data/u-bj775/{1}/tend_qphys_tot/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_qphys_tot.nc".format(str(i).zfill(3), region))
-        iris.fileformats.netcdf.save(a,"/project/spice/radiation/ML/CRM/data/u-bj775/{1}/tend_qadv_tot/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_qadv_tot.nc".format(str(i).zfill(3), region))
-        iris.fileformats.netcdf.save(q,"/project/spice/radiation/ML/CRM/data/u-bj775/{1}/q_tot/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_q_tot.nc".format(str(i).zfill(3), region))
+        iris.fileformats.netcdf.save(p,"/project/spice/radiation/ML/CRM/data/{2}/{1}/tend_qphys_tot/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_qphys_tot.nc".format(str(i).zfill(3), region, suite_id))
+        iris.fileformats.netcdf.save(a,"/project/spice/radiation/ML/CRM/data/{2}/{1}/tend_qadv_tot/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_qadv_tot.nc".format(str(i).zfill(3), region, suite_id))
+        iris.fileformats.netcdf.save(q,"/project/spice/radiation/ML/CRM/data/{2}/{1}/q_tot/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_q_tot.nc".format(str(i).zfill(3), region, suite_id))
         i += 1
 
 def combine_q(region, in_prefix="30"):
@@ -81,18 +83,18 @@ def combine_q(region, in_prefix="30"):
     q_cubelist = []
     # Read in the first q stash 00010 and then append to that data array in the second loop
     for subdomain in range(64):
-        q = "/project/spice/radiation/ML/CRM/data/u-bj775_/{2}/concat_stash_{1}/{3}_days_{2}_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(10).zfill(5), region, in_prefix)
+        q = "/project/spice/radiation/ML/CRM/data/{4}/{2}/concat_stash_{1}/{3}_days_{2}_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(10).zfill(5), region, in_prefix, suite_id)
         q_cubelist.append(iris.load_cube(q))
     
     for q in q_stashes:
         print("Processing STASHES {0}".format(q))
         for subdomain in range(64):
             q_file_name = "{3}_days_{2}_km1p5_ra1m_30x30_subdomain_{0}_{1}.nc".format(str(subdomain).zfill(3), str(q).zfill(5),region,in_prefix)
-            q_file = "/project/spice/radiation/ML/CRM/data/u-bj775_/{2}/concat_stash_{0}/{1}".format(str(q).zfill(5),q_file_name, region)
+            q_file = "/project/spice/radiation/ML/CRM/data/{3}/{2}/concat_stash_{0}/{1}".format(str(q).zfill(5),q_file_name, region, suite_id)
             q_cube = iris.load_cube(q_file)
             (q_cubelist[subdomain]).data = q_cubelist[subdomain].data + q_cube.data
 
-    save_path="/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_99821/".format(region)         
+    save_path="/project/spice/radiation/ML/CRM/data/{1}/{0}/concat_stash_99821/".format(region, suite_id)         
     try:
         os.makedirs(save_path)
     except OSError:
@@ -118,7 +120,7 @@ def check_files_exist(region: str, date: datetime, subdomain: int, stash: int):
     analysis_time=['0000','1200']
     list_of_files = []
     datestr=date.strftime("%Y%m%d")
-    location='/net/spice/project/radiation/ML/CRM/data/u-bj775_/{0}/stash_{1}/'.format(region, str(stash).zfill(5))
+    location='/net/spice/project/radiation/ML/CRM/data/{2}/{0}/stash_{1}/'.format(region, str(stash).zfill(5), suite_id)
     # location="/project/spice/radiation/ML/CRM/data/u-bj775/{0}/adv/netcdf/advect_incr/".format(region)
     # Create a list of files to read and then subsequently combine
     for atime in analysis_time:
@@ -143,8 +145,8 @@ def combine_files_per_subdomain(region: str, date: datetime, subdomain: int, sta
     analysis_time=['0000','1200']
     list_of_files = []
     datestr=date.strftime("%Y%m%d")
-    location='/net/spice/project/radiation/ML/CRM/data/u-bj775_/{0}/stash_{1}/'.format(region, str(stash).zfill(5))
-    out_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5))
+    location='/net/spice/project/radiation/ML/CRM/data/{2}/{0}/stash_{1}/'.format(region, str(stash).zfill(5), suite_id)
+    out_location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5), suite_id)
     # if not os.path.exists(out_location): This can create race condition
     try:
         os.makedirs(out_location)
@@ -180,7 +182,7 @@ def combine_day_tseries(start_date: datetime, end_date: datetime, region: str, s
     tdelta = datetime.timedelta(days=1)
     filelist = []
     running_date = start_date
-    location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5))
+    location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5), suite_id)
     while running_date <= end_date:
         d = running_date.strftime('%Y%m%d')
         running_date += tdelta
@@ -196,7 +198,7 @@ def combine_day_tseries(start_date: datetime, end_date: datetime, region: str, s
         
     # If nothing went wrong above, let's combine the files
     out_filename =  "{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(len(filelist),region,str(subdomain).zfill(3),str(stash).zfill(5))
-    out_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5))
+    out_location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5), suite_id)
     clist = []
     for filename in filelist:
         print("Reading {0}".format(filename))
@@ -213,7 +215,7 @@ def combine_day_tseries_dayrange(region: str, subdomain: int, stash: int, days_r
     # First create a list of all the files that are going to be
     # combined into a single timeseries
     filelist = []
-    location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5))
+    location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5), suite_id)
 
     for day in days_range:
         date = datetime.date(2017, 1, day)
@@ -229,8 +231,9 @@ def combine_day_tseries_dayrange(region: str, subdomain: int, stash: int, days_r
             raise ValueError("File {0} does not exist".format(f))
         
     # If nothing went wrong above, let's combine the files
-    out_filename =  "{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format("031525",region,str(subdomain).zfill(3),str(stash).zfill(5))
-    out_location='/project/spice/radiation/ML/CRM/data/u-bj775_/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5))
+    prefix=''.join([str(i).zfill(2) for i in days_range])
+    out_filename =  "{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(prefix,region,str(subdomain).zfill(3),str(stash).zfill(5))
+    out_location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5), suite_id)
     clist = []
     for filename in filelist:
         print("Reading {0}".format(filename))
@@ -266,7 +269,7 @@ def main_combine_files(region: str, stashes: list, days_range=range(1,32)):
     #print(day)
     #main_combine_files(day)
         
-def main_combine_day_tseries(region: str, stashes: list):
+def main_combine_day_tseries(region: str, stashes: list, days_range=[3,4,5]):
     # region='10N160E'
     # Start from day 2 to ignore spin up day 1
     start_date = datetime.datetime(2017,1,2)
@@ -275,7 +278,7 @@ def main_combine_day_tseries(region: str, stashes: list):
     for stash in stashes:
         for subdomain in range(64):
             # combine_day_tseries(start_date, end_date, region, subdomain, stash)
-            combine_day_tseries_dayrange(region, subdomain, stash, days_range=[3,15,25])
+            combine_day_tseries_dayrange(region, subdomain, stash, days_range=days_range)
 
 
 def calc_tendencies(region: str, in_prefix: str="30"):
@@ -296,11 +299,11 @@ if __name__ == "__main__":
     if argument == '1':
         main_check_files_exist(region, stashes)
     elif argument == '2':
-        main_combine_files(region, stashes, days_range=[3,15,25])
+        main_combine_files(region, stashes, days_range=[3,4,5])
     elif argument == '3':
-        main_combine_day_tseries(region, stashes)
+        main_combine_day_tseries(region, stashes, days_range=[3,4,5])
     elif argument == '4':
-        combine_q(region, in_prefix="031525")
+        combine_q(region, in_prefix="030405")
     elif argument == '5':
-        calc_tendencies(region, in_prefix="031525")
+        calc_tendencies(region, in_prefix="030405")
     

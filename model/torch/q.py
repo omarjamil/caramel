@@ -12,6 +12,13 @@ import model
 import data_io
 import normalize
 
+def minkowski_error(prediction, target, minkowski_parameter=1.5):
+    """
+    Minkowski error to be better deal with outlier errors
+    """
+    loss = torch.mean((torch.abs(prediction - target))**minkowski_parameter)
+    return loss
+
 parser = argparse.ArgumentParser(description='Train Q')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 128)')
@@ -53,7 +60,11 @@ in_features, nb_classes=123,30
 nb_hidden_layer = args.nhdn_layers
 hidden_size = 256
 mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
-model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}.tar".format(str(nb_hidden_layer).zfill(3),
+# mlp = model.MLP_BN(in_features, nb_classes, nb_hidden_layer, hidden_size)
+pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
+print("Number of traninable parameter: {0}".format(pytorch_total_params))
+
+model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_mse_vlr.tar".format(str(nb_hidden_layer).zfill(3),
                                                                                     str(in_features).zfill(3),
                                                                                     str(nb_classes).zfill(3),
                                                                                     str(hidden_size).zfill(4),
@@ -64,7 +75,8 @@ optimizer =  torch.optim.Adam(mlp.parameters(), lr=1.e-3)
 # optimizer =  torch.optim.SGD(mlp.parameters(), lr=0.01)
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
 loss_function = torch.nn.MSELoss()
-
+# loss_function = torch.nn.L1Loss()
+# loss_function = minkowski_error
 # Get the data
 if args.isambard:
     locations={ "train_test_datadir":"/home/mo-ojamil/ML/CRM/data",
@@ -104,6 +116,8 @@ nn_data = data_io.Data_IO(region, locations)
 
 qt_train  = np.concatenate((nn_data.q_tot_train[:,:nlevs], nn_data.q_tot_adv_train[:,:nlevs], nn_data.theta_train[:,:nlevs], nn_data.theta_adv_train[:,:nlevs], nn_data.sw_toa_train, nn_data.lhf_train, nn_data.shf_train),axis=1)
 qt_test  = np.concatenate((nn_data.q_tot_test[:,:nlevs], nn_data.q_tot_adv_test[:,:nlevs], nn_data.theta_test[:,:nlevs], nn_data.theta_adv_test[:,:nlevs], nn_data.sw_toa_test, nn_data.lhf_test, nn_data.shf_test),axis=1)
+# qt_train  = np.concatenate((nn_data.q_tot_train[:,:nlevs], nn_data.theta_train[:,:nlevs], nn_data.sw_toa_train, nn_data.lhf_train, nn_data.shf_train),axis=1)
+# qt_test  = np.concatenate((nn_data.q_tot_test[:,:nlevs], nn_data.theta_test[:,:nlevs], nn_data.sw_toa_test, nn_data.lhf_test, nn_data.shf_test),axis=1)
 
 qt_train_out = nn_data.qphys_train[:,:nlevs]
 qt_test_out = nn_data.qphys_test[:,:nlevs]

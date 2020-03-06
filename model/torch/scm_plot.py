@@ -18,8 +18,8 @@ def visualise_scm_predictions_q(np_file, figname):
     ax = axs[0]
     vmin,vmax=np.min(q_),np.max(q_)
     # print(vmin,vmax)
-    c = ax.pcolor(q_ml[:,:], vmin=vmin, vmax=vmax)
-    # c = ax.pcolor(q_ml[:,:])
+    # c = ax.pcolor(q_ml[:,:], vmin=vmin, vmax=vmax)
+    c = ax.pcolor(q_ml[:,:])
     ax.set_title('q (ML)')
     fig.colorbar(c,ax=ax)
 
@@ -51,11 +51,11 @@ def visualise_tseries(npfile,level):
     qphys_ml = data['qphys_ml'][:]
     qphys = data['qphys'][:]
     qadv_dot = data['qadv_dot'][:]
-    qadv_dot_un = data['qadv_dot_raw'][:]*600.
+    qadv_dot_un = data['qadv_dot_inv'][:]
     q_sane = data['q_sane'][:]
     qphys_drift = data['qphys_drift'][:]
     qphys_pred_drift = data['qphys_pred_drift'][:]
-    tadv_dot = data['tadv_dot'][:]
+    # tadv_dot = data['tadv_dot'][:]
 
     fig, axs = plt.subplots(3,1,figsize=(14, 10),sharex=True)
     ax = axs[0]
@@ -108,21 +108,32 @@ def visualise_tseries_qphys(np_file,level):
     data = h5py.File(np_file, 'r')
     qphys_ml = data['qphys_predict'][:6000,:]
     qphys = data['qphys_test'][:6000,:]
-    fig, axs = plt.subplots(2,1,figsize=(14, 10), sharex=False)
-    ax = axs[0]
-    ax.plot(qphys_ml[:,level],'.-',label='qphys (ML)')
-    ax.plot(qphys[:,level],'.',label='qphys')
-    ax.set_title('Level {0}'.format(level))
-    ax.legend()
+    fig = plt.figure(figsize=(14,10))
+    # fig, axs = plt.subplots(3,1,figsize=(14, 10), sharex=True)
+    # ax0 = axs[0]
+    ax0 = fig.add_subplot(311)
+    ax0.plot(qphys_ml[:,level],'-.',label='qphys (ML)')
+    ax0.plot(qphys[:,level],'-.',label='qphys')
+    ax0.set_title('Level {0}'.format(level))
+    ax0.legend()
 
-    ax = axs[1]
-    ax.scatter(qphys[:,level], qphys_ml[:,level])
-    ax.plot(qphys[:,level],qphys[:,level],'k-')
-    ax.set_xlabel('UM')
-    ax.set_ylabel('ML')
-    # ax.plot(qphys_ml[:,level]-qphys[:,level],'.-',label='qphys (ML) -  qphys')
-    ax.set_title('Level {0}'.format(level))
-    # ax.legend()
+    # ax1 = axs[1]
+    ax1 = fig.add_subplot(312,sharex=ax0)
+    ax1.plot(qphys_ml[:,level]-qphys[:,level],'.-',label='qphys (ML) -  qphys')
+    ax1.set_title('Level {0}'.format(level))
+    ax1.legend()
+
+    # ax2 = axs[2]
+    ax2 = fig.add_subplot(313)
+    ax2.scatter(qphys[:,level], qphys_ml[:,level])
+    ax2.plot(qphys[:,level],qphys[:,level],'k-')
+    xmin, xmax = np.min(qphys[:,level]), np.max(qphys[:,level])
+    ymin, ymax = np.min(qphys_ml[:,level]), np.max(qphys_ml[:,level])
+    ax2.set_xlim([xmin, xmax])
+    ax2.set_ylim([ymin, ymax])
+    ax2.set_xlabel('UM')
+    ax2.set_ylabel('ML')
+    ax2.set_title('Level {0}'.format(level))
     
     plt.show()
 
@@ -159,7 +170,10 @@ def model_loss(model_file):
     fig, ax = plt.subplots(1,1,figsize=(14, 10))
     ax.plot(train_loss,'.-',label='Train Loss')
     ax.plot(test_loss,'.-',label='Test Loss')
-    ax.set_title('Model loss')
+    plt_title = model_file.split('/')[-1]
+    ax.set_title('{0}'.format(plt_title))
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
     ax.legend()
     plt.show()
 
@@ -190,7 +204,7 @@ def average_tseries(np_file):
         plt.show()
 
 if __name__ == "__main__":
-    model_name="q_qadv_t_tadv_swtoa_lhf_shf_qphys_006_lyr_123_in_030_out_0256_hdn_100_epch_02000_btch_9999NEWS"
+    model_name="q_qadv_t_tadv_swtoa_lhf_shf_qphys_009_lyr_123_in_030_out_0256_hdn_050_epch_02000_btch_9999LEAU_mae_vlr"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)
@@ -199,10 +213,9 @@ if __name__ == "__main__":
     np_file_2 = model_name+"_qphys.hdf5"
     # average_tseries(np_file)
     figname = np_file.replace("hdf5","png")
-    # visualise_scm_predictions_q(np_file,figname)
-    for l in range(1,30,5):
+    visualise_scm_predictions_q(np_file,figname)
+    for l in range(1,30,1):
         level=l
-        # visualise_tseries(np_file, level)
-    #     # visualise_tseries_q(np_file,level)
+        visualise_tseries(np_file, level)
         visualise_tseries_qphys(np_file_2,level)
         # compare_qphys_predictions(np_file, np_file_2, level)
