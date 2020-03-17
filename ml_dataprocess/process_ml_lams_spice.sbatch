@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --mem=12000
+#SBATCH --mem=6000
 #SBATCH --ntasks=4
 #SBATCH --time=1000
 #SBATCH --export=NONE

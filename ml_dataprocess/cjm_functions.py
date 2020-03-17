@@ -119,7 +119,124 @@ def mean_subdomains(data,date,vt,name_str,analysis_time,region,output_label,ndim
     return outcome;
 
 def extract_fields_for_advective_tendencies(date,vt,roseid,name_str,analysis_time,region):
-    # Currently hard-coded for user "frme"
+    tmppath = '/project/spice/radiation/ML/CRM/data/'+roseid+'/'+region+'/'
+    tmppath_nc = tmppath+'netcdf/'
+    tmppath_99181 = tmppath+'stash_99181/'
+    tmppath_99182 = tmppath+'stash_99182/'
+
+    try:
+        os.makedirs(tmppath_nc)
+    except OSError:
+        pass
+    try:
+        os.makedirs(tmppath_99181)
+    except OSError:
+        pass
+    try:
+        os.makedirs(tmppath_99182)
+    except OSError:
+        pass     
+    
+    filename=generate_ml_filename_in(date,vt,'.pp','c',name_str,analysis_time,region)
+    filein=tmppath+filename
+    #
+    # Read in moisture data
+    result = make_stash_string(0,10)
+    qv = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
+    result = make_stash_string(0,254)
+    qcl = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
+    result = make_stash_string(0,12)
+    qcf = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
+    result = make_stash_string(0,272)
+    qrain = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
+    result = make_stash_string(0,273)
+    qgraup = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
+    #
+    # Add all the water variables together
+    qtotal = qv+qcl+qcf+qrain+qgraup
+    #
+    # Read in dry potential temperature data
+    result = make_stash_string(0,4)
+    theta_dry = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
+    
+    # pressure on theta levels not output by nested models so use global mean profile 
+    # ocean_mean_profile_201701151200Z_exner_mean = np.array[(1.0016,1.0004,0.99879,0.99672,0.9942,0.99122,0.98778,0.98389,0.97955,0.97477,0.96955,0.96389,0.9578,0.95128,0.94434,0.93699,0.92923,0.92106,0.91249,0.90352,0.89416,0.8844,0.87427,0.86375,0.85286,0.8416,0.82998,0.81799,0.80565,0.79296,0.77992,0.76654,0.75283,0.73881,0.72447,0.70985,0.69496,0.67983,0.66448,0.64889,0.63305,0.61696,0.6006,0.58394,0.56694,0.54955,0.53171,0.51336,0.49449,0.4751,0.45521,0.43483,0.41391,0.39236,0.37009,0.34711,0.32345,0.29919,0.27445,0.24943,0.22439,0.19967,0.17564,0.15263,0.13059,0.10925,0.088742,0.069395,0.051218,0.034236])
+    
+    # Read in pressure on theta levels
+    filename=generate_ml_filename_in(date,vt,'.pp','f',name_str,analysis_time,region)
+    filein=tmppath+filename
+    result = make_stash_string(0,408)
+    p_theta_levels = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
+    # Tl=T-(L/cp)*qcl
+    # T=theta * exner
+    # exner=(p/pref) ** kay
+    kay=0.286
+    exner=(p_theta_levels/1.0e5)**kay
+    exner = ocean_mean_profile_201701151200Z_exner_mean
+    lv=2.501e6
+    lf=2.834e6
+    cp=1005.0
+    lvovercp=lv/cp
+    lfovercp=lf/cp
+    liq=qcl+qrain
+    ice=qcf+qgraup
+    # Calculate a liq/ice static temperature 
+    theta=theta_dry-(lvovercp*liq/exner)-(lfovercp*ice/exner)
+    #
+    # Read in wind data
+    # NB u wind is staggered half a grid-box to the west  and half a layer down.
+    # NB v wind is staggered half a grid-box to the south and half a layer down.
+    # NB w wind is on same grid and theta and q
+    filename=generate_ml_filename_in(date,vt,'.pp','e',name_str,analysis_time,region)
+    filein=tmppath+filename
+    result = make_stash_string(0,2)
+    u_wind = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
+    result = make_stash_string(0,3)
+    v_wind = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
+    result = make_stash_string(0,150)
+    w_wind = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
+    #
+    flux_qtotal=u_dot_grad_field(u_wind,v_wind,w_wind,qtotal,'qtotal')
+    flux_theta=u_dot_grad_field(u_wind,v_wind,w_wind,theta,'theta')
+    #
+    write_out_intermediate_data=0
+    if write_out_intermediate_data==1:
+        # Write everything out so can potentially check things offline.
+        #
+        # vt=validity time
+        if vt < 10:
+            vtstr='00'+str(vt) 
+        else:
+            vtstr='0'+str(vt)
+        # endif
+        fileout=tmppath+'/netcdf/'+date.strftime("%Y%m%d")+analysis_time+'_'+region+'_km1p5_'+name_str+'_'+vtstr+'_qtotal.nc'
+        iris.save(qtotal, fileout)
+        fileout=tmppath+'/netcdf/'+date.strftime("%Y%m%d")+analysis_time+'_'+region+'_km1p5_'+name_str+'_'+vtstr+'_theta.nc'
+        iris.save(theta, fileout)
+        fileout=tmppath+'/netcdf/'+date.strftime("%Y%m%d")+analysis_time+'_'+region+'_km1p5_'+name_str+'_'+vtstr+'_uwind.nc'
+        iris.save(u_wind, fileout)
+        fileout=tmppath+'/netcdf/'+date.strftime("%Y%m%d")+analysis_time+'_'+region+'_km1p5_'+name_str+'_'+vtstr+'_vwind.nc'
+        iris.save(v_wind, fileout)
+        fileout=tmppath+'/netcdf/'+date.strftime("%Y%m%d")+analysis_time+'_'+region+'_km1p5_'+name_str+'_'+vtstr+'_wwind.nc'
+        iris.save(w_wind, fileout)
+    # endif
+    #
+    write_out_total_flux_data=0
+    if write_out_total_flux_data==1:
+        fileout=tmppath+'/netcdf/'+date.strftime("%Y%m%d")+analysis_time+'_'+region+'_km1p5_'+name_str+'_'+vtstr+'_python_flux_qtotal.nc'
+        iris.save(flux_qtotal, fileout)
+        fileout=tmppath+'/netcdf/'+date.strftime("%Y%m%d")+analysis_time+'_'+region+'_km1p5_'+name_str+'_'+vtstr+'_python_flux_theta.nc'
+        iris.save(flux_theta, fileout)
+    # endif
+    #
+    # Make up some stash numbers so file has 5 digit ref but these are not actual UM stash codes
+    # 99181 theta increment from advection
+    # 99182 total q increment from advection
+    outcome=mean_subdomains(flux_theta[:,:,60:300,60:300],date,vt,name_str,analysis_time,region,'99181',3,tmppath_99181)
+    outcome=mean_subdomains(flux_qtotal[:,:,60:300,60:300],date,vt,name_str,analysis_time,region,'99182',3,tmppath_99182)
+    return outcome;
+
+def _extract_fields_for_advective_tendencies(date,vt,roseid,name_str,analysis_time,region):
     tmppath = '/project/spice/radiation/ML/CRM/data/'+roseid+'/'+region+'/'
     tmppath_nc = tmppath+'netcdf/'
     tmppath_99181 = tmppath+'stash_99181/'
@@ -185,7 +302,7 @@ def extract_fields_for_advective_tendencies(date,vt,roseid,name_str,analysis_tim
         vtstr='00'+str(vt) 
     else:
         vtstr='0'+str(vt)
-    write_out_intermediate_data=1
+    write_out_intermediate_data=0
     if write_out_intermediate_data==1:
         # Write everything out so can potentially check things offline.
         fileout=tmppath_nc+date.strftime("%Y%m%d")+analysis_time+'_'+region+'_km1p5_'+name_str+'_'+vtstr+'_qtotal.nc'
@@ -200,7 +317,7 @@ def extract_fields_for_advective_tendencies(date,vt,roseid,name_str,analysis_tim
         iris.save(w_wind, fileout)
     # endif
     #
-    write_out_total_flux_data=1
+    write_out_total_flux_data=0
     if write_out_total_flux_data==1:
         fileout=tmppath_nc+date.strftime("%Y%m%d")+analysis_time+'_'+region+'_km1p5_'+name_str+'_'+vtstr+'_flux_qtotal.nc'
         iris.save(flux_qtotal, fileout)
@@ -213,7 +330,7 @@ def extract_fields_for_advective_tendencies(date,vt,roseid,name_str,analysis_tim
     # 99182 total q increment from advection
     outcome=mean_subdomains(flux_theta[:,:,60:300,60:300],date,vt,name_str,analysis_time,region,'99181',3,tmppath_99181)
     outcome=mean_subdomains(flux_qtotal[:,:,60:300,60:300],date,vt,name_str,analysis_time,region,'99182',3,tmppath_99182)
-    return outcome;
+    return outcome
 
 def generate_filename_in(date,vt,ext,stream,name_str,analysis_time,region):
     if vt < 10:
@@ -224,7 +341,7 @@ def generate_filename_in(date,vt,ext,stream,name_str,analysis_time,region):
     filename=date.strftime("%Y%m%d")+analysis_time+'_'+region+'_km1p5_'+name_str+'_pver'+stream+vtstr+ext
     print(filename)
     #
-    return filename;
+    return filename
 
 def retrieve_a_file(date,vt,roseid,name_str,analysis_time,stream,region,flag):
     # If flag == 1, it deletes the file and then retrieves a clean copy

@@ -5,18 +5,24 @@ class Normalizers(object):
     def __init__(self, locations):
         print("Initialising normaliser to location: {0}".format(locations['normaliser_loc']))
         self.qphys_normaliser_std = h5py.File('{0}/q_phys.hdf5'.format(locations['normaliser_loc']),'r')
+        self.tphys_normaliser_std = h5py.File('{0}/t_phys.hdf5'.format(locations['normaliser_loc']),'r')
         self.q_normaliser_std = h5py.File('{0}/q_tot.hdf5'.format(locations['normaliser_loc']),'r')
+        self.t_normaliser_std = h5py.File('{0}/air_potential_temperature.hdf5'.format(locations['normaliser_loc']),'r')
         self.qadv_normaliser_std = h5py.File('{0}/q_adv.hdf5'.format(locations['normaliser_loc']),'r')
         self.tadv_normaliser_std = h5py.File('{0}/t_adv.hdf5'.format(locations['normaliser_loc']),'r')
 
         self.qphys_mean = torch.tensor(self.qphys_normaliser_std['mean_'][:])
+        self.tphys_mean = torch.tensor(self.tphys_normaliser_std['mean_'][:])
         self.q_mean = torch.tensor(self.q_normaliser_std['mean_'][:])
+        self.t_mean = torch.tensor(self.t_normaliser_std['mean_'][:])
         self.qadv_mean = torch.tensor(self.qadv_normaliser_std['mean_'][:])
         self.tadv_mean = torch.tensor(self.tadv_normaliser_std['mean_'][:])
         
 
         self.qphys_stdscale = torch.from_numpy(self.qphys_normaliser_std['scale_'][:])
+        self.tphys_stdscale = torch.from_numpy(self.tphys_normaliser_std['scale_'][:])
         self.q_stdscale = torch.from_numpy(self.q_normaliser_std['scale_'][:])
+        self.t_stdscale = torch.from_numpy(self.t_normaliser_std['scale_'][:])
         self.qadv_stdscale = torch.from_numpy(self.qadv_normaliser_std['scale_'][:])
         self.tadv_stdscale = torch.from_numpy(self.tadv_normaliser_std['scale_'][:])
 

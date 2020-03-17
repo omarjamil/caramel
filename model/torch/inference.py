@@ -73,12 +73,13 @@ nn_data.get_data(0)
 
 # Define the Model
 # n_inputs,n_outputs=140,70
-in_features, nb_classes=123,30
+nlevs=45
+in_features, nb_classes=(nlevs*4+3),(nlevs*2)
 nb_hidden_layer = args.nhdn_layers 
-hidden_size = 256
+hidden_size = 512
 mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
 # mlp = model.MLP_BN(in_features, nb_classes, nb_hidden_layer, hidden_size)
-model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_mse_vlr.tar".format(str(nb_hidden_layer).zfill(3),
+model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_mink_vlr.tar".format(str(nb_hidden_layer).zfill(3),
                                                                                     str(in_features).zfill(3),
                                                                                     str(nb_classes).zfill(3),
                                                                                     str(hidden_size).zfill(4),
@@ -112,19 +113,23 @@ for param_tensor in mlp.state_dict():
 
 
 
-def predict_q(q_in, nlevs):
+def predict_q(q_in):
     """
     Test the humidity model
     """
-    global mlp
     
     qphys_predict = mlp(torch.from_numpy(q_in))
-        
-    # qphys_predict_denorm = nt.inverse_minmax(qphys_predict.data.numpy(), qphys_scale.data.numpy(), qphys_feature_min.data.numpy(), qphys_feature_max.data.numpy(), qphys_data_min.data.numpy())
     qphys_predict_denorm = nt.inverse_std(qphys_predict.data.numpy(), nt.qphys_stdscale.data.numpy()[...,:nlevs], nt.qphys_mean.data.numpy()[...,:nlevs])
-    # qphys_predict_denorm = nt.inverse_std(qphys_predict.data.numpy(), nt.qphys_dot_stdscale_s.data.numpy(), nt.qphys_dot_mean_s.data.numpy())
-    
     return qphys_predict_denorm.reshape(nlevs)
+
+def predict_qt(qt_in):
+    """
+    Test the humidity model
+    """
+    qtphys_predict = mlp(torch.from_numpy(qt_in))
+    qphys_predict_denorm = nt.inverse_std(qtphys_predict.data.numpy()[...,:nlevs], nt.qphys_stdscale.data.numpy()[...,:nlevs], nt.qphys_mean.data.numpy()[...,:nlevs])
+    tphys_predict_denorm = nt.inverse_std(qtphys_predict.data.numpy()[...,nlevs:], nt.tphys_stdscale.data.numpy()[...,:nlevs], nt.tphys_mean.data.numpy()[...,:nlevs])
+    return qphys_predict_denorm.reshape(nlevs), tphys_predict_denorm.reshape(nlevs)
 
 def q_scm(region='50S69W'):
     """
@@ -134,7 +139,6 @@ def q_scm(region='50S69W'):
     
     start = 0
     end = 200
-    nlevs = 30
     # q_tot = nn_data.q_tot_test[start:end,:nlevs]
     q_inv =  nt.inverse_std(nn_data.q_tot_test[start:end,:nlevs], nt.q_stdscale.data.numpy()[...,:nlevs], nt.q_mean.data.numpy()[...,:nlevs])
     qphys = nn_data.qphys_test[start:end,:nlevs]
@@ -167,7 +171,7 @@ def q_scm(region='50S69W'):
         # q_in = (qcomb_dot_test[t_step-1,:]).reshape((1,140))
         q_in = (qt_test[t_step,:]).reshape((1,in_features))
         # q_in = (qcomb_dot_test[t_step,:]).reshape((1,70))
-        qphys_pred = predict_q(q_in, nlevs)
+        qphys_pred = predict_q(q_in)
         qphys_ml[t_step,:] = qphys_pred
         #q_ml[t_step,:] = q_ml[t_step-1,:] + qadv_inv[t_step,:] + qphys_pred
         # q_ml[t_step,:] = q_ml[t_step-1,:] + qadv_dot_inv[t_step-1,:] + qphys_pred
@@ -185,13 +189,72 @@ def q_scm(region='50S69W'):
         for k,v in output_dict.items():
             outfile.create_dataset(k,data=v)
 
+def qt_scm(region='50S69W'):
+    """
+    Using qphys prediction and then feeding them back into the emulator, 
+    create a timeseries of prediction to compare with validation data
+    """
+    
+    start = 0
+    end = 200
+    # q_tot = nn_data.q_tot_test[start:end,:nlevs]
+    q_inv =  nt.inverse_std(nn_data.q_tot_test[start:end,:nlevs], nt.q_stdscale.data.numpy()[...,:nlevs], nt.q_mean.data.numpy()[...,:nlevs])
+    t_inv = nt.inverse_std(nn_data.theta_test[start:end,:nlevs], nt.t_stdscale.data.numpy()[...,:nlevs], nt.t_mean.data.numpy()[...,:nlevs])
+    qphys = nn_data.qphys_test[start:end,:nlevs]
+    tphys = nn_data.theta_phys_test[start:end,:nlevs]
+    qadv_dot = nn_data.q_tot_adv_test[start:end,:nlevs]
+    tadv_dot = nn_data.theta_adv_test[start:end,:nlevs]
+    qadv_dot_inv = nt.inverse_std(qadv_dot, nt.qadv_stdscale.data.numpy()[...,:nlevs], nt.qadv_mean.data.numpy()[...,:nlevs])
+    tadv_dot_inv = nt.inverse_std(tadv_dot, nt.tadv_stdscale.data.numpy()[...,:nlevs], nt.tadv_mean.data.numpy()[...,:nlevs])
+
+    qadv_dot_inv = qadv_dot_inv * 600.
+    qt_test  = np.concatenate((nn_data.q_tot_test[start:end,:nlevs], nn_data.q_tot_adv_test[start:end,:nlevs], nn_data.theta_test[start:end,:nlevs], nn_data.theta_adv_test[start:end,:nlevs], nn_data.sw_toa_test[start:end], nn_data.lhf_test[start:end], nn_data.shf_test[start:end]),axis=1)
+    # qt_test  = np.concatenate((nn_data.q_tot_test[:,:nlevs], nn_data.theta_test[:,:nlevs], nn_data.sw_toa_test, nn_data.lhf_test, nn_data.shf_test),axis=1)
+    
+    qphys_inv = nt.inverse_std(qphys, nt.qphys_stdscale.data.numpy()[...,:nlevs], nt.qphys_mean.data.numpy()[...,:nlevs])
+    tphys_inv = nt.inverse_std(tphys, nt.tphys_stdscale.data.numpy()[...,:nlevs], nt.tphys_mean.data.numpy()[...,:nlevs])
+    n_steps = len(range(start,end))
+    
+    q_start = q_inv[0,:]
+    q_ml = np.zeros((n_steps,nlevs))
+    q_sane = np.zeros((n_steps,nlevs))
+    qphys_ml = np.zeros((n_steps,nlevs))
+    q_ml[0,:] = q_start
+    q_sane[0,:] = q_start
+    
+    t_start = t_inv[0,:]
+    t_ml = np.zeros((n_steps,nlevs))
+    t_sane = np.zeros((n_steps,nlevs))
+    tphys_ml = np.zeros((n_steps,nlevs))
+    t_ml[0,:] = t_start
+    t_sane[0,:] = t_start
+
+    printProgressBar(0, n_steps, prefix = 'Progress:', suffix = 'Complete', length = 50)
+    for t_step in range(1,n_steps):
+        
+        qt_in = (qt_test[t_step,:]).reshape((1,in_features))
+        qphys_ml[t_step,:], tphys_ml[t_step,:] = predict_qt(qt_in)
+        q_ml[t_step,:] = q_ml[t_step-1,:] + qadv_dot_inv[t_step-1,:] + qphys_ml[t_step-1,:]
+        t_ml[t_step,:] = t_ml[t_step-1,:] + tadv_dot_inv[t_step-1,:] + tphys_ml[t_step-1,:]
+        q_sane[t_step,:] = q_sane[t_step-1,:] + qadv_dot_inv[t_step-1,:] + qphys_inv[t_step-1, :]
+        t_sane[t_step,:] = t_sane[t_step-1,:] + tadv_dot_inv[t_step-1,:] + tphys_inv[t_step-1, :]
+        printProgressBar(t_step, n_steps, prefix = 'Progress:', suffix = 'Complete', length = 50)
+
+    # qadv_un = qadv_inv #qadv_normaliser.inverse_transform(qadv_norm)
+    output_dict = {"q_ml":q_ml[:],"q": q_inv[:],"qphys_ml":qphys_ml,"qphys":qphys_inv[:],
+                    "q_sane":q_sane[:], "t_ml":t_ml[:],"t": t_inv[:],"tphys_ml":tphys_ml,
+                    "tphys":tphys_inv[:], "t_sane":t_sane[:]}
+    outfile_name = model_name.replace('.tar','_scm.hdf5')    
+    with h5py.File(outfile_name,'w') as outfile:
+        for k,v in output_dict.items():
+            outfile.create_dataset(k,data=v)
+
 def q_inference(region='50S69W'):
     """
     q model inference/testing
     """
     start=0
     end=200
-    nlevs=30
     # Testing data
     qphys_norm_test = nn_data.qphys_test[start:end,:nlevs]
     # qphys_norm_test = nn_data.qphys_train[start:end,:nlevs]
@@ -222,6 +285,35 @@ def q_inference(region='50S69W'):
         for k, v in output.items():  
             hfile.create_dataset(k,data=v)
 
+def qt_inference(region='50S69W'):
+    """
+    qt model inference/testing
+    """
+    start=0
+    end=200
+    # Testing data
+    qphys_norm_test = nn_data.qphys_test[start:end,:nlevs]
+    tphys_norm_test = nn_data.theta_phys_test[start:end,:nlevs]
+    qt_test  = np.concatenate((nn_data.q_tot_test[start:end,:nlevs], nn_data.q_tot_adv_test[start:end,:nlevs], nn_data.theta_test[start:end,:nlevs], nn_data.theta_adv_test[start:end,:nlevs], nn_data.sw_toa_test[start:end,:], nn_data.lhf_test[start:end,:], nn_data.shf_test[start:end,:]),axis=1)
+    #test_in, test_out = qcomb_dot_test, qphys_norm_test
+    x_t,y_t = torch.from_numpy(qt_test[:]), qphys_norm_test[:]
+
+    prediction = mlp(x_t)
+    qphys_predict_denorm = nt.inverse_std(prediction[...,:nlevs], nt.qphys_stdscale[...,:nlevs], nt.qphys_mean[...,:nlevs])
+    qphys_test_denorm = nt.inverse_std(torch.from_numpy(qphys_norm_test[:]), nt.qphys_stdscale[...,:nlevs], nt.qphys_mean[...,:nlevs])
+    tphys_predict_denorm = nt.inverse_std(prediction[...,nlevs:], nt.tphys_stdscale[...,:nlevs], nt.tphys_mean[...,:nlevs])
+    tphys_test_denorm = nt.inverse_std(torch.from_numpy(tphys_norm_test[:]), nt.tphys_stdscale[...,:nlevs], nt.qphys_mean[...,:nlevs])
+
+    hfilename = model_name.replace('.tar','_qtphys.hdf5')
+    output={'qphys_predict':qphys_predict_denorm.data.numpy(),'qphys_test':qphys_test_denorm.data.numpy(), 
+            'tphys_predict':tphys_predict_denorm.data.numpy(),'tphys_test':tphys_test_denorm.data.numpy()}
+    
+    with h5py.File(hfilename, 'w') as hfile:
+        for k, v in output.items():  
+            hfile.create_dataset(k,data=v)
+
 if __name__ == "__main__":
-    q_inference(region=region)
-    q_scm(region=region)
+    # q_inference(region=region)
+    # q_scm(region=region)
+    qt_inference(region=region)
+    qt_scm(region=region)

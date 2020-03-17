@@ -299,11 +299,11 @@ if __name__ == "__main__":
     if argument == '1':
         main_check_files_exist(region, stashes)
     elif argument == '2':
-        main_combine_files(region, stashes, days_range=[3,4,5])
+        main_combine_files(region, stashes, days_range=[6,7,8])
     elif argument == '3':
-        main_combine_day_tseries(region, stashes, days_range=[3,4,5])
+        main_combine_day_tseries(region, stashes, days_range=[6,7,8])
     elif argument == '4':
-        combine_q(region, in_prefix="030405")
+        combine_q(region, in_prefix="060708")
     elif argument == '5':
-        calc_tendencies(region, in_prefix="030405")
+        calc_tendencies(region, in_prefix="060708")
     
