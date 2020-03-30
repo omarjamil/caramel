@@ -7,12 +7,15 @@ import iris
 import iris.analysis
 import sys
 import argparse
+import tempfile
 
 # Import some of my own functions
 from cjm_functions import process_ml_lam_file
 from cjm_functions import extract_fields_for_advective_tendencies
 from cjm_functions import generate_filename_in
 from cjm_functions import retrieve_a_file
+
+roseid='u-bs572'
 
 def daterange(start_date, end_date):
     for n in range(int ((end_date - start_date).days)):
@@ -56,16 +59,16 @@ def process_files(regions: list, start_date: date, end_date: date, list_analysis
 #   d) 3d field of increments to c).
 
 
-def single_level(start_day: int, region: str):
+def single_level(start_day: int, start_month: int, region: str):
     # roseid='u-bj775'
-    roseid='u-br800'
+    # roseid='u-br800'
        
     #roseid='u-bj967'
 
     # Probably worth ignoring the first 24 hours of the simulation
     # so set start_date to 1 day after start of the actual runs.
     # start_day = int(sys.argv[1])
-    start_month = 1
+    # start_month = 1
     # end_day = start_day + 1 #int(sys.argv[2])
     # end_month = start_month
     start_date = date(2017, start_month, start_day)
@@ -94,16 +97,17 @@ def single_level(start_day: int, region: str):
     
     ndims = 2
     process_files(regions, start_date, end_date, list_analysis_time, name_str, list_stream,  list_stash_sec, list_stash_code, roseid, ndims)
+    return 0
 
-def multi_level(start_day: int, region: str):
+def multi_level(start_day: int, start_month: int, region: str):
     # roseid='u-bj775'
-    roseid='u-br800'
+    # roseid='u-br800'
     #roseid='u-bj967'
 
     # Probably worth ignoring the first 24 hours of the simulation
     # so set start_date to 1 day after start of the actual runs.
     # start_day = int(sys.argv[1])
-    start_month = 1
+    # start_month = 1
     # end_day = start_day + 1 #int(sys.argv[2])
     # end_month = start_month
     start_date = date(2017, start_month, start_day)
@@ -147,17 +151,18 @@ def multi_level(start_day: int, region: str):
     name_str='ra1m'
     ndims = 3 
     process_files(regions, start_date, end_date, list_analysis_time, name_str, list_stream,  list_stash_sec, list_stash_code, roseid, ndims)
+    return 0
 
-def advect_process(start_day, region):
+def advect_process(start_day, start_month, region):
 
     # roseid='u-bj775'
-    roseid='u-br800'
+    # roseid='u-br800'
     #roseid='u-bj967'
 
     # Probably worth ignoring the first 24 hours of the simulation
     # so set start_date to 1 day after start of the actual runs.
     # start_day = int(sys.argv[1])
-    start_month = 1
+    # start_month = 1
     # end_day = start_day + 1 #int(sys.argv[2])
     # end_month = start_month
     start_date = date(2017, start_month, start_day)
@@ -165,7 +170,7 @@ def advect_process(start_day, region):
 
     list_analysis_time=['T0000Z','T1200Z']
     name_str='ra1m'
-    list_stream=['c','e']
+    # list_stream=['c','e']
     regions=[region]
     
     for single_date in daterange(start_date, end_date):
@@ -191,7 +196,7 @@ def advect_process(start_day, region):
                     # for stream_number in np.arange(0,len(list_stream),1):
                     #     stream=list_stream[stream_number]
                     #     outcome=retrieve_a_file(single_date,vt,roseid,name_str,analysis_time,stream,region,0)
-
+    return 0
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Process LAMS')
@@ -203,6 +208,8 @@ if __name__ == "__main__":
                     help='advection files processing')                                
     parser.add_argument('--start-day', type=int, default=1, metavar='N',
                     help='date start day')
+    parser.add_argument('--start-month', type=int, default=1, metavar='N',
+                    help='date start month')
     parser.add_argument('--region', type=str, help='region to process e.g. 50S69W')
     args = parser.parse_args()
     
@@ -210,11 +217,24 @@ if __name__ == "__main__":
     multi = args.multi
     advect = args.advect
     start_day = args.start_day
+    start_month = args.start_month
     region = args.region
 
     if single:
-        single_level(start_day, region)
+        fname="{0}_{1}_{2}_slams_".format(roseid,region,start_month)
+        tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock')
+        ret = single_level(start_day, start_month, region)
+        if ret == 0:
+            tmpf.close()
     elif multi:
-        multi_level(start_day, region)
+        fname="{0}_{1}_{2}_mlams_".format(roseid,region,start_month)
+        tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock')
+        ret = multi_level(start_day, start_month, region)
+        if ret == 0:
+            tmpf.close()
     elif advect:
-        advect_process(start_day, region)
+        fname="{0}_{1}_{2}_alams_".format(roseid,region,start_month)
+        tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock')
+        ret = advect_process(start_day, start_month, region)
+        if ret == 0:
+            tmpf.close()

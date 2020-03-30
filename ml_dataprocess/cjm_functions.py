@@ -69,6 +69,7 @@ def process_ml_lam_file(date,vt,roseid,name_str,analysis_time,stream,region,stas
     filename=generate_ml_filename_in(date,vt,'.pp',stream,name_str,analysis_time,region)
     filein=tmppath+filename
     result = make_stash_string(stash_sec,stash_code)
+    print(result)
     tmppath_out='/project/spice/radiation/ML/CRM/data/'+roseid+'/'+region+'/stash_'+result['stashstr_fout']+'/'
     try:
         os.makedirs(tmppath_out)
@@ -171,17 +172,17 @@ def extract_fields_for_advective_tendencies(date,vt,roseid,name_str,analysis_tim
     # T=theta * exner
     # exner=(p/pref) ** kay
     kay=0.286
-    exner=(p_theta_levels/1.0e5)**kay
-    exner = ocean_mean_profile_201701151200Z_exner_mean
+    exner=np.power((p_theta_levels.data/1.0e5),kay)
+    # exner = ocean_mean_profile_201701151200Z_exner_mean
     lv=2.501e6
     lf=2.834e6
     cp=1005.0
     lvovercp=lv/cp
     lfovercp=lf/cp
-    liq=qcl+qrain
-    ice=qcf+qgraup
+    liq=qcl.data+qrain.data
+    ice=qcf.data+qgraup.data
     # Calculate a liq/ice static temperature 
-    theta=theta_dry-(lvovercp*liq/exner)-(lfovercp*ice/exner)
+    theta=theta_dry.data-(lvovercp*liq/exner)-(lfovercp*ice/exner)
     #
     # Read in wind data
     # NB u wind is staggered half a grid-box to the west  and half a layer down.
@@ -197,7 +198,7 @@ def extract_fields_for_advective_tendencies(date,vt,roseid,name_str,analysis_tim
     w_wind = iris.load_cube(filein,iris.AttributeConstraint(STASH=result['stashstr_iris']))
     #
     flux_qtotal=u_dot_grad_field(u_wind,v_wind,w_wind,qtotal,'qtotal')
-    flux_theta=u_dot_grad_field(u_wind,v_wind,w_wind,theta,'theta')
+    flux_theta=u_dot_grad_field(u_wind,v_wind,w_wind,theta_dry.copy(theta),'theta')
     #
     write_out_intermediate_data=0
     if write_out_intermediate_data==1:

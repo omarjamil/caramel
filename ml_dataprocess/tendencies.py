@@ -2,8 +2,7 @@ from netCDF4 import Dataset
 import iris
 import numpy as np
 import os
-
-suite_id="u-br800"
+import datetime
 
 def array_diff(inarray: np.array, step: int, axis: int=0):
     """
@@ -34,7 +33,7 @@ def nooverlap_smooth(arrayin, window=6):
     averaged = np.mean(arrayin.reshape(window,x//window,y),axis=0)
     return averaged
 
-def t_tendency(region: str, subdomain: int, in_prefix:str="30"):
+def t_tendency(region: str, subdomain: int, in_prefix:str="30", suite_id="u-bs572_conc"):
     """
     Physics tendency for q quantities
     specific humidity only to start
@@ -77,11 +76,8 @@ def t_tendency(region: str, subdomain: int, in_prefix:str="30"):
     outfile="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3),str(99904).zfill(5))
     print("Saving T tendency ... {0}".format(t_phys_location+outfile))
     iris.fileformats.netcdf.save(new_cube,t_phys_location+outfile)
-    
 
-
-
-def q_tendency_qdot(region: str, subdomain: int, in_prefix: str="30"):
+def q_tendency_qdot(region: str, subdomain: int, in_prefix: str="30", suite_id: str="u-bs572_conc"):
     """
     Physics tendency for q quantities using qadv_dot and qtot
 
@@ -116,33 +112,22 @@ def q_tendency_qdot(region: str, subdomain: int, in_prefix: str="30"):
     q_phys = q_diff - qadv_array[:-1]
     
     time_coord = iris.coords.DimCoord(q_dat.coord('time').points[:-1],standard_name="time",units=q_dat.coord('time').units)
-    model_lev_coord = iris.coords.DimCoord(q_dat.coord('model_level_number').points,standard_name="model_level_number")
+    model_lev_coord = iris.coords.DimCoord(q_dat.coord('model_level_number').points,long_name="model_level_number")
     new_cube = iris.cube.Cube(q_phys,long_name="q_phys",dim_coords_and_dims=[(time_coord,0),(model_lev_coord,1)])
     outfile="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3), str(99983).zfill(5))
     print("Saving q tendency ... {0}".format(q_phys_location+outfile))
     iris.fileformats.netcdf.save(new_cube,q_phys_location+outfile)
 
-    # Hourly meaned data
 
-    # q_array_smooth = nooverlap_smooth(q_dat.data[:,:], window=6)
-    # qadv_array_smooth = nooverlap_smooth(qadv_dat.data[:,:]*600., window=6)
-    # q_diff_smooth = array_diff(q_array_smooth, 1)
-    # q_phys_smooth = q_diff_smooth - qadv_array_smooth[:-1]
 
-    # time_coord_s = iris.coords.DimCoord(range(len(q_phys_smooth)),standard_name="time")
-    # model_lev_coord_s = iris.coords.DimCoord(q_dat.coord('model_level_number').points,standard_name="model_level_number")
-    # new_cube_s = iris.cube.Cube(q_phys_smooth,long_name="q_phys",dim_coords_and_dims=[(time_coord_s,0),(model_lev_coord_s,1)])
-    # outfile_s="{0}_{1}_km1p5_ra1m_30x30_subdomain_{2}_q_phys_smooth.nc".format(d,region,str(subdomain).zfill(3))
-    # print("Saving smoothed q tendency ... {0}".format(q_phys_location+outfile_s))
-    # iris.fileformats.netcdf.save(new_cube_s,q_phys_location+outfile_s)
-
-def main_Q_dot(region, in_prefix="30"):
+def main_Q_dot(region, suite_id, in_prefix="30"):
     for subdomain in range(64):
-        q_tendency_qdot(region,subdomain, in_prefix=in_prefix)
+        q_tendency_qdot(region,subdomain, suite_id=suite_id, in_prefix=in_prefix)
 
-def main_T_dot(region, in_prefix="30"):
+def main_T_dot(region, suite_id, in_prefix="30"):
     for subdomain in range(64):
-        t_tendency(region,subdomain, in_prefix=in_prefix)
+        t_tendency(region,subdomain, suite_id=suite_id, in_prefix=in_prefix)
+
 
 if __name__ == "__main__":
     region="80S90W"

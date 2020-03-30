@@ -73,7 +73,7 @@ model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_
                                                                                     args.identifier)
 optimizer =  torch.optim.Adam(mlp.parameters(), lr=1.e-3)
 # optimizer =  torch.optim.SGD(mlp.parameters(), lr=0.01)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.9)
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
 # loss_function = torch.nn.MSELoss()
 # loss_function = torch.nn.L1Loss()
 loss_function = minkowski_error
@@ -114,36 +114,60 @@ nt = normalize.Normalizers(locations)
 # Training and testing data class
 nn_data = data_io.Data_IO(region, locations)
 
-qt_train  = np.concatenate((nn_data.q_tot_train[:,:nlevs], nn_data.q_tot_adv_train[:,:nlevs], nn_data.theta_train[:,:nlevs], nn_data.theta_adv_train[:,:nlevs], nn_data.sw_toa_train, nn_data.lhf_train, nn_data.shf_train),axis=1)
-qt_test  = np.concatenate((nn_data.q_tot_test[:,:nlevs], nn_data.q_tot_adv_test[:,:nlevs], nn_data.theta_test[:,:nlevs], nn_data.theta_adv_test[:,:nlevs], nn_data.sw_toa_test, nn_data.lhf_test, nn_data.shf_test),axis=1)
-# qt_train  = np.concatenate((nn_data.q_tot_train[:,:nlevs], nn_data.theta_train[:,:nlevs], nn_data.sw_toa_train, nn_data.lhf_train, nn_data.shf_train),axis=1)
-# qt_test  = np.concatenate((nn_data.q_tot_test[:,:nlevs], nn_data.theta_test[:,:nlevs], nn_data.sw_toa_test, nn_data.lhf_test, nn_data.shf_test),axis=1)
+# qt_train  = np.concatenate((nn_data.q_tot_train[:,:nlevs], nn_data.q_tot_adv_train[:,:nlevs], nn_data.theta_train[:,:nlevs], nn_data.theta_adv_train[:,:nlevs], nn_data.sw_toa_train, nn_data.lhf_train, nn_data.shf_train),axis=1)
+# qt_test  = np.concatenate((nn_data.q_tot_test[:,:nlevs], nn_data.q_tot_adv_test[:,:nlevs], nn_data.theta_test[:,:nlevs], nn_data.theta_adv_test[:,:nlevs], nn_data.sw_toa_test, nn_data.lhf_test, nn_data.shf_test),axis=1)
+# # qt_train  = np.concatenate((nn_data.q_tot_train[:,:nlevs], nn_data.theta_train[:,:nlevs], nn_data.sw_toa_train, nn_data.lhf_train, nn_data.shf_train),axis=1)
+# # qt_test  = np.concatenate((nn_data.q_tot_test[:,:nlevs], nn_data.theta_test[:,:nlevs], nn_data.sw_toa_test, nn_data.lhf_test, nn_data.shf_test),axis=1)
 
-# qt_train_out = nn_data.qphys_train[:,:nlevs]
-# qt_test_out = nn_data.qphys_test[:,:nlevs]
-qt_train_out = np.concatenate((nn_data.qphys_train[:,:nlevs], nn_data.theta_phys_train[:,:nlevs]), axis=1)
-qt_test_out = np.concatenate((nn_data.qphys_test[:,:nlevs], nn_data.theta_phys_test[:,:nlevs]), axis=1)
+# # qt_train_out = nn_data.qphys_train[:,:nlevs]
+# # qt_test_out = nn_data.qphys_test[:,:nlevs]
+# qt_train_out = np.concatenate((nn_data.qphys_train[:,:nlevs], nn_data.theta_phys_train[:,:nlevs]), axis=1)
+# qt_test_out = np.concatenate((nn_data.qphys_test[:,:nlevs], nn_data.theta_phys_test[:,:nlevs]), axis=1)
 
-# x,y,z = torch.from_numpy(qt_train[:]).to(device), torch.from_numpy(qt_train_out[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train[:]).to(device)
-x,y = torch.from_numpy(qt_train[:]).to(device), torch.from_numpy(qt_train_out[:]).to(device)
-x_t,y_t = torch.from_numpy(qt_test[:]).to(device), torch.from_numpy(qt_test_out[:]).to(device)
+# # x,y,z = torch.from_numpy(qt_train[:]).to(device), torch.from_numpy(qt_train_out[:]).to(device), torch.from_numpy(nn_data.qnext_norm_train[:]).to(device)
+# x,y = torch.from_numpy(qt_train[:]).to(device), torch.from_numpy(qt_train_out[:]).to(device)
+# x_t,y_t = torch.from_numpy(qt_test[:]).to(device), torch.from_numpy(qt_test_out[:]).to(device)
+
+x2d  = [nn_data.sw_toa_train, nn_data.lhf_train, nn_data.shf_train]
+x2d_test  = [nn_data.sw_toa_test, nn_data.lhf_test, nn_data.shf_test]
+x3d  = [nn_data.q_tot_train, nn_data.q_tot_adv_train, nn_data.theta_train, nn_data.theta_adv_train]
+x3d_test  = [nn_data.q_tot_test, nn_data.q_tot_adv_test, nn_data.theta_test, nn_data.theta_adv_test]
+y = [nn_data.qphys_train, nn_data.theta_phys_train]
+y_test = [nn_data.qphys_test, nn_data.theta_phys_test]
 
 class ConcatDataset(torch.utils.data.Dataset):
-    def __init__(self, *datasets):
-        self.datasets = datasets
+    def __init__(self, x3data, x2data, ydata, nlevs):
+        self.x3datasets = x3data
+        self.x2datasets = x2data
+        self.ydatasets = ydata
+        self.nlevs = nlevs
 
     def __getitem__(self, i):
-        return tuple(d[i] for d in self.datasets)
+        x3 = [torch.tensor(d[i,:self.nlevs]) for d in self.x3datasets]
+        x2 = [torch.tensor(d[i]) for d in self.x2datasets]
+        x = torch.cat(x3+x2)
+        y = torch.cat([torch.tensor(d[i,:self.nlevs]) for d in self.ydatasets],dim=0)
+        return (x.to(device),y.to(device))
 
     def __len__(self):
-        return min(len(d) for d in self.datasets)
+        return min(len(d) for d in self.x2datasets)
+
+# class ConcatDataset(torch.utils.data.Dataset):
+#     def __init__(self, *datasets):
+#         self.datasets = datasets
+
+#     def __getitem__(self, i):
+#         return tuple(d[i] for d in self.datasets)
+
+#     def __len__(self):
+#         return min(len(d) for d in self.datasets)
 
 train_loader = torch.utils.data.DataLoader(
-             ConcatDataset(x,y),
+             ConcatDataset(x3d,x2d,y,nlevs),
              batch_size=args.batch_size, shuffle=True)
 
 validate_loader = torch.utils.data.DataLoader(
-             ConcatDataset(x_t,y_t),
+             ConcatDataset(x3d_test,x2d_test,y_test,nlevs),
              batch_size=args.batch_size, shuffle=False)
 
 

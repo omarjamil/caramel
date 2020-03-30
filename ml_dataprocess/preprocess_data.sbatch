@@ -1,11 +1,11 @@
 #!/bin/bash -l
-#SBATCH --mem=8000
-#SBATCH --ntasks=2
+#SBATCH --mem=12000
+#SBATCH --ntasks=4
 #SBATCH --time=360
 #SBATCH --qos=normal
 #SBATCH --wckey=preprocess_data
-##SBATCH --mail-user=omar.jamil@metoffice.gov.uk
-#SBATCH --mail-type=ALL
+#SBATCH --output=/scratch/ojamil/slurmout/%j.out
+#SBATCH --error=/scratch/ojamil/slurmout/%j.error
 
 module load scitools
 export MPLBACKEND='Agg' # set the backend for use on spice

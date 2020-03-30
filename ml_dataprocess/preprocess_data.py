@@ -10,8 +10,14 @@ import numpy as np
 import gc
 import iris
 import tendencies
+import tempfile
+import traceback
 
-suite_id="u-br800"
+# Ocean only from u-bs572 and u-bs573 set aside for validation '0N100W'
+# leave out 0N0E as that does not get read into iris properly
+regions=['0N100W','0N130W','0N15W','0N160E','0N160W','0N30W','0N50E','0N70E','0N88E','10N100W','10N120W','10N140W','10N145E','10N160E','10N170W','10N30W','10N50W','10N60E','10N88E','10S120W','10S140W','10S15W','10S170E','10S170W','10S30W','10S5E','10S60E','10S88E','10S90W','20N135E','20N145W','20N170E','20N170W','20N30W','20N55W','20N65E','20S0E','20S100W','20S105E','20S130W','20S160W','20S30W','20S55E','20S80E','21N115W','29N65W','30N130W','30N145E','30N150W','30N170E','30N170W','30N25W','30N45W','30S100W','30S10E','30S130W','30S15W','30S160W','30S40W','30S60E','30S88E','40N140W','40N150E','40N160W','40N170E','40N25W','40N45W','40N65W','40S0E','40S100E','40S100W','40S130W','40S160W','40S50E','40S50W','50N140W','50N149E','50N160W','50N170E','50N25W','50N45W','50S150E','50S150W','50S30E','50S30W','50S88E','50S90W','60N15W','60N35W','60S0E','60S140E','60S140W','60S70E','60S70W','70N0E','70S160W','70S40W','80N150W']
+
+suite_id="u-bs573_conc"
 
 def combine_q_tednencies(region):
     """
@@ -111,6 +117,7 @@ def combine_q(region, in_prefix="30"):
         iris.fileformats.netcdf.save(q,"{0}/{3}_days_{2}_km1p5_ra1m_30x30_subdomain_{1}_99821.nc".format(save_path, str(i).zfill(3),region,in_prefix))
         i += 1
 
+
 def check_files_exist(region: str, date: datetime, subdomain: int, stash: int):
     """
     Check all the files that will be used in combine_files_per_subdomain
@@ -208,7 +215,7 @@ def combine_day_tseries(start_date: datetime, end_date: datetime, region: str, s
     print("Saving file {0}".format(out_filename))
     iris.fileformats.netcdf.save(cubelist.concatenate()[0],out_location+out_filename)
 
-def combine_day_tseries_dayrange(region: str, subdomain: int, stash: int, days_range=range(1,32)):
+def combine_day_tseries_dayrange(region: str, subdomain: int, stash: int, days_range=range(1,32), month=7):
     """
     Combine the per day files into a single file 
     """
@@ -218,7 +225,7 @@ def combine_day_tseries_dayrange(region: str, subdomain: int, stash: int, days_r
     location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5), suite_id)
 
     for day in days_range:
-        date = datetime.date(2017, 1, day)
+        date = datetime.date(2017, month, day)
         d = date.strftime('%Y%m%d')
         fname = "{0}_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(d,region,str(subdomain).zfill(3),str(stash).zfill(5))
         filelist.append(location+fname)
@@ -243,50 +250,55 @@ def combine_day_tseries_dayrange(region: str, subdomain: int, stash: int, days_r
     print("Saving file {0}".format(out_filename))
     iris.fileformats.netcdf.save(cubelist.concatenate()[0],out_location+out_filename)
     
-def combine_files(region: str, day: int, stashes: list):
-    date = datetime.date(2017, 1, day)
+def combine_files(region: str, day: int, stashes: list, month=7):
+    date = datetime.date(2017, month, day)
     #for stash in [10,12182,16004,12181]:
     for stash in stashes:    
         for subdomain in range(64):
             combine_files_per_subdomain(region, date, subdomain, stash)
             
 
-def main_check_files_exist(region: str, stashes: list):
+def main_check_files_exist(region: str, stashes: list, month=7):
     for day in range(1,32):
-        date = datetime.date(2017, 1, day)
+        date = datetime.date(2017, month, day)
         # for stash in [10,12182,16004,12181]:
         for stash in stashes:
             for subdomain in range(64):
                 check_files_exist(region, date, subdomain, stash)
             
-def main_combine_files(region: str, stashes: list, days_range=range(1,32)):
+def main_combine_files(region: str, stashes: list, days_range=range(1,32), month=7):
     # day = sys.argv[1]
-    
-    for day in days_range:
-        combine_files(region, day, stashes)
-
+    try:
+        for day in days_range:
+            combine_files(region, day, stashes, month=month)
+        return 0
+    except Exception as e:
+        sys.stderr.write("error: " + str(e))
+        sys.stderr.write(traceback.format_exc())
+        return 1
     #day=9
     #print(day)
     #main_combine_files(day)
         
-def main_combine_day_tseries(region: str, stashes: list, days_range=[3,4,5]):
+def main_combine_day_tseries(region: str, stashes: list, days_range=[3,4,5], month=7):
     # region='10N160E'
     # Start from day 2 to ignore spin up day 1
-    start_date = datetime.datetime(2017,1,2)
-    end_date = datetime.datetime(2017,1,31)
-    # for stash in [10,12182,16004,12181]:
-    for stash in stashes:
-        for subdomain in range(64):
-            # combine_day_tseries(start_date, end_date, region, subdomain, stash)
-            combine_day_tseries_dayrange(region, subdomain, stash, days_range=days_range)
-
+    try:
+        # for stash in [10,12182,16004,12181]:
+        for stash in stashes:
+            for subdomain in range(64):
+                # combine_day_tseries(start_date, end_date, region, subdomain, stash)
+                combine_day_tseries_dayrange(region, subdomain, stash, days_range=days_range, month=month)
+        return 0
+    except Exception as e:
+        sys.stderr.write("error: " + str(e))
+        sys.stderr.write(traceback.format_exc())
+        return 1
 
 def calc_tendencies(region: str, in_prefix: str="30"):
-    tendencies.main_Q_dot(region, in_prefix=in_prefix)
-    tendencies.main_T_dot(region, in_prefix=in_prefix)            
-    
+    tendencies.main_Q_dot(region, suite_id, in_prefix=in_prefix)
+    tendencies.main_T_dot(region, suite_id, in_prefix=in_prefix)   
 
-        
 if __name__ == "__main__":
     argument = sys.argv[1]
     region = sys.argv[2]
@@ -299,11 +311,19 @@ if __name__ == "__main__":
     if argument == '1':
         main_check_files_exist(region, stashes)
     elif argument == '2':
-        main_combine_files(region, stashes, days_range=[6,7,8])
+        fname="{0}-{1}-{2}-{3}-pp-".format(suite_id,region,argument,stash)
+        tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock',delete=False)
+        ret = main_combine_files(region, stashes, days_range=range(2,16), month=7)
+        if ret == 0:
+            os.remove(tmpf.name)
     elif argument == '3':
-        main_combine_day_tseries(region, stashes, days_range=[6,7,8])
+        fname="{0}-{1}-{2}-{3}-pp-".format(suite_id,region,argument,stash, month=7)
+        tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock',delete=False)
+        ret = main_combine_day_tseries(region, stashes, days_range=range(2,16))
+        if ret == 0:
+            os.remove(tmpf.name)
     elif argument == '4':
-        combine_q(region, in_prefix="060708")
+        combine_q(region, in_prefix="0203040506070809101112131415")
     elif argument == '5':
-        calc_tendencies(region, in_prefix="060708")
+        calc_tendencies(region, in_prefix="0203040506070809101112131415")
     
