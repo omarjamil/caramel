@@ -1,6 +1,6 @@
 #!/bin/bash -l
-#SBATCH --mem=200000
-#SBATCH --ntasks=48
+#SBATCH --mem=60000
+#SBATCH --ntasks=24
 #SBATCH --time=360
 #SBATCH --qos=normal
 #SBATCH --wckey=combined_dataset

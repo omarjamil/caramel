@@ -18,6 +18,14 @@ def minkowski_error(prediction, target, minkowski_parameter=1.5):
     loss = torch.mean((torch.abs(prediction - target))**minkowski_parameter)
     return loss
 
+class dotdict(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+# args = dotdict()
+
 parser = argparse.ArgumentParser(description='Train Q')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
                     help='input batch size for training (default: 128)')
@@ -42,13 +50,13 @@ parser.add_argument('--nhdn-layers', type=int, default=6, metavar='N',
                     help='Number of hidden layers (default: 6)')
     
 args = parser.parse_args()
-use_cuda = args.with_cuda and torch.cuda.is_available()
+args.cuda = args.with_cuda and torch.cuda.is_available()
 
 torch.manual_seed(args.seed)
 
-device = torch.device("cuda" if use_cuda else "cpu")
+device = torch.device("cuda" if args.cuda else "cpu")
 
-kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 log_interval = args.log_interval
 
 # Define the Model
@@ -116,12 +124,12 @@ nt = normalize.Normalizers(locations)
 # Training and testing data class
 nn_data = data_io.Data_IO(region, locations)
 
-x2d  = [nn_data.sw_toa_train, nn_data.lhf_train, nn_data.shf_train]
-x2d_test  = [nn_data.sw_toa_test, nn_data.lhf_test, nn_data.shf_test]
-x3d  = [nn_data.q_tot_train, nn_data.q_tot_adv_train, nn_data.theta_train, nn_data.theta_adv_train]
-x3d_test  = [nn_data.q_tot_test, nn_data.q_tot_adv_test, nn_data.theta_test, nn_data.theta_adv_test]
-y = [nn_data.qphys_train, nn_data.theta_phys_train]
-y_test = [nn_data.qphys_test, nn_data.theta_phys_test]
+x2d  = [nn_data.sw_toa_train[:], nn_data.lhf_train[:], nn_data.shf_train[:]]
+x2d_test  = [nn_data.sw_toa_test[:], nn_data.lhf_test[:], nn_data.shf_test[:]]
+x3d  = [nn_data.q_tot_train[:], nn_data.q_tot_adv_train[:], nn_data.theta_train[:], nn_data.theta_adv_train[:]]
+x3d_test  = [nn_data.q_tot_test[:], nn_data.q_tot_adv_test[:], nn_data.theta_test[:], nn_data.theta_adv_test[:]]
+y = [nn_data.qphys_train[:], nn_data.theta_phys_train[:]]
+y_test = [nn_data.qphys_test[:], nn_data.theta_phys_test[:]]
 
 class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, x3data, x2data, ydata, nlevs):
@@ -149,68 +157,59 @@ train_loader = torch.utils.data.DataLoader(
              ConcatDataset(x3d,x2d,y,nlevs),
              batch_size=batch_size, shuffle=True, **kwargs)
 
-validate_loader = torch.utils.data.DataLoader(
+validation_loader = torch.utils.data.DataLoader(
              ConcatDataset(x3d_test,x2d_test,y_test,nlevs),
              batch_size=batch_size, shuffle=False, **kwargs)
+
 
 
 def train(epoch):
     """
     Train the model
     """
-     
-    # Sets the model into training mode
-    mlp.train()
     train_loss = 0
-    # x=data in, y=data out, z = extra loss qnext
+    ## First Batch overfit to find errors 
     # first_batch = next(iter(train_loader))
     # for batch_idx, (x, y) in enumerate([first_batch] * 50):
     # training code here
     for batch_idx, (x, y) in enumerate(train_loader):
+        # Sets the model into training mode
+        mlp.train()
         x = x.to(device)
-        optimizer.zero_grad()
         prediction = mlp(x)
-        phys_loss = loss_function(prediction, y)
-        # qnext_loss = q_loss_tensors_mm(prediction, z, x)
-        # qnext_loss = q_loss_tensors_std(prediction, z, x)
-        loss = phys_loss #+ 0.*qnext_loss
+        loss = loss_function(prediction, y)
+        optimizer.zero_grad()
         loss.backward()
-        train_loss += loss.item()
         optimizer.step()
+        train_loss += loss.item()
 
         if batch_idx % log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, 
             batch_idx * len(x), len(train_loader.dataset),100. * batch_idx / len(train_loader),
             loss.item() / len(x)))
-        
         ##### Use this for finding learning rate 
         # scheduler.step()
         # for param_group in optimizer.param_groups:
         #     print(param_group['lr'], loss.item() / len(x))
         ###### LR finder end
-    average_loss = train_loss / len(train_loader.dataset)
+            
+    average_loss = train_loss / len(train_loader)
     print('====> Epoch: {} Average loss: {:.6f}'.format(epoch, average_loss))
     
     return average_loss
 
-def validate(epoch):
+def test():
     mlp.eval()
     validation_loss = 0
     with torch.no_grad():
-        # first_batch = next(iter(validate_loader))
-        # for batch_idx, (x, y) in enumerate([first_batch] * 50):
-        for batch_idx, (x,y) in enumerate(validate_loader):
+        first_batch = next(iter(validation_loader))
+        for (x,y) in [first_batch]:
+        # for x, y in validation_loader:
             x = x.to(device)
             prediction = mlp(x)
             validation_loss += loss_function(prediction,y).item()
-            # if i == 0:
-            #     n = min(x.size(0), 8)
-            #     comparison = torch.cat([data[:n],
-            #                           recon_batch.view(args.batch_size, 1, 28, 28)[:n]])
-            #     save_image(comparison.cpu(),
-            #              'results/reconstruction_' + str(epoch) + '.png', nrow=n)
 
-    validation_loss /= len(validate_loader.dataset)
+    validation_loss /= len(validation_loader)
     print('====> validation loss: {:.6f}'.format(validation_loss))
     return validation_loss
 
@@ -231,10 +230,10 @@ def train_main():
     validation_loss = []
     for epoch in range(1, epochs + 1):
         train_loss = train(epoch)
-        validate_loss = validate(epoch)
-        scheduler.step()    
+        val_loss = test()
         training_loss.append(train_loss)
-        validation_loss.append(validate_loss)
+        validation_loss.append(val_loss)
+        scheduler.step()    
         if epoch % 5 == 0:
             checkpoint_save(epoch, mlp, optimizer, training_loss, validation_loss, model_name)
 

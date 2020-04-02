@@ -4,10 +4,8 @@ and make available for model training and testing
 """
 
 import numpy as np
-from netCDF4 import Dataset
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
-import joblib
 import h5py
 
 # locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain"}
