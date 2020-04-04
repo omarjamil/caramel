@@ -167,8 +167,8 @@ def visualise_tseries_q(np_file,level):
     
 def visualise_tseries_qphys(np_file,level):
     data = h5py.File(np_file, 'r')
-    qphys_ml = data['qphys_predict'][:6000,:]
-    qphys = data['qphys_test'][:6000,:]
+    qphys_ml = data['qphys_predict_norm'][:6000,:]
+    qphys = data['qphys_test_norm'][:6000,:]
     fig = plt.figure(figsize=(14,10))
     # fig, axs = plt.subplots(3,1,figsize=(14, 10), sharex=True)
     # ax0 = axs[0]
@@ -297,7 +297,7 @@ def average_tseries(np_file):
         plt.show()
 
 if __name__ == "__main__":
-    model_name="q_qadv_t_tadv_swtoa_lhf_shf_qtphys_012_lyr_183_in_090_out_0512_hdn_1000_epch_02000_btch_9999LEAU_mink_vlr"
+    model_name="q_qadv_t_tadv_swtoa_lhf_shf_qtphys_008_lyr_183_in_090_out_0256_hdn_100_epch_00100_btch_021501AQ_mae_vlr_chkepo_005"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)
@@ -307,10 +307,10 @@ if __name__ == "__main__":
     # average_tseries(np_file)
     figname = np_file.replace("hdf5","png")
     # visualise_scm_predictions_q(np_file,figname)
-    visualise_scm_predictions_qt(np_file,figname)
+    # visualise_scm_predictions_qt(np_file,figname)
     for l in range(1,30,1):
         level=l
-        visualise_tseries(np_file, level)
+        # visualise_tseries(np_file, level)
         visualise_tseries_qphys(np_file_2,level)
         visualise_tseries_tphys(np_file_2,level)
         # compare_qphys_predictions(np_file, np_file_2, level)

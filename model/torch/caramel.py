@@ -9,7 +9,6 @@ import argparse
 
 import model
 import data_io
-import normalize
 
 def minkowski_error(prediction, target, minkowski_parameter=1.5):
     """
@@ -50,168 +49,55 @@ parser.add_argument('--nhdn-layers', type=int, default=6, metavar='N',
                     help='Number of hidden layers (default: 6)')
     
 args = parser.parse_args()
-args.cuda = args.with_cuda and torch.cuda.is_available()
-
 torch.manual_seed(args.seed)
-
+args.cuda = args.with_cuda and torch.cuda.is_available()
 device = torch.device("cuda" if args.cuda else "cpu")
 
-kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
-log_interval = args.log_interval
+def configure_optimizers():
+    optimizer =  torch.optim.Adam(mlp.parameters(), lr=1.e-3)
+    # optimizer =  torch.optim.SGD(mlp.parameters(), lr=0.01)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+    # loss_function = torch.nn.MSELoss()
+    return optimizer, scheduler
 
-# Define the Model
-# n_inputs,n_outputs=140,70
-region=args.data_region
-epochs=args.epochs
-batch_size=args.batch_size
-nb_hidden_layer = args.nhdn_layers
-identifier = args.identifier
-nlevs = 45
-in_features, nb_classes=(nlevs*4+3),(nlevs*2)
-hidden_size = 512
-mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
-# mlp = model.MLP_BN(in_features, nb_classes, nb_hidden_layer, hidden_size)
-pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
-print("Number of traninable parameter: {0}".format(pytorch_total_params))
-
-model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_mae_vlr.tar".format(str(nb_hidden_layer).zfill(3),
-                                                                                    str(in_features).zfill(3),
-                                                                                    str(nb_classes).zfill(3),
-                                                                                    str(hidden_size).zfill(4),
-                                                                                    str(epochs).zfill(3),
-                                                                                    str(batch_size).zfill(5),
-                                                                                    identifier)
-optimizer =  torch.optim.Adam(mlp.parameters(), lr=1.e-6)
-# optimizer =  torch.optim.SGD(mlp.parameters(), lr=0.01)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
-# loss_function = torch.nn.MSELoss()
-loss_function = torch.nn.L1Loss()
-# loss_function = minkowski_error
-# Get the data
-if args.isambard:
-    locations={ "train_test_datadir":"/home/mo-ojamil/ML/CRM/data",
-            "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/chkpts",
-            "hist_loc":"/home/mo-ojamil/ML/CRM/data/models",
-            "model_loc":"/home/mo-ojamil/ML/CRM/data/models/torch",
-            "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(region)}
-else:
-    locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
-            "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
-            "hist_loc":"/project/spice/radiation/ML/CRM/data/models/history",
-            "model_loc":"/project/spice/radiation/ML/CRM/data/models/torch",
-            "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(region)}
-
-if args.warm_start:
-# Load the save model 
-    checkpoint = torch.load(locations['model_loc']+'/'+model_name, map_location=device)
-    mlp.load_state_dict(checkpoint['model_state_dict'])
-    mlp.to(device)
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    loss = checkpoint['loss']
-    epoch = checkpoint['epoch']
-    model_name = model_name.replace('.tar','_{0}.tar'.format(region))
-else:
-    mlp.to(device)
-print("Model's state_dict:")
-for param_tensor in mlp.state_dict():
-    print(param_tensor, "\t", mlp.state_dict()[param_tensor].size())
-
-
-
-
-# Data normalizer class
-nt = normalize.Normalizers(locations)
-# Training and testing data class
-nn_data = data_io.Data_IO(region, locations)
-
-x2d  = [nn_data.sw_toa_train[:], nn_data.lhf_train[:], nn_data.shf_train[:]]
-x2d_test  = [nn_data.sw_toa_test[:], nn_data.lhf_test[:], nn_data.shf_test[:]]
-x3d  = [nn_data.q_tot_train[:], nn_data.q_tot_adv_train[:], nn_data.theta_train[:], nn_data.theta_adv_train[:]]
-x3d_test  = [nn_data.q_tot_test[:], nn_data.q_tot_adv_test[:], nn_data.theta_test[:], nn_data.theta_adv_test[:]]
-y = [nn_data.qphys_train[:], nn_data.theta_phys_train[:]]
-y_test = [nn_data.qphys_test[:], nn_data.theta_phys_test[:]]
-
-class ConcatDataset(torch.utils.data.Dataset):
-    def __init__(self, x3data, x2data, ydata, nlevs):
-        self.x3datasets = x3data
-        self.x2datasets = x2data
-        self.ydatasets = ydata
-        self.nlevs = nlevs
-
-    def __getitem__(self, i):
-        # x3 = [torch.tensor(d[i,:self.nlevs]) for d in self.x3datasets]
-        # x2 = [torch.tensor(d[i]) for d in self.x2datasets]
-        # x = torch.cat(x3+x2,dim=0)
-        # y = torch.cat([torch.tensor(d[i,:self.nlevs]) for d in self.ydatasets],dim=0)
-        x3 = [d[i,:self.nlevs] for d in self.x3datasets]
-        x2 = [d[i] for d in self.x2datasets]
-        x =  np.concatenate((x3+x2))
-        y = np.concatenate(([d[i,:self.nlevs] for d in self.ydatasets]))
-
-        return (torch.from_numpy(x).to(device),torch.from_numpy(y).to(device))
-
-    def __len__(self):
-        return min(len(d) for d in self.x2datasets)
-
-train_loader = torch.utils.data.DataLoader(
-             ConcatDataset(x3d,x2d,y,nlevs),
+def train_loader():
+    train_dataset_file = "{0}/train_data_{1}.hdf5".format(locations["train_test_datadir"],region)
+    train_loader = torch.utils.data.DataLoader(
+             data_io.ConcatDataset("train",nlevs,train_dataset_file, overfit=False),
              batch_size=batch_size, shuffle=True, **kwargs)
+    return train_loader
 
-validation_loader = torch.utils.data.DataLoader(
-             ConcatDataset(x3d_test,x2d_test,y_test,nlevs),
+def test_loader():
+    test_dataset_file = "{0}/test_data_{1}.hdf5".format(locations["train_test_datadir"],region)
+    validation_loader = torch.utils.data.DataLoader(
+             data_io.ConcatDataset("test",nlevs, test_dataset_file, overfit=False),
              batch_size=batch_size, shuffle=False, **kwargs)
+    return validation_loader
 
-
-
-def train(epoch):
+def training_step(batch, batch_idx):
     """
-    Train the model
     """
-    train_loss = 0
-    ## First Batch overfit to find errors 
-    # first_batch = next(iter(train_loader))
-    # for batch_idx, (x, y) in enumerate([first_batch] * 50):
-    # training code here
-    for batch_idx, (x, y) in enumerate(train_loader):
-        # Sets the model into training mode
-        mlp.train()
-        x = x.to(device)
-        prediction = mlp(x)
-        loss = loss_function(prediction, y)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        train_loss += loss.item()
+    x, y = batch
+    x = x.to(device)
+    y = y.to(device)
+    output = mlp(x)
+    loss = loss_function(output,y)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    return loss
 
-        if batch_idx % log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, 
-            batch_idx * len(x), len(train_loader.dataset),100. * batch_idx / len(train_loader),
-            loss.item() / len(x)))
-        ##### Use this for finding learning rate 
-        # scheduler.step()
-        # for param_group in optimizer.param_groups:
-        #     print(param_group['lr'], loss.item() / len(x))
-        ###### LR finder end
-            
-    average_loss = train_loss / len(train_loader)
-    print('====> Epoch: {} Average loss: {:.6f}'.format(epoch, average_loss))
-    
-    return average_loss
-
-def test():
-    mlp.eval()
-    validation_loss = 0
+def validation_step(batch, batch_idx):
+    """
+    """
+    x,y = batch
+    x = x.to(device)
+    y = y.to(device)
     with torch.no_grad():
-        first_batch = next(iter(validation_loader))
-        for (x,y) in [first_batch]:
-        # for x, y in validation_loader:
-            x = x.to(device)
-            prediction = mlp(x)
-            validation_loss += loss_function(prediction,y).item()
+        output = mlp(x)
+        loss = loss_function(output, y)
+    return loss
 
-    validation_loss /= len(validation_loader)
-    print('====> validation loss: {:.6f}'.format(validation_loss))
-    return validation_loss
 
 def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, training_loss: list, validation_loss: list, model_name: str):
     """
@@ -225,27 +111,152 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
                 'validation_loss':validation_loss},
                 locations['model_loc']+'/'+checkpoint_name)
 
-def train_main():
-    training_loss = []
-    validation_loss = []
-    for epoch in range(1, epochs + 1):
-        train_loss = train(epoch)
-        val_loss = test()
-        training_loss.append(train_loss)
-        validation_loss.append(val_loss)
-        scheduler.step()    
-        if epoch % 5 == 0:
-            checkpoint_save(epoch, mlp, optimizer, training_loss, validation_loss, model_name)
 
-    # Save the final model
+def set_model():
+    global mlp
+    global loss_function
+    global optimizer
+    global scheduler
+    
+    mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
+    # mlp = model.MLP_BN(in_features, nb_classes, nb_hidden_layer, hidden_size)
+    pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
+    print("Number of traninable parameter: {0}".format(pytorch_total_params))
+    loss_function = torch.nn.L1Loss()
+    # loss_function = torch.nn.MSELoss()
+    # loss_function = minkowski_error
+    optimizer, scheduler = configure_optimizers()
+
+    if args.warm_start:
+    # Load the save model 
+        checkpoint = torch.load(locations['model_loc']+'/'+model_name, map_location=device)
+        mlp.load_state_dict(checkpoint['model_state_dict'])
+        mlp.to(device)
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        loss = checkpoint['loss']
+        epoch = checkpoint['epoch']
+        model_name = model_name.replace('.tar','_{0}.tar'.format(region))
+    else:
+        mlp.to(device)
+    print("Model's state_dict:")
+    for param_tensor in mlp.state_dict():
+        print(param_tensor, "\t", mlp.state_dict()[param_tensor].size())
+
+def train_loader():
+    train_dataset_file = "{0}/train_data_{1}.hdf5".format(locations["train_test_datadir"],region)
+    train_loader = torch.utils.data.DataLoader(
+             data_io.ConcatDataset("train",nlevs,train_dataset_file, overfit=True),
+             batch_size=batch_size, shuffle=True, **kwargs)
+    return train_loader
+
+def test_loader():
+    test_dataset_file = "{0}/test_data_{1}.hdf5".format(locations["train_test_datadir"],region)
+    validation_loader = torch.utils.data.DataLoader(
+             data_io.ConcatDataset("test",nlevs, test_dataset_file, overfit=True),
+             batch_size=batch_size, shuffle=False, **kwargs)
+    return validation_loader
+
+def set_args():
+
+    global kwargs
+    global log_interval
+    global region
+    global epochs
+    global batch_size
+    global nb_hidden_layer
+    global identifier
+    global nlevs
+    global in_features
+    global nb_classes
+    global hidden_size
+    global model_name
+    global locations
+
+    kwargs = {'pin_memory': False} if args.cuda else {}
+
+    log_interval = args.log_interval
+
+    # Define the Model
+    # n_inputs,n_outputs=140,70
+    region=args.data_region
+    epochs=args.epochs
+    batch_size=args.batch_size
+    nb_hidden_layer = args.nhdn_layers
+    identifier = args.identifier
+    nlevs = 45
+    in_features = (nlevs*4+3)
+    nb_classes =(nlevs*2)
+    hidden_size = 256
+
+    model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_mae_vlr.tar".format(str(nb_hidden_layer).zfill(3),
+                                                                                    str(in_features).zfill(3),
+                                                                                    str(nb_classes).zfill(3),
+                                                                                    str(hidden_size).zfill(4),
+                                                                                    str(epochs).zfill(3),
+                                                                                    str(batch_size).zfill(5),
+                                                                                    identifier)
+
+    # Get the data
+    if args.isambard:
+        locations={ "train_test_datadir":"/home/mo-ojamil/ML/CRM/data",
+                "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/chkpts",
+                "hist_loc":"/home/mo-ojamil/ML/CRM/data/models",
+                "model_loc":"/home/mo-ojamil/ML/CRM/data/models/torch",
+                "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(region)}
+    else:
+        locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
+                "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
+                "hist_loc":"/project/spice/radiation/ML/CRM/data/models/history",
+                "model_loc":"/project/spice/radiation/ML/CRM/data/models/torch",
+                "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(region)}
+
+def train_loop():
+    
+    training_loss = []
+    train_ldr = train_loader()
+    validation_loss = []
+    test_ldr = test_loader()
+
+    for epoch in range(1, epochs + 1):
+        ## Training
+        train_loss = 0
+        for batch_idx, batch in enumerate(train_ldr):
+            # Sets the model into training mode
+            mlp.train()
+            loss = training_step(batch, batch_idx)
+            train_loss += loss
+            if batch_idx % log_interval == 0:
+                x,y=batch
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, 
+                batch_idx * len(x), len(train_ldr.dataset),100. * batch_idx / len(train_ldr),
+                loss.item() / len(x)))
+        average_loss = train_loss / len(train_ldr.dataset)
+        print('====> Epoch: {} Average loss: {:.6f}'.format(epoch, average_loss))
+        training_loss.append(average_loss)
+        scheduler.step()
+        ## Testing
+        test_loss = 0
+        for batch_idx, batch in enumerate(test_ldr):
+            mlp.eval()
+            loss = validation_step(batch, batch_idx)
+            test_loss += loss.item()
+        average_loss_val = test_loss / len(test_ldr.dataset)
+        print('====> validation loss: {:.6f}'.format(average_loss_val))
+        validation_loss.append(average_loss_val)
+        # if epoch % 5 == 0:
+        #     checkpoint_save(epoch, mlp, optimizer, training_loss, validation_loss, model_name)            
+     # Save the final model
     torch.save({'epoch':epoch,
                 'model_state_dict':mlp.state_dict(),
                 'optimizer_state_dict':optimizer.state_dict(),
                 'training_loss':training_loss,
                 'validation_loss':validation_loss},
-                locations['model_loc']+'/'+model_name)
+                locations['model_loc']+'/'+model_name)   
+
 
 if __name__ == "__main__":
-    train_main()
+    set_args()
+    set_model()
+    train_loop()
     
  

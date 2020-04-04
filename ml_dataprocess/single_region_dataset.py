@@ -237,7 +237,7 @@ def nn_dataset_per_subdomain(region:str, in_prefix="031525", suite_id="u-br800",
             
             std_fname=varname+".hdf5"
             if global_profile:
-                global_norm="9999LEAU_std"
+                global_norm="021507AQ_std"
                 print("Applying global mean and std for normalising from {0}".format(global_norm))
                 normed_var, raw_var = normalise_with_global_profile(s, var, global_norm)
             else:
@@ -295,7 +295,7 @@ def nn_dataset(region:str, in_prefix="031525", suite_id="u-br800", truncate: boo
             var = dataf[nn_data_stashes[s]][:]
         std_fname=nn_data_stashes[s]+".hdf5"
         if global_profile:
-            global_norm="9999LEAU_std"
+            global_norm="021507AQ_std"
             print("Applying global mean and std for normalising from {0}".format(global_norm))
             normed_var, raw_var = normalise_with_global_profile(s, var, global_norm)
         else:
@@ -310,7 +310,7 @@ def nn_dataset(region:str, in_prefix="031525", suite_id="u-br800", truncate: boo
 
     train_test_datadir = "{0}/models/datain/".format(crm_data)
     
-    fname = 'train_test_data_levs_{0}_std.hdf5'.format(region)
+    fname = 'train_test_data_{0}_std.hdf5'.format(region)
     # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
     with h5py.File(train_test_datadir+fname, 'w') as hfile:
         i = 0
@@ -331,7 +331,7 @@ def nn_dataset(region:str, in_prefix="031525", suite_id="u-br800", truncate: boo
             i+=1
 
 if __name__ == "__main__":
-    region="60S140W"
+    region="0N100W"
     # combine_subdomains(region, in_prefix="030405", suite_id="u-br800")
     # nn_dataset(region, in_prefix="030405", suite_id="u-br800", truncate=False, global_profile=True)
-    nn_dataset_per_subdomain(region, in_prefix="060708", suite_id="u-br800", truncate=False, global_profile=True)
+    nn_dataset_per_subdomain(region, in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", truncate=False, global_profile=True)

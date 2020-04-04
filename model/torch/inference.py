@@ -29,6 +29,8 @@ parser.add_argument('--identifier', type=str,
 parser.add_argument('--nhdn-layers', type=int, default=6, metavar='N',
                     help='Number of hidden layers (default: 6)')
 
+parser.add_argument('--model-file', type=str, help="model file")
+
 args = parser.parse_args()
 args.cuda = args.with_cuda and torch.cuda.is_available()
 device = torch.device("cuda" if args.cuda else "cpu")
@@ -76,16 +78,17 @@ nn_data.get_data(0)
 nlevs=45
 in_features, nb_classes=(nlevs*4+3),(nlevs*2)
 nb_hidden_layer = args.nhdn_layers 
-hidden_size = 512
+hidden_size = 256
 mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
 # mlp = model.MLP_BN(in_features, nb_classes, nb_hidden_layer, hidden_size)
-model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_mink_vlr.tar".format(str(nb_hidden_layer).zfill(3),
-                                                                                    str(in_features).zfill(3),
-                                                                                    str(nb_classes).zfill(3),
-                                                                                    str(hidden_size).zfill(4),
-                                                                                    str(args.epochs).zfill(3),
-                                                                                    str(args.batch_size).zfill(5),
-                                                                                    args.identifier)
+model_name = args.model_file
+# model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_mink_vlr.tar".format(str(nb_hidden_layer).zfill(3),
+#                                                                                     str(in_features).zfill(3),
+#                                                                                     str(nb_classes).zfill(3),
+#                                                                                     str(hidden_size).zfill(4),
+#                                                                                     str(args.epochs).zfill(3),
+#                                                                                     str(args.batch_size).zfill(5),
+#                                                                                     args.identifier)
 optimizer =  torch.optim.Adam(mlp.parameters())
 # loss_function = torch.nn.MSELoss()
 
@@ -306,7 +309,9 @@ def qt_inference(region='50S69W'):
 
     hfilename = model_name.replace('.tar','_qtphys.hdf5')
     output={'qphys_predict':qphys_predict_denorm.data.numpy(),'qphys_test':qphys_test_denorm.data.numpy(), 
-            'tphys_predict':tphys_predict_denorm.data.numpy(),'tphys_test':tphys_test_denorm.data.numpy()}
+            'tphys_predict':tphys_predict_denorm.data.numpy(),'tphys_test':tphys_test_denorm.data.numpy(),
+            'qphys_predict_norm':prediction[...,:nlevs].data.numpy(),'qphys_test_norm':qphys_norm_test[:], 
+            'tphys_predict_norm':prediction[...,nlevs:].data.numpy(),'tphys_test_norm':tphys_norm_test[:]}
     
     with h5py.File(hfilename, 'w') as hfile:
         for k, v in output.items():  
@@ -316,4 +321,4 @@ if __name__ == "__main__":
     # q_inference(region=region)
     # q_scm(region=region)
     qt_inference(region=region)
-    qt_scm(region=region)
+    # qt_scm(region=region)
