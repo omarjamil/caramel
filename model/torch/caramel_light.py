@@ -17,7 +17,7 @@ class MLP(pl.LightningModule):
         hidden_size, act=torch.nn.ReLU):
         # super(MLP, self).__init__()
         super().__init__()
-        # self.act = act()
+        self.act = act()
         self.n_hidden_layers = nb_hidden_layer
         self.fc1 = torch.nn.Linear(in_features, hidden_size)
         self.fcs = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
@@ -48,26 +48,26 @@ class MLP(pl.LightningModule):
         """
         L1 Error
         """
-        return torch.nn.L1Loss(prediction, target)
+        return torch.nn.functional.l1_loss(prediction, target)
 
     def configure_optimizers(self):
         optimizer =  torch.optim.Adam(self.parameters(), lr=1.e-3)
         # optimizer =  torch.optim.SGD(mlp.parameters(), lr=0.01)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
         # loss_function = torch.nn.MSELoss()
-        return optimizer, scheduler
+        return [optimizer], [scheduler]
 
-    def train_loader(self):
+    def train_dataloader(self):
         train_dataset_file = "{0}/train_data_{1}.hdf5".format(locations["train_test_datadir"],region)
-        train_loader = torch.utils.data.DataLoader(
-                data_io.ConcatDataset("train",nlevs,train_dataset_file, overfit=False),
+        training_loader = torch.utils.data.DataLoader(
+                data_io.ConcatDataset("train",nlevs,train_dataset_file, overfit=True),
                 batch_size=batch_size, shuffle=True)
-        return train_loader
+        return training_loader
 
-    def test_loader(self):
+    def test_dataloader(self):
         test_dataset_file = "{0}/test_data_{1}.hdf5".format(locations["train_test_datadir"],region)
         validation_loader = torch.utils.data.DataLoader(
-                data_io.ConcatDataset("test",nlevs, test_dataset_file, overfit=False),
+                data_io.ConcatDataset("test",nlevs, test_dataset_file, overfit=True),
                 batch_size=batch_size, shuffle=False)
         return validation_loader
 
@@ -77,7 +77,7 @@ class MLP(pl.LightningModule):
         x, y = batch
         output = self.forward(x)
         loss = self.loss_function(output,y)
-        logs = {'train_loss': loss}
+        logs = {'training_loss': loss}
         return {'loss':loss,'log':logs}
 
     def validation_step(self, batch, batch_idx):
@@ -143,7 +143,7 @@ identifier = args.identifier
 nlevs = 45
 in_features = (nlevs*4+3)
 nb_classes =(nlevs*2)
-hidden_size = 512
+hidden_size = int(0.66 * in_features + nb_classes)
 
 if args.isambard:
     locations={ "train_test_datadir":"/home/mo-ojamil/ML/CRM/data",
@@ -160,5 +160,5 @@ else:
 
 # train
 model = MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
-trainer = pl.Trainer(max_epochs=epochs)
+trainer = pl.Trainer(max_epochs=epochs, train_percent_check=1.)
 trainer.fit(model) 

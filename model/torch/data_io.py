@@ -83,7 +83,7 @@ class ConcatDataset(torch.utils.data.Dataset):
             self.theta_phys_train = dataset["t_phys_train"]
             self.qphys_train = dataset["q_phys_train"]
             if overfit:
-                self.npoints = 100000
+                self.npoints = 2000000
                 # print("Npoints: {0}".format(self.npoints)) 
             else:
                 self.npoints = self.q_tot_train.shape[0]

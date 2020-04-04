@@ -45,6 +45,7 @@ parser.add_argument('--warm-start', action='store_true', default=False,
 parser.add_argument('--identifier', type=str, 
                     help='Added to model name as a unique identifier;  also needed for warm start from a previous model')                    
 parser.add_argument('--data-region', type=str, help='data region')
+parser.add_argument('--loss', type=str, help='loss function to use', default='mae')
 parser.add_argument('--nhdn-layers', type=int, default=6, metavar='N',
                     help='Number of hidden layers (default: 6)')
     
@@ -56,23 +57,10 @@ device = torch.device("cuda" if args.cuda else "cpu")
 def configure_optimizers():
     optimizer =  torch.optim.Adam(mlp.parameters(), lr=1.e-3)
     # optimizer =  torch.optim.SGD(mlp.parameters(), lr=0.01)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
     # loss_function = torch.nn.MSELoss()
     return optimizer, scheduler
 
-def train_loader():
-    train_dataset_file = "{0}/train_data_{1}.hdf5".format(locations["train_test_datadir"],region)
-    train_loader = torch.utils.data.DataLoader(
-             data_io.ConcatDataset("train",nlevs,train_dataset_file, overfit=False),
-             batch_size=batch_size, shuffle=True, **kwargs)
-    return train_loader
-
-def test_loader():
-    test_dataset_file = "{0}/test_data_{1}.hdf5".format(locations["train_test_datadir"],region)
-    validation_loader = torch.utils.data.DataLoader(
-             data_io.ConcatDataset("test",nlevs, test_dataset_file, overfit=False),
-             batch_size=batch_size, shuffle=False, **kwargs)
-    return validation_loader
 
 def training_step(batch, batch_idx):
     """
@@ -122,9 +110,13 @@ def set_model():
     # mlp = model.MLP_BN(in_features, nb_classes, nb_hidden_layer, hidden_size)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
     print("Number of traninable parameter: {0}".format(pytorch_total_params))
-    loss_function = torch.nn.L1Loss()
-    # loss_function = torch.nn.MSELoss()
-    # loss_function = minkowski_error
+
+    if args.loss == "mae":
+        loss_function = torch.nn.functional.l1_loss #torch.nn.L1Loss()
+    elif args.loss == "mse":
+        loss_function = torch.nn.functional.mse_loss #torch.nn.MSELoss()
+    elif args.loss == "mink":
+        loss_function = minkowski_error
     optimizer, scheduler = configure_optimizers()
 
     if args.warm_start:
@@ -142,14 +134,14 @@ def set_model():
     for param_tensor in mlp.state_dict():
         print(param_tensor, "\t", mlp.state_dict()[param_tensor].size())
 
-def train_loader():
+def train_dataloader():
     train_dataset_file = "{0}/train_data_{1}.hdf5".format(locations["train_test_datadir"],region)
     train_loader = torch.utils.data.DataLoader(
              data_io.ConcatDataset("train",nlevs,train_dataset_file, overfit=True),
              batch_size=batch_size, shuffle=True, **kwargs)
     return train_loader
 
-def test_loader():
+def test_dataloader():
     test_dataset_file = "{0}/test_data_{1}.hdf5".format(locations["train_test_datadir"],region)
     validation_loader = torch.utils.data.DataLoader(
              data_io.ConcatDataset("test",nlevs, test_dataset_file, overfit=True),
@@ -186,15 +178,16 @@ def set_args():
     nlevs = 45
     in_features = (nlevs*4+3)
     nb_classes =(nlevs*2)
-    hidden_size = 256
+    hidden_size = int(0.66 * in_features + nb_classes)
 
-    model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_mae_vlr.tar".format(str(nb_hidden_layer).zfill(3),
+    model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}.tar".format(str(nb_hidden_layer).zfill(3),
                                                                                     str(in_features).zfill(3),
                                                                                     str(nb_classes).zfill(3),
                                                                                     str(hidden_size).zfill(4),
                                                                                     str(epochs).zfill(3),
                                                                                     str(batch_size).zfill(5),
-                                                                                    identifier)
+                                                                                    identifier, 
+                                                                                    args.loss)
 
     # Get the data
     if args.isambard:
@@ -213,9 +206,9 @@ def set_args():
 def train_loop():
     
     training_loss = []
-    train_ldr = train_loader()
+    train_ldr = train_dataloader()
     validation_loss = []
-    test_ldr = test_loader()
+    test_ldr = test_dataloader()
 
     for epoch in range(1, epochs + 1):
         ## Training
@@ -243,8 +236,8 @@ def train_loop():
         average_loss_val = test_loss / len(test_ldr.dataset)
         print('====> validation loss: {:.6f}'.format(average_loss_val))
         validation_loss.append(average_loss_val)
-        # if epoch % 5 == 0:
-        #     checkpoint_save(epoch, mlp, optimizer, training_loss, validation_loss, model_name)            
+        if epoch % 10 == 0:
+            checkpoint_save(epoch, mlp, optimizer, training_loss, validation_loss, model_name)            
      # Save the final model
     torch.save({'epoch':epoch,
                 'model_state_dict':mlp.state_dict(),
