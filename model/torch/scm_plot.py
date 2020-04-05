@@ -297,7 +297,7 @@ def average_tseries(np_file):
         plt.show()
 
 if __name__ == "__main__":
-    model_name="q_qadv_t_tadv_swtoa_lhf_shf_qtphys_008_lyr_183_in_090_out_0256_hdn_010_epch_00100_btch_021501AQ_mae_vlr"
+    model_name="q_qadv_t_tadv_swtoa_lhf_shf_qtphys_009_lyr_183_in_090_out_0512_hdn_100_epch_02000_btch_021501AQ_mse"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)

@@ -78,7 +78,7 @@ nn_data.get_data(0)
 nlevs=45
 in_features, nb_classes=(nlevs*4+3),(nlevs*2)
 nb_hidden_layer = args.nhdn_layers 
-hidden_size = 256
+hidden_size = 512
 mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
 # mlp = model.MLP_BN(in_features, nb_classes, nb_hidden_layer, hidden_size)
 model_name = args.model_file

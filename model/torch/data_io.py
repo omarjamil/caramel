@@ -64,7 +64,7 @@ class Data_IO_validation(object):
 
 
 class ConcatDataset(torch.utils.data.Dataset):
-    def __init__(self, dat_type, nlevs, dataset_file, overfit=False):
+    def __init__(self, dat_type, nlevs, dataset_file, data_frac=1.):
         super().__init__()
         self.dat_type = dat_type
         self.dataset_file = dataset_file
@@ -82,12 +82,8 @@ class ConcatDataset(torch.utils.data.Dataset):
             self.lhf_train = dataset["surface_upward_latent_heat_flux_train"]
             self.theta_phys_train = dataset["t_phys_train"]
             self.qphys_train = dataset["q_phys_train"]
-            if overfit:
-                self.npoints = 2000000
-                # print("Npoints: {0}".format(self.npoints)) 
-            else:
-                self.npoints = self.q_tot_train.shape[0]
-                # print("Npoints: {0}".format(self.npoints)) 
+            
+            self.npoints = int(self.q_tot_train.shape[0] * data_frac)
             self.x3data = [self.q_tot_train[:self.npoints], self.q_tot_adv_train[:self.npoints], self.theta_train[:self.npoints], self.theta_adv_train[:self.npoints]]
             self.x2data = [self.sw_toa_train[:self.npoints], self.lhf_train[:self.npoints], self.shf_train[:self.npoints]]
             self.ydata = [self.qphys_train[:self.npoints], self.theta_phys_train[:self.npoints]]
@@ -103,12 +99,8 @@ class ConcatDataset(torch.utils.data.Dataset):
             self.lhf_test = dataset["surface_upward_latent_heat_flux_test"]
             self.theta_phys_test = dataset["t_phys_test"]
             self.qphys_test = dataset["q_phys_test"] 
-            if overfit:
-                self.npoints = 100000
-                # print("Npoints: {0}".format(self.npoints)) 
-            else:
-                self.npoints = self.q_tot_test.shape[0]
-                # print("Npoints: {0}".format(self.npoints)) 
+            
+            self.npoints = int(self.q_tot_test.shape[0] * data_frac)
             self.x3data = [self.q_tot_test[:self.npoints], self.q_tot_adv_test[:self.npoints], self.theta_test[:self.npoints], self.theta_adv_test[:self.npoints]]
             self.x2data = [self.sw_toa_test[:self.npoints], self.lhf_test[:self.npoints], self.shf_test[:self.npoints]]
             self.ydata = [self.qphys_test[:self.npoints], self.theta_phys_test[:self.npoints]]

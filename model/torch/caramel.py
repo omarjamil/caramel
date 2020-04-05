@@ -48,6 +48,8 @@ parser.add_argument('--data-region', type=str, help='data region')
 parser.add_argument('--loss', type=str, help='loss function to use', default='mae')
 parser.add_argument('--nhdn-layers', type=int, default=6, metavar='N',
                     help='Number of hidden layers (default: 6)')
+parser.add_argument('--data-frac', type=float, default=1.,
+                    help='fraction of data to use for training and testing (default: 1)')                    
     
 args = parser.parse_args()
 torch.manual_seed(args.seed)
@@ -137,14 +139,14 @@ def set_model():
 def train_dataloader():
     train_dataset_file = "{0}/train_data_{1}.hdf5".format(locations["train_test_datadir"],region)
     train_loader = torch.utils.data.DataLoader(
-             data_io.ConcatDataset("train",nlevs,train_dataset_file, overfit=True),
+             data_io.ConcatDataset("train",nlevs,train_dataset_file, data_frac=data_fraction),
              batch_size=batch_size, shuffle=True, **kwargs)
     return train_loader
 
 def test_dataloader():
     test_dataset_file = "{0}/test_data_{1}.hdf5".format(locations["train_test_datadir"],region)
     validation_loader = torch.utils.data.DataLoader(
-             data_io.ConcatDataset("test",nlevs, test_dataset_file, overfit=True),
+             data_io.ConcatDataset("test",nlevs, test_dataset_file, data_frac=data_fraction),
              batch_size=batch_size, shuffle=False, **kwargs)
     return validation_loader
 
@@ -163,6 +165,7 @@ def set_args():
     global hidden_size
     global model_name
     global locations
+    global data_fraction
 
     kwargs = {'pin_memory': False} if args.cuda else {}
 
@@ -173,13 +176,13 @@ def set_args():
     region=args.data_region
     epochs=args.epochs
     batch_size=args.batch_size
+    data_fraction = args.data_frac
     nb_hidden_layer = args.nhdn_layers
     identifier = args.identifier
     nlevs = 45
     in_features = (nlevs*4+3)
     nb_classes =(nlevs*2)
-    hidden_size = int(0.66 * in_features + nb_classes)
-
+    hidden_size = 512 #int(0.66 * in_features + nb_classes)
     model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}.tar".format(str(nb_hidden_layer).zfill(3),
                                                                                     str(in_features).zfill(3),
                                                                                     str(nb_classes).zfill(3),
