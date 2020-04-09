@@ -57,9 +57,9 @@ args.cuda = args.with_cuda and torch.cuda.is_available()
 device = torch.device("cuda" if args.cuda else "cpu")
 
 def configure_optimizers():
-    optimizer =  torch.optim.Adam(mlp.parameters(), lr=1.e-3)
+    optimizer =  torch.optim.Adam(mlp.parameters(), lr=1.e-2)
     # optimizer =  torch.optim.SGD(mlp.parameters(), lr=0.01)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.9)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
     # loss_function = torch.nn.MSELoss()
     return optimizer, scheduler
 
@@ -182,8 +182,8 @@ def set_args():
     nlevs = 45
     in_features = (nlevs*4+3)
     nb_classes =(nlevs*2)
-    hidden_size = 512 #int(0.66 * in_features + nb_classes)
-    model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}.tar".format(str(nb_hidden_layer).zfill(3),
+    hidden_size = int(0.66 * in_features + nb_classes)
+    model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_levs.tar".format(str(nb_hidden_layer).zfill(3),
                                                                                     str(in_features).zfill(3),
                                                                                     str(nb_classes).zfill(3),
                                                                                     str(hidden_size).zfill(4),

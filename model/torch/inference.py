@@ -71,14 +71,14 @@ nt = normalize.Normalizers(locations)
 # Training and testing data class
 # nn_data = data_io.Data_IO(region, locations)
 nn_data = data_io.Data_IO_validation(region, locations)
-nn_data.get_data(0)
+nn_data.get_data(15)
 
 # Define the Model
 # n_inputs,n_outputs=140,70
 nlevs=45
 in_features, nb_classes=(nlevs*4+3),(nlevs*2)
 nb_hidden_layer = args.nhdn_layers 
-hidden_size = 512
+hidden_size = int(0.66 * in_features + nb_classes)
 mlp = model.MLP(in_features, nb_classes, nb_hidden_layer, hidden_size)
 # mlp = model.MLP_BN(in_features, nb_classes, nb_hidden_layer, hidden_size)
 model_name = args.model_file
@@ -282,7 +282,45 @@ def q_inference(region='50S69W'):
     # qphys_test_denorm = torch.from_numpy(qphys_norm_test)
 
     hfilename = model_name.replace('.tar','_qphys.hdf5')
-    output={'qphys_predict':qphys_predict_denorm.data.numpy(),'qphys_test':qphys_test_denorm.data.numpy()}
+    output={'qphys_predict':qphys_predict_denorm.data.numpy(),'qphys_test':qphys_test_denorm.data.numpy(),
+            'qphys_predict_norm':prediction[...,:nlevs].data.numpy(),'qphys_test_norm':qphys_norm_test[:]}
+    
+    with h5py.File(hfilename, 'w') as hfile:
+        for k, v in output.items():  
+            hfile.create_dataset(k,data=v)
+
+def t_inference(region='50S69W'):
+    """
+    q model inference/testing
+    """
+    start=0
+    end=200
+    # Testing data
+    tphys_norm_test = nn_data.theta_phys_test[start:end,:nlevs]
+    # qphys_norm_test = nn_data.qphys_train[start:end,:nlevs]
+    # qcomb_test  = np.concatenate((nn_data.qadv_norm_test,nn_data.q_norm_test),axis=1)
+    # qcomb_dot_test  = np.concatenate((nn_data.qadd_dot_test,nn_data.q_norm_test),axis=1)
+    # qcomb_dot_test  = nn_data.qadd_dot_test
+    # qcomb_dot_test  = np.concatenate((nn_data.q_norm_test_s, nn_data.qadv_dot_norm_test_s),axis=1)
+    qt_test  = np.concatenate((nn_data.q_tot_test[start:end,:nlevs], nn_data.q_tot_adv_test[start:end,:nlevs], nn_data.theta_test[start:end,:nlevs], nn_data.theta_adv_test[start:end,:nlevs], nn_data.sw_toa_test[start:end,:], nn_data.lhf_test[start:end,:], nn_data.shf_test[start:end,:]),axis=1)
+    # qt_test  = np.concatenate((nn_data.q_tot_test[start:end,:nlevs], nn_data.theta_test[start:end,:nlevs], nn_data.sw_toa_test[start:end,:], nn_data.lhf_test[start:end,:], nn_data.shf_test[start:end,:]),axis=1)
+    # qt_test  = np.concatenate((nn_data.q_tot_train[start:end,:nlevs], nn_data.q_tot_adv_train[start:end,:nlevs], nn_data.theta_train[start:end,:nlevs], nn_data.theta_adv_train[start:end,:nlevs], nn_data.sw_toa_train[start:end,:], nn_data.lhf_train[start:end,:], nn_data.shf_train[start:end,:]),axis=1)
+    
+    #train_in, train_out = qcomb_dot_train, qphys_norm_train
+    #test_in, test_out = qcomb_dot_test, qphys_norm_test
+    x_t,y_t = torch.from_numpy(qt_test[:]), tphys_norm_test[:]
+
+    prediction = mlp(x_t)
+    # qphys_predict_denorm = nt.inverse_minmax_tensor(prediction, qphys_scale, qphys_feature_min, qphys_feature_max, qphys_data_min)
+    # qphys_test_denorm = nt.inverse_minmax_tensor(torch.from_numpy(qphys_norm_test[:]), qphys_scale, qphys_feature_min, qphys_feature_max, qphys_data_min)
+    tphys_predict_denorm = nt.inverse_std(prediction, nt.tphys_stdscale[...,:nlevs], nt.tphys_mean[...,:nlevs])
+    tphys_test_denorm = nt.inverse_std(torch.from_numpy(tphys_norm_test[:]), nt.tphys_stdscale[...,:nlevs], nt.tphys_mean[...,:nlevs])
+    # qphys_predict_denorm = prediction
+    # qphys_test_denorm = torch.from_numpy(qphys_norm_test)
+
+    hfilename = model_name.replace('.tar','_tphys.hdf5')
+    output={'tphys_predict':tphys_predict_denorm.data.numpy(),'tphys_test':tphys_test_denorm.data.numpy(),
+            'tphys_predict_norm':prediction[...,:nlevs].data.numpy(),'tphys_test_norm':tphys_norm_test[:]}
     
     with h5py.File(hfilename, 'w') as hfile:
         for k, v in output.items():  
@@ -298,6 +336,7 @@ def qt_inference(region='50S69W'):
     qphys_norm_test = nn_data.qphys_test[start:end,:nlevs]
     tphys_norm_test = nn_data.theta_phys_test[start:end,:nlevs]
     qt_test  = np.concatenate((nn_data.q_tot_test[start:end,:nlevs], nn_data.q_tot_adv_test[start:end,:nlevs], nn_data.theta_test[start:end,:nlevs], nn_data.theta_adv_test[start:end,:nlevs], nn_data.sw_toa_test[start:end,:], nn_data.lhf_test[start:end,:], nn_data.shf_test[start:end,:]),axis=1)
+    # qt_test  = np.concatenate((nn_data.q_tot_test[start:end,:nlevs]+nn_data.q_tot_adv_test[start:end,:nlevs], nn_data.theta_test[start:end,:nlevs]+nn_data.theta_adv_test[start:end,:nlevs], nn_data.sw_toa_test[start:end,:], nn_data.lhf_test[start:end,:], nn_data.shf_test[start:end,:]),axis=1)
     #test_in, test_out = qcomb_dot_test, qphys_norm_test
     x_t,y_t = torch.from_numpy(qt_test[:]), qphys_norm_test[:]
 
@@ -306,12 +345,20 @@ def qt_inference(region='50S69W'):
     qphys_test_denorm = nt.inverse_std(torch.from_numpy(qphys_norm_test[:]), nt.qphys_stdscale[...,:nlevs], nt.qphys_mean[...,:nlevs])
     tphys_predict_denorm = nt.inverse_std(prediction[...,nlevs:], nt.tphys_stdscale[...,:nlevs], nt.tphys_mean[...,:nlevs])
     tphys_test_denorm = nt.inverse_std(torch.from_numpy(tphys_norm_test[:]), nt.tphys_stdscale[...,:nlevs], nt.qphys_mean[...,:nlevs])
+    qtot_test_denorm = nt.inverse_std(torch.from_numpy(nn_data.q_tot_test[start:end,:nlevs]), nt.q_stdscale[...,:nlevs], nt.q_mean[...,:nlevs])
+    qadv_test_denorm = nt.inverse_std(torch.from_numpy(nn_data.q_tot_adv_test[start:end,:nlevs]), nt.qadv_stdscale[...,:nlevs], nt.qadv_mean[...,:nlevs])
+    t_test_denorm = nt.inverse_std(torch.from_numpy(nn_data.theta_test[start:end,:nlevs]), nt.t_stdscale[...,:nlevs], nt.t_mean[...,:nlevs])
+    tadv_denorm = nt.inverse_std(torch.from_numpy(nn_data.theta_adv_test[start:end,:nlevs]), nt.tadv_stdscale[...,:nlevs], nt.tadv_mean[...,:nlevs])
 
     hfilename = model_name.replace('.tar','_qtphys.hdf5')
     output={'qphys_predict':qphys_predict_denorm.data.numpy(),'qphys_test':qphys_test_denorm.data.numpy(), 
             'tphys_predict':tphys_predict_denorm.data.numpy(),'tphys_test':tphys_test_denorm.data.numpy(),
             'qphys_predict_norm':prediction[...,:nlevs].data.numpy(),'qphys_test_norm':qphys_norm_test[:], 
-            'tphys_predict_norm':prediction[...,nlevs:].data.numpy(),'tphys_test_norm':tphys_norm_test[:]}
+            'tphys_predict_norm':prediction[...,nlevs:].data.numpy(),'tphys_test_norm':tphys_norm_test[:],
+            'qtot_test_norm':nn_data.q_tot_test[start:end,:nlevs], 'qadv_test_norm':nn_data.q_tot_adv_test[start:end,:nlevs],
+            'theta_test_norm':nn_data.theta_test[start:end,:nlevs], 'theta_adv_test_norm':nn_data.theta_adv_test[start:end,:nlevs],
+            'qtot_test':qtot_test_denorm.data.numpy(), 'qadv_test':qadv_test_denorm.data.numpy(),
+            'theta_test':t_test_denorm.data.numpy(), 'theta_adv_test':tadv_denorm.data.numpy()}
     
     with h5py.File(hfilename, 'w') as hfile:
         for k, v in output.items():  
@@ -319,6 +366,7 @@ def qt_inference(region='50S69W'):
 
 if __name__ == "__main__":
     # q_inference(region=region)
+    # t_inference(region=region)
     # q_scm(region=region)
     qt_inference(region=region)
     # qt_scm(region=region)

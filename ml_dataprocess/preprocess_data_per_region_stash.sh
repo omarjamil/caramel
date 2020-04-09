@@ -14,34 +14,34 @@ regions=('0N100W' '0N130W' '0N15W' '0N160E' '0N160W' '0N30W' '0N50E' '0N70E' '0N
 
 
 # poll submit to avoid job numbers limit
-# option=3
-# r=0
-# while [ $r -lt ${#regions[@]} ]
-# do
-#     region=${regions[r]}
-#     sq=`squeue -u ojamil | wc -l`
-#     let qlength=$((sq-1))
-#     let gap=$((999-qlength))
-#     if (( gap > 40 ))
-#     then
-#         for s in ${stashes[@]}
-#         do
-#             command="sbatch preprocess_data.sbatch $option $region $s"
-#             echo $command
-#             eval $command
-#         done
-#         r=$((r+1))
-#     fi
-#     sleep 2.5
-# done
-
-option=5
-for region in ${regions[@]}
+option=2
+r=0
+while [ $r -lt ${#regions[@]} ]
 do
-    command="sbatch preprocess_data.sbatch $option $region 00000"
-    echo $command
-    eval $command
+    region=${regions[r]}
+    sq=`squeue -u ojamil | wc -l`
+    let qlength=$((sq-1))
+    let gap=$((999-qlength))
+    if (( gap > 40 ))
+    then
+        for s in ${stashes[@]}
+        do
+            command="sbatch preprocess_data.sbatch $option $region $s"
+            echo $command
+            eval $command
+        done
+        r=$((r+1))
+    fi
+    sleep 2.5
 done
+
+# option=5
+# for region in ${regions[@]}
+# do
+#     command="sbatch preprocess_data.sbatch $option $region 00000"
+#     echo $command
+#     eval $command
+# done
 
 # for region in ${regions[@]}
 # do

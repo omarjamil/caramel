@@ -237,7 +237,7 @@ def nn_dataset_per_subdomain(region:str, in_prefix="031525", suite_id="u-br800",
             
             std_fname=varname+".hdf5"
             if global_profile:
-                global_norm="021507AQ_std"
+                global_norm="021501AQ_scalar"
                 print("Applying global mean and std for normalising from {0}".format(global_norm))
                 normed_var, raw_var = normalise_with_global_profile(s, var, global_norm)
             else:
@@ -310,7 +310,7 @@ def nn_dataset(region:str, in_prefix="031525", suite_id="u-br800", truncate: boo
 
     train_test_datadir = "{0}/models/datain/".format(crm_data)
     
-    fname = 'train_test_data_{0}_std.hdf5'.format(region)
+    fname = 'train_test_data_scalar_{0}_std.hdf5'.format(region)
     # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
     with h5py.File(train_test_datadir+fname, 'w') as hfile:
         i = 0

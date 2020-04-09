@@ -87,7 +87,7 @@ def standardise_data_transform(dataset: np.array([]), region: str, save_fname: s
     Manually standardise data based instead of using sklearn standarad scaler
     robust: Use median and quantiles for scaling
     """
-    save_location = "{0}/models/normaliser/{1}/".format(crm_data,region)
+    save_location = "{0}/models/normaliser/{1}_scalar/".format(crm_data,region)
     # save_location = "{0}/models/normaliser/{1}_noshuffle/".format(crm_data,region)
     try:
         os.makedirs(save_location)
@@ -379,7 +379,7 @@ def nn_dataset_std(region:str, in_prefix="031525", suite_id="u-br800", truncate:
         else:
             var = dataf[nn_data_stashes[s]][:]
         std_fname=nn_data_stashes[s]+".hdf5"
-        normed_var = standardise_data_transform(var, region, save_fname=std_fname, return_raw=False)
+        normed_var = standardise_data_transform(var, region, save_fname=std_fname, return_raw=False, levs=False)
         data_labels.append(nn_data_stashes[s])
         data.append(normed_var)
     
@@ -389,7 +389,7 @@ def nn_dataset_std(region:str, in_prefix="031525", suite_id="u-br800", truncate:
 
     train_test_datadir = "{0}/models/datain/".format(crm_data)
     
-    fname = 'train_test_data_{0}_std.hdf5'.format(region)
+    fname = 'train_test_data_{0}_sec_std.hdf5'.format(region)
     # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
     with h5py.File(train_test_datadir+fname, 'w') as hfile:
         i = 0
@@ -478,5 +478,4 @@ if __name__ == "__main__":
     #combine_surface_level_files(in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", new_region="021507AQ")
     # combine_subdomains("021507AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc")
     # nn_dataset_raw_std("021507AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", truncate=False)
-    # nn_dataset_std("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_conc", truncate=False)
-    nn_dataset_std_sep_train("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_conc", truncate=False)
+    nn_dataset_std("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_conc", truncate=False)

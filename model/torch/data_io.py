@@ -85,8 +85,11 @@ class ConcatDataset(torch.utils.data.Dataset):
             
             self.npoints = int(self.q_tot_train.shape[0] * data_frac)
             self.x3data = [self.q_tot_train[:self.npoints], self.q_tot_adv_train[:self.npoints], self.theta_train[:self.npoints], self.theta_adv_train[:self.npoints]]
+            # self.x3data = [self.q_tot_train[:self.npoints] + self.q_tot_adv_train[:self.npoints], self.theta_train[:self.npoints] + self.theta_adv_train[:self.npoints]]
             self.x2data = [self.sw_toa_train[:self.npoints], self.lhf_train[:self.npoints], self.shf_train[:self.npoints]]
             self.ydata = [self.qphys_train[:self.npoints], self.theta_phys_train[:self.npoints]]
+            # self.ydata = [self.theta_phys_train[:self.npoints]]
+            # self.ydata = [self.qphys_train[:self.npoints]]
         elif dat_type == "test":
             print("Reading dataset file: {0}".format(dataset_file))
             dataset=h5py.File(dataset_file,'r')
@@ -102,8 +105,11 @@ class ConcatDataset(torch.utils.data.Dataset):
             
             self.npoints = int(self.q_tot_test.shape[0] * data_frac)
             self.x3data = [self.q_tot_test[:self.npoints], self.q_tot_adv_test[:self.npoints], self.theta_test[:self.npoints], self.theta_adv_test[:self.npoints]]
+            # self.x3data = [self.q_tot_test[:self.npoints] + self.q_tot_adv_test[:self.npoints], self.theta_test[:self.npoints] + self.theta_adv_test[:self.npoints]]
             self.x2data = [self.sw_toa_test[:self.npoints], self.lhf_test[:self.npoints], self.shf_test[:self.npoints]]
             self.ydata = [self.qphys_test[:self.npoints], self.theta_phys_test[:self.npoints]]
+            # self.ydata = [self.theta_phys_test[:self.npoints]]
+            # self.ydata = [self.qphys_test[:self.npoints]]
 
     def __getitem__(self, i):
         """
