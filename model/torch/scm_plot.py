@@ -180,6 +180,7 @@ def visualise_tseries_qT(npfile,level):
     qadv_test = data['qadv_test_norm'][:]
     theta_test = data['theta_test_norm'][:]
     theta_adv_test= data['theta_adv_test_norm'][:]
+    qphys_mean = np.mean(qphys,axis=0)
 
     fig, axs = plt.subplots(4,3,figsize=(14, 10),sharex=True)
     ax = axs[0,0]
@@ -230,6 +231,9 @@ def visualise_tseries_qT(npfile,level):
     ax = axs[1,2]
     ax.plot(qadv_test[:,level],'.-', label='qadv norm')
     ax.plot(qphys_norm[:,level],'.-',label='qphys norm')
+    ax.plot(qtot_test[:,level] + qadv_test[:,level],'.-',label='qtot+qadv')
+    ax.plot(qphys_ml_norm[:,level],'.-',label='qphys (ML) norm')
+
 
     # ax.plot(qtot_test[:,level]-qadv_test[:,level],'.-', label='qtot*qadv norm')
     ax.legend()
@@ -244,7 +248,60 @@ def visualise_tseries_qT(npfile,level):
     ax.legend()
 
     plt.show()
-    
+
+def visualise_all_levels_qT(npfile):
+    # data = np.load(np_file)
+    data = h5py.File(npfile, 'r')
+    qphys_ml = data['qphys_predict'][:]
+    qphys = data['qphys_test'][:]
+    tphys_ml = data['tphys_predict'][:]
+    tphys = data['tphys_test'][:]
+    qphys_ml_norm = data['qphys_predict_norm'][:]
+    qphys_norm = data['qphys_test_norm'][:]
+    tphys_ml_norm = data['tphys_predict_norm'][:]
+    tphys_norm = data['tphys_test_norm'][:]
+    qtot_test = data['qtot_test_norm'][:]
+    qadv_test = data['qadv_test_norm'][:]
+    theta_test = data['theta_test_norm'][:]
+    theta_adv_test= data['theta_adv_test_norm'][:]
+
+    fig, axs = plt.subplots(3,2,figsize=(14, 10), sharex=True)
+    ax = axs[0,0]
+    vmin,vmax=np.min(qphys_ml),np.max(qphys_ml)
+    c = ax.pcolor(qphys_ml[:,:].T)
+    ax.set_title('qphys (ML)')
+    fig.colorbar(c,ax=ax)
+
+    ax = axs[1,0]
+    c = ax.pcolor(qphys[:,:].T)
+    ax.set_title('qphys ')
+    fig.colorbar(c,ax=ax)
+
+    qdiff = qphys_ml[:].T - qphys[:].T
+    ax = axs[2,0]
+    c = ax.pcolor(qdiff[:,:])
+    ax.set_title('Predict - Test')
+    fig.colorbar(c,ax=ax)
+
+    ax = axs[0,1]
+    vmin,vmax=np.min(tphys_ml),np.max(tphys_ml)
+    c = ax.pcolor(tphys_ml[:,:].T)
+    ax.set_title('tphys (ML)')
+    fig.colorbar(c,ax=ax)
+
+    ax = axs[1,1]
+    c = ax.pcolor(tphys[:,:].T, vmin=vmin, vmax=vmax)
+    ax.set_title('tphys ')
+    fig.colorbar(c,ax=ax)
+
+    tdiff = tphys_ml[:].T - tphys[:].T
+    ax = axs[2,1]
+    c = ax.pcolor(tdiff[:,:])
+    ax.set_title('Predict - Test')
+    fig.colorbar(c,ax=ax)
+
+    plt.show()
+
 def visualise_tseries_qphys(np_file,level):
     data = h5py.File(np_file, 'r')
     qphys_ml = data['qphys_predict'][:,:]
@@ -400,7 +457,7 @@ def average_tseries(np_file):
         plt.show()
 
 if __name__ == "__main__":
-    model_name="q_qadv_t_tadv_swtoa_lhf_shf_qtphys_009_lyr_183_in_090_out_0210_hdn_030_epch_01000_btch_021501AQ_mae_levs"
+    model_name="q_qadv_t_tadv_swtoa_lhf_shf_qtphys_009_lyr_183_in_090_out_0210_hdn_030_epch_01000_btch_021501AQ_mae_standardise_levs"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)
@@ -409,6 +466,7 @@ if __name__ == "__main__":
     np_file_2 = model_name+"_qtphys.hdf5"
     # average_tseries(np_file)
     figname = np_file.replace("hdf5","png")
+    visualise_all_levels_qT(np_file_2)
     # visualise_scm_predictions_q(np_file,figname)
     # visualise_scm_predictions_qt(np_file,figname)
     for l in range(1,45,1):

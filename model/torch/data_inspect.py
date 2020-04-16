@@ -1,6 +1,5 @@
 import torch
 import pickle
-import joblib
 import numpy as np
 import math
 import sys
@@ -11,139 +10,137 @@ import matplotlib.pyplot as plt
 
 import model
 import data_io
-import normalize as nt
 
-locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
+class dotdict(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+args_parser = None
+def set_args():
+    if args_parser is not None:
+        args = args_parser
+    else:
+        args = dotdict()
+        args.seed = 1
+        args.log_interval = 10    
+        args.batch_size = 10000
+        args.epochs = 1
+        args.with_cuda = False
+        args.chkpt_interval = 10
+        args.isambard = False
+        args.warm_start = False
+        args.identifier = '021501AQ'
+        args.data_region = '021501AQ'
+        args.normaliser = 'standardise'
+        args.loss = 'mae'
+        args.nb_hidden_layers = 9
+        args.nlevs = 45
+        args.data_fraction = 0.01
+
+    torch.manual_seed(args.seed)
+    args.cuda = args.with_cuda and torch.cuda.is_available()
+    args.device = torch.device("cuda" if args.cuda else "cpu")
+    kwargs = {'pin_memory': False} if args.cuda else {}
+
+    # Define the Model
+    # n_inputs,n_outputs=140,70
+    args.region=args.data_region
+    args.in_features = (args.nlevs*4+3)
+    args.nb_classes =(args.nlevs*2)
+    args.hidden_size = int(0.66 * args.in_features + args.nb_classes)
+    args.model_name = "q_qadv_t_tadv_swtoa_lhf_shf_qtphys_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}levs.tar".format(str(args.nb_hidden_layers).zfill(3),
+                                                                                    str(args.in_features).zfill(3),
+                                                                                    str(args.nb_classes).zfill(3),
+                                                                                    str(args.hidden_size).zfill(4),
+                                                                                    str(args.epochs).zfill(3),
+                                                                                    str(args.batch_size).zfill(5),
+                                                                                    args.identifier, 
+                                                                                    args.loss,
+                                                                                    args.normaliser)
+
+    # Get the data
+    if args.isambard:
+        args.locations={ "train_test_datadir":"/home/mo-ojamil/ML/CRM/data",
+                "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/chkpts",
+                "hist_loc":"/home/mo-ojamil/ML/CRM/data/models",
+                "model_loc":"/home/mo-ojamil/ML/CRM/data/models/torch",
+                "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}_{1}".format(args.region, args.normaliser)}
+    else:
+        args.locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
                 "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
                 "hist_loc":"/project/spice/radiation/ML/CRM/data/models/history",
                 "model_loc":"/project/spice/radiation/ML/CRM/data/models/torch",
-                "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser"}
+                "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}_{1}".format(args.region, args.normaliser)}
+    return args
 
-region="50S69W"
+def train_dataloader(args):
+    train_dataset_file = "{0}/train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
+    concatDataset = data_io.ConcatDataset("train",args.nlevs,train_dataset_file, args.locations['normaliser_loc'], data_frac=args.data_fraction)
+    train_loader = torch.utils.data.DataLoader(concatDataset,batch_size=args.batch_size, shuffle=True)
+    return train_loader, concatDataset
 
-train_data_in, train_data_out, test_data_in, test_data_out = data_io.scm_model_data(region)
-q_norm_train = train_data_in["qtot"]
-qnext_norm_train = train_data_in["qtot_next"]
-qadv_norm_train = train_data_in["qadv"]
-qadv_dot_norm_train = train_data_in["qadv_dot"]
-qphys_norm_train = train_data_out["qphys_tot"]
+def plot_training_data(args):
+    train_ldr, concatDataset =  train_dataloader(args)
+    for batch_idx, batch in enumerate(train_ldr):
+        x,y = batch
+        print(x.shape, y.shape)
+        x_split = concatDataset.split_xdata(x)
+        y_split = concatDataset.split_ydata(y)
+        qphys_test_norm = y_split['qphys']
+        theta_phys_test_norm = y_split['theta_phys']
+        qtot_test_norm = x_split['qtot']
+        qadv_test_norm = x_split['qadv']
+        theta_test_norm = x_split['theta']
+        theta_adv_test_norm = x_split['theta_adv']
+        sw_toa = x_split['sw_toa']
+        shf = x_split['shf']
+        lhf = x_split['lhf']
 
-q_norm_test = test_data_in["qtot_test"]
-qnext_norm_test = test_data_in["qtot_next_test"]
-qadv_norm_test = test_data_in["qadv_test"]
-qadv_dot_norm_test = test_data_in["qadv_dot_test"]
-qphys_norm_test = test_data_out["qphys_test"]
-qadd_train = train_data_in["qadd"]
-qadd_dot_train = train_data_in["qadd_dot"]
-qadd_test = test_data_in["qadd_test"]
-qadd_dot_test = test_data_in["qadd_dot_test"]
-qcomb_train = np.concatenate((qadv_norm_train,q_norm_train),axis=1)
-qcomb_test  = np.concatenate((qadv_norm_test,q_norm_test),axis=1)
-# qcomb_dot_train = np.concatenate((qadv_dot_norm_train,q_norm_train),axis=1)
-# qcomb_dot_test  = np.concatenate((qadv_dot_norm_test,q_norm_test),axis=1)
-qcomb_dot_train = np.concatenate((qadd_dot_train,q_norm_train),axis=1)
-qcomb_dot_test  = np.concatenate((qadd_dot_test,q_norm_test),axis=1)
+        level = 0
+        fig, axs = plt.subplots(3,3,figsize=(14, 10),sharex=True)
+        ax = axs[0,0]
+        ax.plot(qphys_test_norm[:,level],'.-',label='qphys')
+        ax.legend()
 
+        ax = axs[1,0]
+        ax.plot(theta_phys_test_norm[:,level],'.-',label='tphys')
+        ax.legend()
+        
+        ax = axs[2,0]
+        ax.plot(qadv_test_norm[:,level],'.-',label='qadv')
+        ax.legend()
 
-def view_minmax_data():
-    
-    # Data normalisers
-    qphys_normaliser = h5py.File('{0}/minmax_qphystot.hdf5'.format(locations['normaliser_loc']),'r')
-    q_normaliser = h5py.File('{0}/minmax_qtot.hdf5'.format(locations['normaliser_loc']),'r')
-    qadd_normaliser = h5py.File('{0}/minmax_qadd_dot.hdf5'.format(locations['normaliser_loc']),'r')
-    qphys_feature_min = torch.tensor(qphys_normaliser['feature_range'][0])
-    qphys_feature_max = torch.tensor(qphys_normaliser['feature_range'][1])
-    qadd_feature_min  = torch.tensor(qadd_normaliser['feature_range'][0])
-    q_feature_max = torch.tensor(q_normaliser['feature_range'][1])
-    q_feature_min  = torch.tensor(q_normaliser['feature_range'][0])
-    qadd_feature_max = torch.tensor(qadd_normaliser['feature_range'][1])
-    qphys_scale = torch.from_numpy(qphys_normaliser['scale_'][:])
-    qadd_scale = torch.from_numpy(qadd_normaliser['scale_'][:])
-    q_scale = torch.from_numpy(q_normaliser['scale_'][:])
-    qphys_data_min = torch.from_numpy(qphys_normaliser['data_min_'][:])
-    qadd_data_min = torch.from_numpy(qadd_normaliser['data_min_'][:])
-    q_data_min = torch.from_numpy(q_normaliser['data_min_'][:])
-    qadd_normaliser_sk = joblib.load('{0}/minmax_qadd_dot.joblib'.format(locations['normaliser_loc']))
-    
-    qadd_dot = qcomb_dot_train[:100,:70]
-    qadd_dot_denorm = qadd_normaliser_sk.inverse_transform(qadd_dot)
-    qadd_dot_denorm_tensor = nt.inverse_minmax(torch.from_numpy(qadd_dot), qadd_scale, qadd_feature_min, qadd_feature_max, qadd_data_min)
-    qphys_denorm = nt.inverse_minmax(torch.from_numpy(qphys_norm_train[:]), qphys_scale, qphys_feature_min, qphys_feature_max, qphys_data_min)
-    q_denorm = nt.inverse_minmax(torch.from_numpy(q_norm_train[:]), q_scale, q_feature_min, q_feature_max, q_data_min)
+        ax = axs[0,1]
+        ax.plot(sw_toa[:],'.-',label='sw_toa')
+        ax.legend()
 
-    #print(qadd_dot_denorm)
-    #print(qadd_dot[:100,:70])
-    #print(qadd_dot_denorm_tensor.data)
-    qphys_norm_var = np.var(qphys_norm_train, axis=0)
-    qphys_var = np.var(qphys_denorm.data.numpy(), axis=0)
-    qphys_range = np.amax(qphys_denorm.data.numpy(), axis=0) - np.amin(qphys_denorm.data.numpy(),axis=0)
-    qadd_norm_var = np.var(qadd_dot, axis=0)
-    qadd_var = np.var(qadd_dot_denorm, axis=0)
-    qadd_range = np.amax(qadd_dot_denorm, axis=0) - np.amin(qadd_dot_denorm,axis=0)
-    q_norm_var = np.var(q_norm_train, axis=0)
-    q_var = np.var(q_denorm.data.numpy(), axis=0)
-    qadd_range = np.amax(q_denorm.data.numpy(), axis=0) - np.amin(q_denorm.data.numpy(), axis=0)
+        ax = axs[1,1]
+        ax.plot(theta_adv_test_norm[:,level],'.-',label='tadv')
+        ax.legend()
+        
+        ax = axs[2,1]
+        ax.plot(theta_test_norm[:,level],'.-',label='theta')
+        ax.legend()
+        
+        ax = axs[0,2]
+        ax.plot(qtot_test_norm[:,level],'.-',label='qtot')
+        ax.legend()
 
-    fig, axs = plt.subplots(2,1,figsize=(14, 10))
-    ax = axs[0]
-    c = ax.plot(qphys_norm_var, 'k-')
-    c = ax.plot(qadd_norm_var,'r-')
-    c = ax.plot(q_norm_var,'b-')
+        ax = axs[1,2]
+        ax.plot(shf[:],'.-',label='shf')
+        ax.legend()
 
-    ax = axs[1]
-    c = ax.plot(qphys_var, 'k-')
-    c = ax.plot(qadd_var,'r-')
-    c = ax.plot(q_var,'b-')
-    
+        ax = axs[2,2]
+        ax.plot(lhf[:],'.-',label='lhf')
+        ax.legend()
 
-    #c = ax.plot(qphys_range)
-    plt.show()
-
-def view_std_data():
-    
-    # Data normalisers
-    qphys_normaliser = h5py.File('{0}/std_qphystot.hdf5'.format(locations['normaliser_loc']),'r')
-    q_normaliser = h5py.File('{0}/std_qtot.hdf5'.format(locations['normaliser_loc']),'r')
-    qadd_normaliser = h5py.File('{0}/std_qadd_dot.hdf5'.format(locations['normaliser_loc']),'r')
-    qphys_scale = torch.from_numpy(qphys_normaliser['scale_'][:])
-    qadd_scale = torch.from_numpy(qadd_normaliser['scale_'][:])
-    q_scale = torch.from_numpy(q_normaliser['scale_'][:])
-    qphys_data_mean = torch.from_numpy(qphys_normaliser['mean_'][:])
-    qadd_data_mean = torch.from_numpy(qadd_normaliser['mean_'][:])
-    q_data_mean = torch.from_numpy(q_normaliser['mean_'][:])
-
-    qadd_dot = qcomb_dot_train[:100,:70]
-    qadd_dot_denorm = nt.inverse_std(torch.from_numpy(qadd_dot), qadd_scale, qadd_data_mean)
-    qphys_denorm = nt.inverse_std(torch.from_numpy(qphys_norm_train[:]), qphys_scale, qphys_data_mean)
-    q_denorm = nt.inverse_std(torch.from_numpy(q_norm_train[:]), q_scale, q_data_mean)
-    #print(qadd_dot_denorm)
-    #print(qadd_dot[:100,:70])
-    #print(qadd_dot_denorm_tensor.data)
-    qphys_norm_var = np.var(qphys_norm_train, axis=0)
-    qphys_var = np.var(qphys_denorm.data.numpy(), axis=0)
-    qphys_range = np.amax(qphys_denorm.data.numpy(), axis=0) - np.amin(qphys_denorm.data.numpy(),axis=0)
-    qadd_norm_var = np.var(qadd_dot, axis=0)
-    qadd_var = np.var(qadd_dot_denorm.data.numpy(), axis=0)
-    qadd_range = np.amax(qadd_dot_denorm.data.numpy(), axis=0) - np.amin(qadd_dot_denorm.data.numpy(),axis=0)
-    q_norm_var = np.var(q_norm_train, axis=0)
-    q_var = np.var(q_denorm.data.numpy(), axis=0)
-    qadd_range = np.amax(q_denorm.data.numpy(), axis=0) - np.amin(q_denorm.data.numpy(), axis=0)
-
-    fig, axs = plt.subplots(2,1,figsize=(14, 10))
-    ax = axs[0]
-    c = ax.plot(qphys_norm_var, 'k-')
-    c = ax.plot(qadd_norm_var,'r-')
-    c = ax.plot(q_norm_var,'b-')
-
-    ax = axs[1]
-    c = ax.plot(qphys_var, 'k-')
-    c = ax.plot(qadd_var,'r-')
-    c = ax.plot(q_var,'b-')
-    
-
-    #c = ax.plot(qphys_range)
-    plt.show()
+        ax.set_title('Level {0}'.format(level))
+        ax.legend()
+        plt.show()
 
 if __name__ == "__main__":
-    # view_minmax_data()
-    view_std_data()
+    args = set_args()
+    plot_training_data(args)
+    

@@ -272,6 +272,63 @@ def nn_dataset_per_subdomain(region:str, in_prefix="031525", suite_id="u-br800",
                 hfile.create_dataset(test_name,data=test_data)
                 i+=1
 
+def nn_dataset_per_subdomain_raw(region:str, in_prefix="031525", suite_id="u-br800", truncate: bool=True):
+    """
+    Create dataset for the neural network training and testing
+    """   
+    # NN input data
+    
+
+    if truncate:
+        trunc_idx = truncation_idx(region, suite_id, in_prefix)
+
+    for subdomain in range(64):
+        data_labels = []
+        raw_data = []
+        for s in nn_data_stashes:
+            indir = "/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}".format(region, str(s).zfill(5), suite_id)
+            infile="{0}/{1}_days_{2}_km1p5_ra1m_30x30_subdomain_{4}_{3}.nc".format(indir, in_prefix, region, str(s).zfill(5), str(subdomain).zfill(3))
+            print("Processing {0}".format(infile))
+            dataf = Dataset(infile)
+            if s == 99181:
+                readname = "unknown"
+                varname = "t_adv"
+            elif s == 99182:
+                readname = "unknown"
+                varname = "q_adv"
+            else:
+                readname = nn_data_stashes[s]
+                varname = nn_data_stashes[s]
+            if truncate:
+                var = dataf[readname][trunc_idx]
+            else:
+                if s in [99904, 99983]:
+                    var = dataf[readname][:]
+                else:
+                    var = dataf[readname][:-1]
+            
+            if s in [99181, 99182]:
+                print("Multiplying advected quantity {0} with 600.".format(nn_data_stashes[s]))
+                var *= 600.
+            data_labels.append(varname)
+            raw_data.append(var)
+        
+        data_std_split = raw_data
+        train_test_datadir = "{0}/models/datain/".format(crm_data)
+        
+        fname = 'validation_data_{0}_{1}.hdf5'.format(region, str(subdomain).zfill(3))
+        # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
+        with h5py.File(train_test_datadir+fname, 'w') as hfile:
+            i = 0
+            while (i < len(data_std_split)):
+                test_name = data_labels[i]+"_test"
+                print("Saving normalised data {0}".format(test_name))
+                test_data = data_std_split[i]
+                if test_data.ndim == 1:
+                    test_data = test_data.reshape(-1,1)
+                hfile.create_dataset(test_name,data=test_data)
+                i+=1
+
 def nn_dataset(region:str, in_prefix="031525", suite_id="u-br800", truncate: bool=True, global_profile: bool=False):
     """
     Create dataset for the neural network training and testing
@@ -330,8 +387,11 @@ def nn_dataset(region:str, in_prefix="031525", suite_id="u-br800", truncate: boo
             hfile.create_dataset(test_name,data=test_data)
             i+=1
 
+
+
 if __name__ == "__main__":
     region="0N100W"
     # combine_subdomains(region, in_prefix="030405", suite_id="u-br800")
     # nn_dataset(region, in_prefix="030405", suite_id="u-br800", truncate=False, global_profile=True)
-    nn_dataset_per_subdomain(region, in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", truncate=False, global_profile=True)
+    # nn_dataset_per_subdomain(region, in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", truncate=False, global_profile=True)
+    nn_dataset_per_subdomain_raw(region, in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False)

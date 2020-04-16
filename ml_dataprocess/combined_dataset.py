@@ -285,13 +285,12 @@ def combine_subdomains(region: str, in_prefix="031525", suite_id="u-br800"):
         iris.fileformats.netcdf.save(var_cube, outfile)
 
 
-def nn_dataset_raw_std(region:str, in_prefix="031525", suite_id="u-br800", truncate: bool=False):
+def nn_dataset_raw(region:str, in_prefix="031525", suite_id="u-br800", truncate: bool=False):
     """
-    Create dataset for the neural network training and testing. This save raw data as well as normalised
+    Create dataset. This save raw data as well as normalised
     """   
     # NN input data
     data_labels = []
-    data = []
     raw_data = []
     if truncate:
         trunc_idx = truncation_idx(region, suite_id, in_prefix)
@@ -305,44 +304,22 @@ def nn_dataset_raw_std(region:str, in_prefix="031525", suite_id="u-br800", trunc
             var = dataf[nn_data_stashes[s]][trunc_idx]
         else:
             var = dataf[nn_data_stashes[s]][:]
-        std_fname=nn_data_stashes[s]+".hdf5"
-        normed_var, raw_var = standardise_data_transform(var, region, save_fname=std_fname, return_raw=True)
+        if s in [99181, 99182]:
+            print("Multiplying advected quantity {0} with 600.".format(nn_data_stashes[s]))
+            var *= 600.
+        raw_var = var
         data_labels.append(nn_data_stashes[s])
-        data.append(normed_var)
         raw_data.append(raw_var)
     
-    data_std_split = train_test_split(*data, shuffle=True, test_size=0.1, random_state=18)
-    # data_std_split = train_test_split(*data, shuffle=False, random_state=18)
     data_labels = list(chain(*zip(data_labels,data_labels)))
-
     train_test_datadir = "{0}/models/datain/".format(crm_data)
-    
-    fname = 'train_test_data_{0}_std.hdf5'.format(region)
-    # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
-    with h5py.File(train_test_datadir+fname, 'w') as hfile:
-        i = 0
-        while (i < len(data_std_split)):
-            train_name = data_labels[i]+"_train"
-            print("Saving normalised data {0}".format(train_name))
-            train_data = data_std_split[i]
-            if train_data.ndim == 1:
-                train_data = train_data.reshape(-1,1)
-            hfile.create_dataset(train_name,data=train_data)
-            i+=1
-            test_name = data_labels[i]+"_test"
-            print("Saving normalised data {0}".format(test_name))
-            test_data = data_std_split[i]
-            if test_data.ndim == 1:
-                test_data = test_data.reshape(-1,1)
-            hfile.create_dataset(test_name,data=test_data)
-            i+=1
 
-    raw_data_split = train_test_split(*raw_data, shuffle=True, random_state=18, test_soze=0.1)
+    raw_data_split = train_test_split(*raw_data, shuffle=True, random_state=18, test_size=0.1)
     fname = 'train_test_data_{0}_raw.hdf5'.format(region)
     # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
     with h5py.File(train_test_datadir+fname, 'w') as hfile:
         i = 0
-        while (i < len(data_std_split)):
+        while (i < len(raw_data_split)):
             train_name = data_labels[i]+"_train"
             print("Saving normalised data {0}".format(train_name))
             train_data = raw_data_split[i]
@@ -365,7 +342,6 @@ def nn_dataset_std(region:str, in_prefix="031525", suite_id="u-br800", truncate:
     # NN input data
     data_labels = []
     data = []
-    raw_data = []
     if truncate:
         trunc_idx = truncation_idx(region, suite_id, in_prefix)
 
@@ -389,7 +365,7 @@ def nn_dataset_std(region:str, in_prefix="031525", suite_id="u-br800", truncate:
 
     train_test_datadir = "{0}/models/datain/".format(crm_data)
     
-    fname = 'train_test_data_{0}_sec_std.hdf5'.format(region)
+    fname = 'train_test_data_{0}_scalar_std.hdf5'.format(region)
     # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
     with h5py.File(train_test_datadir+fname, 'w') as hfile:
         i = 0
@@ -409,65 +385,85 @@ def nn_dataset_std(region:str, in_prefix="031525", suite_id="u-br800", truncate:
             hfile.create_dataset(test_name,data=test_data)
             i+=1
 
-def nn_dataset_std_sep_train(region:str, in_prefix="031525", suite_id="u-br800", truncate: bool=False):
+def save_standardise_data_vars(dataset: np.array([]), region: str, save_fname: str="std_fit.hdf5", levs: bool=True, robust: bool=False):
     """
-    Create dataset for the neural network training and testing. Separate files for training and testing
+    Manually standardise data based instead of using sklearn standarad scaler
+    robust: Use median and quantiles for scaling
+    """
+    save_location = "{0}/models/normaliser/{1}_standardise_mx/".format(crm_data,region)
+    # save_location = "{0}/models/normaliser/{1}_noshuffle/".format(crm_data,region)
+    try:
+        os.makedirs(save_location)
+    except OSError:
+        pass
+    # per level normalisation
+    if levs:
+        if robust:
+            mean = np.median(dataset, axis=0)
+            q2 = np.quantile(dataset, 0.90, axis=0)
+            q1 = np.quantile(dataset, 0.10, axis=0)
+            scale = q2 - q1
+        else:
+            mean = np.array([np.mean(dataset, axis=0)])
+            minmaxrange = np.max(dataset, axis=0) - np.min(dataset, axis=0)
+            std = np.std(dataset, axis=0)
+            scale = np.array([np.maximum(minmaxrange,std)])
+    else:
+        # Mean across the entire dataset and levels
+        if robust:
+            mean = np.array([np.median(dataset)])
+            q2 = np.array([np.quantile(dataset, 0.90)])
+            q1 = np.array([np.quantile(dataset, 0.10)])
+            scale = q2 - q1
+        else:
+            mean = np.array([np.mean(dataset)])
+            scale = np.array([np.std(dataset)])
+    params = {"mean_":mean, "scale_":scale}
+    with h5py.File(save_location+save_fname, 'w') as hfile:
+        for k, v in params.items():  
+            hfile.create_dataset(k,data=v)
+
+def save_normalise_data_vars(dataset: np.array([]), region: str, save_fname: str="std_fit.hdf5", levs: bool=True):
+    """
+    Manually standardise data based instead of using sklearn standarad scaler
+    robust: Use median and quantiles for scaling
+    """
+    save_location = "{0}/models/normaliser/{1}_normalise/".format(crm_data,region)
+    # save_location = "{0}/models/normaliser/{1}_noshuffle/".format(crm_data,region)
+    try:
+        os.makedirs(save_location)
+    except OSError:
+        pass
+    # per level normalisation
+    if levs:
+        mean = np.array([np.min(dataset, axis=0)])
+        scale = np.array([np.max(dataset, axis=0) - np.min(dataset, axis=0)])
+    else:
+        mean = np.array([np.min(dataset)])
+        scale = np.array([np.max(dataset) - np.min(dataset)])
+    params = {"mean_":mean, "scale_":scale}
+    with h5py.File(save_location+save_fname, 'w') as hfile:
+        for k, v in params.items():  
+            hfile.create_dataset(k,data=v)
+
+def nn_normalisation_vars(region:str, in_prefix="031525", suite_id="u-br800"):
+    """
+    Save data normalisation variables
     """   
     # NN input data
-    data_labels = []
-    data = []
-    raw_data = []
-    if truncate:
-        trunc_idx = truncation_idx(region, suite_id, in_prefix)
 
     for s in nn_data_stashes:
         indir = "/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}".format(region, str(s).zfill(5), suite_id)
         infile="{0}/{1}_days_{2}_km1p5_ra1m_30x30_{3}.nc".format(indir, in_prefix, region, str(s).zfill(5))
         print("Processing {0}".format(infile))
         dataf = Dataset(infile)
-        if truncate:
-            var = dataf[nn_data_stashes[s]][trunc_idx]
-        else:
-            var = dataf[nn_data_stashes[s]][:]
+        var = dataf[nn_data_stashes[s]][:]
         std_fname=nn_data_stashes[s]+".hdf5"
-        normed_var = standardise_data_transform(var, region, save_fname=std_fname, return_raw=False)
-        data_labels.append(nn_data_stashes[s])
-        data.append(normed_var)
-    
-    data_std_split = train_test_split(*data, shuffle=True, test_size=0.1, random_state=18)
-    # data_std_split = train_test_split(*data, shuffle=False, random_state=18)
-    # data_labels = list(chain(*zip(data_labels,data_labels)))
-    train_idx = list(range(0,len(data_std_split),2))
-    test_idx = list(range(1,len(data_std_split)+1,2))
-    train_data = [data_std_split[i] for i in train_idx]
-    test_data = [data_std_split[i] for i in test_idx]
-
-    train_test_datadir = "{0}/models/datain/".format(crm_data)
-    fname_train = 'train_test_data_{0}_std_train.hdf5'.format(region)
-    fname_test = 'train_test_data_{0}_std_test.hdf5'.format(region)
-    
-    # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
-    with h5py.File(train_test_datadir+fname_train, 'w') as hfile:
-        i = 0
-        while (i < len(data_std_split)):
-            train_name = data_labels[i]+"_train"
-            print("Saving normalised training data {0}".format(train_name))
-            train_data = data_std_split[i]
-            if train_data.ndim == 1:
-                train_data = train_data.reshape(-1,1)
-            hfile.create_dataset(train_name,data=train_data)
-            i+=1
-
-    with h5py.File(train_test_datadir+fname_test, 'w') as hfile:
-        i = 0
-        while (i < len(data_std_split)):
-            test_name = data_labels[i]+"_test"
-            print("Saving normalised data {0}".format(test_name))
-            test_data = data_std_split[i]
-            if test_data.ndim == 1:
-                test_data = test_data.reshape(-1,1)
-            hfile.create_dataset(test_name,data=test_data)
-            i+=1
+        if s in [99181,99182]:
+            print("Multiplying advected quantities with 600.")
+            var *= 600.
+        save_standardise_data_vars(var, region, save_fname=std_fname, levs=True)
+        # save_normalise_data_vars(var, region, save_fname=std_fname, levs=True)
 
 if __name__ == "__main__":
     # Run the following in order 
@@ -476,6 +472,7 @@ if __name__ == "__main__":
 
     # combine_multi_level_files(in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", new_region="021507AQ")
     #combine_surface_level_files(in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", new_region="021507AQ")
-    # combine_subdomains("021507AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc")
-    # nn_dataset_raw_std("021507AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", truncate=False)
-    nn_dataset_std("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_conc", truncate=False)
+    # combine_subdomains("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc")
+    # nn_dataset_raw("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False)
+    # nn_dataset_std("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_conc", truncate=False)
+    nn_normalisation_vars("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc")
