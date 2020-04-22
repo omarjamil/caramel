@@ -470,9 +470,10 @@ if __name__ == "__main__":
     # u-bs572 has January runs so 021501AQ
     # u-bs573 has July runs so 0201507AQ
 
-    # combine_multi_level_files(in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", new_region="021507AQ")
-    #combine_surface_level_files(in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", new_region="021507AQ")
-    # combine_subdomains("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc")
-    # nn_dataset_raw("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False)
+    # combine_multi_level_files(in_prefix="161718192021222324252627282930", suite_id="u-bs572_20170116-30_conc", new_region="163001AQ")
+    # combine_surface_level_files(in_prefix="161718192021222324252627282930", suite_id="u-bs572_20170116-30_conc", new_region="163001AQ")
+    # combine_subdomains("163001AQ", in_prefix="161718192021222324252627282930", suite_id="u-bs572_20170116-30_conc")
+    nn_dataset_raw("163001AQ", in_prefix="161718192021222324252627282930", suite_id="u-bs572_20170101-15_conc", truncate=False)
+    # nn_dataset_raw("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170116-30_conc", truncate=False)
     # nn_dataset_std("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_conc", truncate=False)
-    nn_normalisation_vars("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc")
+    # nn_normalisation_vars("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc")
