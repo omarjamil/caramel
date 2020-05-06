@@ -62,7 +62,8 @@ def t_tendency(region: str, subdomain: int, in_prefix:str="30", suite_id="u-bs57
     t_dat = iris.load_cube(t_location+t_file)
     tadv_dat = iris.load_cube(tadv_location+tadv_file)
     t_array = t_dat.data[:]
-    tadv_array = tadv_dat.data[:]
+    # tadv_array = tadv_dat.data[:]*600
+    tadv_array = tadv_dat.data[:]*1080.
     t_diff = array_diff(t_array, 1)
     t_phys = t_diff - tadv_array[1:]
     
@@ -71,7 +72,8 @@ def t_tendency(region: str, subdomain: int, in_prefix:str="30", suite_id="u-bs57
     #t_phys_norm = normalise_data(t_phys)
     
     time_coord = iris.coords.DimCoord(t_dat.coord('time').points[:-1],standard_name="time",units=t_dat.coord('time').units)
-    model_lev_coord = iris.coords.DimCoord(t_dat.coord('model_level_number').points,standard_name="model_level_number")
+    # model_lev_coord = iris.coords.DimCoord(t_dat.coord('model_level_number').points,long_name="model_level_number")
+    model_lev_coord = iris.coords.DimCoord(t_dat.coord('model_levels').points,long_name="model_levels")
     new_cube = iris.cube.Cube(t_phys,long_name="t_phys",dim_coords_and_dims=[(time_coord,0),(model_lev_coord,1)])
     outfile="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3),str(99904).zfill(5))
     print("Saving T tendency ... {0}".format(t_phys_location+outfile))
@@ -107,12 +109,14 @@ def q_tendency_qdot(region: str, subdomain: int, in_prefix: str="30", suite_id: 
     q_dat = iris.load_cube(q_location+q_file)
     qadv_dat = iris.load_cube(qadv_location+qadv_file)
     q_array = q_dat.data[:]
-    qadv_array = qadv_dat.data[:]*600.
+    # qadv_array = qadv_dat.data[:]*600.
+    qadv_array = qadv_dat.data[:]*10800.
     q_diff = array_diff(q_array, 1)
     q_phys = q_diff - qadv_array[:-1]
     
     time_coord = iris.coords.DimCoord(q_dat.coord('time').points[:-1],standard_name="time",units=q_dat.coord('time').units)
-    model_lev_coord = iris.coords.DimCoord(q_dat.coord('model_level_number').points,long_name="model_level_number")
+    # model_lev_coord = iris.coords.DimCoord(q_dat.coord('model_level_number').points,long_name="model_level_number")
+    model_lev_coord = iris.coords.DimCoord(q_dat.coord('model_levels').points,long_name="model_levels")
     new_cube = iris.cube.Cube(q_phys,long_name="q_phys",dim_coords_and_dims=[(time_coord,0),(model_lev_coord,1)])
     outfile="{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3), str(99983).zfill(5))
     print("Saving q tendency ... {0}".format(q_phys_location+outfile))

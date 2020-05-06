@@ -80,8 +80,6 @@ regions=['0N130W','0N15W','0N160E','0N160W','0N30W','0N50E','0N70E','0N88E','10N
 crm_data = "/project/spice/radiation/ML/CRM/data"
 suite_id = "u-bs572_conc"
 
-
-
 def standardise_data_transform(dataset: np.array([]), region: str, save_fname: str="std_fit.hdf5", levs: bool=True, robust: bool=False, return_raw=False):
     """
     Manually standardise data based instead of using sklearn standarad scaler
@@ -185,11 +183,14 @@ def combine_multi_level_files(in_prefix="031525", suite_id="u-br800", new_region
                 in_dir = "/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/".format(r,str(s).zfill(5), suite_id)
                 in_file = "{0}/{3}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{4}.nc".format(in_dir, r, str(subdomain).zfill(3),in_prefix, str(s).zfill(5))
                 # print("Processing file: {0}".format(in_file))
-                data = Dataset(in_file)
+                # data = Dataset(in_file)
+                data = iris.load_cube(in_file).data
                 if s in [99904, 99983]:
-                    var = data[multi_stashes[s]][:]
+                    # var = data[multi_stashes[s]][:]
+                    var = data[:]
                 else:
-                    var = data[multi_stashes[s]][:-1,:]
+                    # var = data[multi_stashes[s]][:-1,:]
+                    var = data[:-1,:]
                 if irx == 0:
                     var_ = var
                 else:
@@ -229,11 +230,14 @@ def combine_surface_level_files(in_prefix="031525", suite_id="u-bj775_", new_reg
                 in_dir = "/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/".format(r,str(s).zfill(5), suite_id)
                 in_file = "{0}/{3}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{4}.nc".format(in_dir, r, str(subdomain).zfill(3),in_prefix, str(s).zfill(5))
                 # print("Processing file: {0}".format(in_file))
-                data = Dataset(in_file)
+                # data = Dataset(in_file)
+                data = iris.load_cube(in_file).data
                 if s in [99904, 99983]:
-                    var = data[surface_stashes[s]][:]
+                    # var = data[surface_stashes[s]][:]
+                    var = data[:]
                 else:
-                    var = data[surface_stashes[s]][:-1]
+                    # var = data[surface_stashes[s]][:-1]
+                    var = data[:-1]
                 if irx == 0:
                     var_ = var
                 else:
@@ -306,7 +310,7 @@ def nn_dataset_raw(region:str, in_prefix="031525", suite_id="u-br800", truncate:
             var = dataf[nn_data_stashes[s]][:]
         if s in [99181, 99182]:
             print("Multiplying advected quantity {0} with 600.".format(nn_data_stashes[s]))
-            var *= 600.
+            var *= 10800.
         raw_var = var
         data_labels.append(nn_data_stashes[s])
         raw_data.append(raw_var)
@@ -461,7 +465,7 @@ def nn_normalisation_vars(region:str, in_prefix="031525", suite_id="u-br800"):
         std_fname=nn_data_stashes[s]+".hdf5"
         if s in [99181,99182]:
             print("Multiplying advected quantities with 600.")
-            var *= 600.
+            var *= 10800.
         save_standardise_data_vars(var, region, save_fname=std_fname, levs=True)
         # save_normalise_data_vars(var, region, save_fname=std_fname, levs=True)
 
@@ -469,11 +473,15 @@ if __name__ == "__main__":
     # Run the following in order 
     # u-bs572 has January runs so 021501AQ
     # u-bs573 has July runs so 0201507AQ
-
-    # combine_multi_level_files(in_prefix="161718192021222324252627282930", suite_id="u-bs572_20170116-30_conc", new_region="163001AQ")
-    # combine_surface_level_files(in_prefix="161718192021222324252627282930", suite_id="u-bs572_20170116-30_conc", new_region="163001AQ")
-    # combine_subdomains("163001AQ", in_prefix="161718192021222324252627282930", suite_id="u-bs572_20170116-30_conc")
-    nn_dataset_raw("163001AQ", in_prefix="161718192021222324252627282930", suite_id="u-bs572_20170101-15_conc", truncate=False)
-    # nn_dataset_raw("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170116-30_conc", truncate=False)
-    # nn_dataset_std("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_conc", truncate=False)
-    # nn_normalisation_vars("021501AQ", in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc")
+    in_prefix = "3h_161718192021222324252627282930"
+    suite_id = "u-bs572_20170116-30_conc"
+    new_region = "163001AQ3H"
+    # in_prefix = "3h_0203040506070809101112131415"
+    # suite_id = "u-bs572_20170101-15_conc"
+    # new_region = "021501AQ3H"
+    # combine_multi_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
+    # combine_surface_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
+    # combine_subdomains(new_region, in_prefix=in_prefix, suite_id=suite_id)
+    # nn_dataset_raw(new_region, in_prefix=in_prefix, suite_id=suite_id, truncate=False)
+    # nn_dataset_std(new_region, in_prefix=in_prefix, suite_id=suite_id, truncate=False)
+    nn_normalisation_vars(new_region, in_prefix=in_prefix, suite_id=suite_id)

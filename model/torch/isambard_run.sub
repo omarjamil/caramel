@@ -9,5 +9,5 @@ module load cuda10.1/fft/10.1.243
 module load cuda10.1/toolkit/10.1.243
 module load cudnn/7.0
 # /home/mo-ojamil/.conda/envs/torch/bin/python /home/mo-ojamil/ML/CRM/code/torch/q.py --epochs 100 --with-cuda --isambard --identifier 10N80W --region 10N80W 
-/home/mo-ojamil/.conda/envs/torch/bin/python /home/mo-ojamil/ML/CRM/code/torch/caramel_train.py --epochs 30 --with-cuda --isambard --identifier 021501AQ --data-region 021501AQ --batch-size 1000 --nb-hidden-layers 9 --data-fraction 1.0 --loss mae --normaliser standardise_mx --nlevs 70
+/home/mo-ojamil/.conda/envs/torch/bin/python /home/mo-ojamil/ML/CRM/code/torch/train.py --epochs 30 --with-cuda --isambard --identifier 023001AQ3H --data-region 023001AQ3H --batch-size 500 --nb-hidden-layers 6 --data-fraction 1.0 --loss mse --normaliser 163001AQ3H_normalise --nlevs 45
 # /home/mo-ojamil/.conda/envs/torch/bin/python /home/mo-ojamil/ML/CRM/code/torch/caramel.py --epochs 100 --with-cuda --isambard --identifier 9999LEAU --data-region 9999LEAU_std --batch-size 2000 --nhdn-layers 9 --data-frac 1.0 --loss mae

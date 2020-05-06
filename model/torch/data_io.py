@@ -45,6 +45,32 @@ class NormalizersData(object):
         self.upshf_stdscale = torch.tensor(self.uplhf_normaliser_std['scale_'][:])
         self.uplhf_stdscale = torch.tensor(self.uplhf_normaliser_std['scale_'][:])
 
+        self.qphys_mean_np = self.qphys_normaliser_std['mean_'][:]
+        self.tphys_mean_np = self.tphys_normaliser_std['mean_'][:]
+        self.q_mean_np = self.q_normaliser_std['mean_'][:]
+        self.t_mean_np = self.t_normaliser_std['mean_'][:]
+        self.qadv_mean_np = self.qadv_normaliser_std['mean_'][:]
+        self.tadv_mean_np = self.tadv_normaliser_std['mean_'][:]
+        self.sw_toa_mean_np = self.sw_toa_normaliser_std['mean_'][:]
+        self.upshf_mean_np = self.uplhf_normaliser_std['mean_'][:]
+        self.uplhf_mean_np = self.uplhf_normaliser_std['mean_'][:]
+
+        self.qphys_stdscale_np = self.qphys_normaliser_std['scale_'][:]
+        self.tphys_stdscale_np = self.tphys_normaliser_std['scale_'][:]
+        self.q_stdscale_np = self.q_normaliser_std['scale_'][:]
+        self.t_stdscale_np = self.t_normaliser_std['scale_'][:]
+        self.qadv_stdscale_np = self.qadv_normaliser_std['scale_'][:]
+        self.tadv_stdscale_np = self.tadv_normaliser_std['scale_'][:]
+        self.sw_toa_stdscale_np = self.sw_toa_normaliser_std['scale_'][:]
+        self.upshf_stdscale_np = self.uplhf_normaliser_std['scale_'][:]
+        self.uplhf_stdscale_np = self.uplhf_normaliser_std['scale_'][:]
+
+    def normalise(self, data, mean, scale):
+        return (data - mean) / scale
+    
+    def inverse_transform(self, data, mean, scale):
+        return (data * scale) + mean
+
 class Data_IO_validation(object):
     def __init__(self, region, nlevs, dataset_file, normaliser, add_adv=False):
         self.region = region
@@ -56,12 +82,20 @@ class Data_IO_validation(object):
         self.ydat = []
         self.ymean = []
         self.ystd = []
+        self.ydat2 = []
+        self.ymean2 = []
+        self.ystd2 = []
         self.xvars = ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
         # self.yvars = ['qphys', 'theta_phys']
         # self.xvars = ['qtot', 'theta', 'sw_toa', 'shf', 'lhf']
         self.yvars = ['qtot_next', 'theta_next']
+        # self.yvars = ['qtot_next']
+        self.yvars2 = ['qphys', 'theta_phys']
+        # self.yvars2 = ['qphys']
+
         self.xdata_idx = []
         self.ydata_idx = []
+        self.ydata_idx2 = []
         self.add_adv = add_adv
 
         print("Reading dataset file: {0}".format(dataset_file))
@@ -87,8 +121,10 @@ class Data_IO_validation(object):
                                 }
         self.ydata_and_norm = {
                                 'qphys_test':[self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.qphys_mean[0,:self.nlevs], self.nn_norm.qphys_stdscale[0,:self.nlevs]],
+                                # 'qphys_test':[self.qphys_test[:self.npoints, :3], self.nn_norm.qphys_mean[0,:3], self.nn_norm.qphys_stdscale[0,:3]],
                                 'theta_phys_test':[self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.tphys_mean[0,:self.nlevs], self.nn_norm.tphys_stdscale[0,:self.nlevs]],
                                 'qtot_next_test':[self.q_tot_test[:self.npoints, :self.nlevs]+self.q_tot_adv_test[:self.npoints, :self.nlevs]+self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean[0,:self.nlevs], self.nn_norm.q_stdscale[0,:self.nlevs]],
+                                # 'qtot_next_test':[self.q_tot_test[:self.npoints, :3]+self.q_tot_adv_test[:self.npoints, :3]+self.qphys_test[:self.npoints, :3], self.nn_norm.q_mean[0,:3], self.nn_norm.q_stdscale[0,:3]],
                                 'theta_next_test':[self.theta_test[:self.npoints, :self.nlevs]+self.theta_adv_test[:self.npoints, :self.nlevs]+self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean[0,:self.nlevs], self.nn_norm.t_stdscale[0,:self.nlevs]]
                                 }
         start_idx = 0
@@ -110,23 +146,49 @@ class Data_IO_validation(object):
             end_idx = start_idx + len(self.ydata_and_norm[j][1])
             self.ydata_idx.append((start_idx,end_idx))
             start_idx = end_idx
+        
+        start_idx = 0
+        for y2 in self.yvars2:
+            k = y2+"_test"
+            self.ydat2.append(self.ydata_and_norm[k][0])
+            self.ymean2.append(self.ydata_and_norm[k][1])
+            self.ystd2.append(self.ydata_and_norm[k][2])
+            end_idx = start_idx + len(self.ydata_and_norm[k][1])
+            self.ydata_idx2.append((start_idx,end_idx))
+            start_idx = end_idx
+
         self.xmean = torch.cat(self.xmean)
         self.ymean = torch.cat(self.ymean)
+        self.ymean2 = torch.cat(self.ymean2)
         self.xstd = torch.cat(self.xstd)
         self.ystd = torch.cat(self.ystd)
+        self.ystd2 = torch.cat(self.ystd2)
+        
     
-    def split_xdata(self, indata):
+    def split_data(self, indata, xyz='x'):
+        """
+        Split x,y data into constituents
+        """
         split_data = {}
-        for i,x in enumerate(self.xvars):
-            l,h = self.xdata_idx[i]
+        data_idx = {'x':self.xdata_idx,'y':self.ydata_idx,'y2':self.ydata_idx2}
+        xyvars = {'x':self.xvars,'y':self.yvars,'y2':self.yvars2}
+        for i,x in enumerate(xyvars[xyz]):
+            l,h = data_idx[xyz][i]
             split_data[x] = indata[...,l:h]
         return split_data
 
-    def split_ydata(self, indata):
-        split_data = {}
-        for i,y in enumerate(self.yvars):
-            split_data[y] = indata[...,self.ydata_idx[i][0]:self.ydata_idx[i][1]]
-        return split_data
+    # def split_xdata(self, indata):
+    #     split_data = {}
+    #     for i,x in enumerate(self.xvars):
+    #         l,h = self.xdata_idx[i]
+    #         split_data[x] = indata[...,l:h]
+    #     return split_data
+
+    # def split_ydata(self, indata):
+    #     split_data = {}
+    #     for i,y in enumerate(self.yvars):
+    #         split_data[y] = indata[...,self.ydata_idx[i][0]:self.ydata_idx[i][1]]
+    #     return split_data
 
     def __get_test_vars__(self):
         """
@@ -134,6 +196,7 @@ class Data_IO_validation(object):
         """
         x_var_data = {}
         y_var_data = {}
+        y_var_data2 = {}
 
         for x in self.xvars:
             i = x+"_test"
@@ -142,8 +205,12 @@ class Data_IO_validation(object):
         for y in self.yvars:
             i = y+"_test"
             y_var_data[i] = self._transform(torch.from_numpy(self.ydata_and_norm[i][0][:]), self.ydata_and_norm[i][1], self.ydata_and_norm[i][2])
+        
+        for y2 in self.yvars2:
+            i = y2+"_test"
+            y_var_data2[i] = self._transform(torch.from_numpy(self.ydata_and_norm[i][0][:]), self.ydata_and_norm[i][1], self.ydata_and_norm[i][2])
 
-        return x_var_data, y_var_data
+        return x_var_data, y_var_data, y_var_data2
 
     def _transform(self, var, mean, std):
         """
@@ -158,17 +225,19 @@ class Data_IO_validation(object):
         return var.mul(std).add(mean)
 
     def get_data(self):
-        x_var_data, y_var_data = self.__get_test_vars__()
+        x_var_data, y_var_data, y_var_data2 = self.__get_test_vars__()
         if self.add_adv == False:
             # x = torch.cat([x_var_data['qtot_test'], x_var_data['qadv_test'], x_var_data['theta_test'], x_var_data['theta_adv_test'], x_var_data['sw_toa_test'], x_var_data['shf_test'], x_var_data['lhf_test']], dim=1)
             # y = torch.cat([y_var_data['qphys_test'], y_var_data['theta_phys_test']], dim=1)
             x = torch.cat([x_var_data[k+'_test'] for k in self.xvars], dim=1)
             y = torch.cat([y_var_data[k+'_test'] for k in self.yvars], dim=1)
+            y2 = torch.cat([y_var_data2[k+'_test'] for k in self.yvars2], dim=1)
         elif self.add_adv == True:
             x = torch.cat([x_var_data['qtot_test'] - x_var_data['qadv_test'], x_var_data['theta_test'] + x_var_data['theta_adv_test'], x_var_data['sw_toa_test'], x_var_data['shf_test'], x_var_data['lhf_test']], dim=1)
             y = torch.cat([y_var_data['qphys_test'], y_var_data['theta_phys_test']], dim=1)
+            y2 = torch.cat([y_var_data2['qphys_test'], y_var_data2['theta_phys_test']], dim=1)
 
-        return (x,y, self.xmean, self.xstd, self.ymean, self.ystd)
+        return (x,y,y2, self.xmean, self.xstd, self.ymean, self.ystd, self.ymean2, self.ystd2)
 
         # x = torch.cat([torch.from_numpy(d) for d in self.xdat], dim=1)
         # y = torch.cat([torch.from_numpy(d) for d in self.ydat], dim=1)
@@ -177,7 +246,10 @@ class Data_IO_validation(object):
         # return (x_,y_, self.xmean, self.xstd, self.ymean, self.ystd)
 
 class ConcatDataset(torch.utils.data.Dataset):
-    def __init__(self, dat_type, nlevs, dataset_file, normaliser, data_frac=1., add_adv=False):
+    def __init__(self, dat_type, nlevs, dataset_file, normaliser, data_frac=1., 
+                xvars=['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf'],
+                yvars=['qtot_next', 'theta_next'],
+                yvars2=['qphys', 'theta_phys'], add_adv=False):
         super().__init__()
         self.dat_type = dat_type
         self.dataset_file = dataset_file
@@ -192,12 +264,17 @@ class ConcatDataset(torch.utils.data.Dataset):
         self.ydat2 = []
         self.ymean2 = []
         self.ystd2 = []
+        self.xvars = xvars
+        self.yvars = yvars
+        self.yvars2 = yvars2
         # self.xvars = ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
         # self.yvars = ['qphys', 'theta_phys']
-        self.xvars = ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
+        # self.xvars = ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
         # self.xvars = ['qtot', 'theta', 'sw_toa', 'shf', 'lhf']
-        self.yvars = ['qtot_next', 'theta_next']
-        self.yvars2 = ['qphys', 'theta_phys']
+        # self.yvars = ['qtot_next', 'theta_next']
+        # self.yvars = ['qtot_next']
+        # self.yvars2 = ['qphys', 'theta_phys']
+        # self.yvars2 = ['qphys']
 
         self.xdata_idx = []
         self.ydata_idx = []
@@ -228,8 +305,10 @@ class ConcatDataset(torch.utils.data.Dataset):
                                     }
             self.ydata_and_norm = {
                                     'qphys_train':[self.qphys_train[:self.npoints, :self.nlevs], self.nn_norm.qphys_mean[0,:self.nlevs], self.nn_norm.qphys_stdscale[0,:self.nlevs]],
+                                    # 'qphys_train':[self.qphys_train[:self.npoints, :3], self.nn_norm.qphys_mean[0,:3], self.nn_norm.qphys_stdscale[0,:3]],
                                     'theta_phys_train':[self.theta_phys_train[:self.npoints, :self.nlevs], self.nn_norm.tphys_mean[0,:self.nlevs], self.nn_norm.tphys_stdscale[0,:self.nlevs]],
                                     'qtot_next_train':[self.q_tot_train[:self.npoints, :self.nlevs]+self.q_tot_adv_train[:self.npoints, :self.nlevs]+self.qphys_train[:self.npoints, :self.nlevs], self.nn_norm.q_mean[0,:self.nlevs], self.nn_norm.q_stdscale[0,:self.nlevs]],
+                                    # 'qtot_next_train':[self.q_tot_train[:self.npoints, :3]+self.q_tot_adv_train[:self.npoints, :3]+self.qphys_train[:self.npoints, :3], self.nn_norm.q_mean[0,:3], self.nn_norm.q_stdscale[0,:3]],
                                     'theta_next_train':[self.theta_train[:self.npoints, :self.nlevs]+self.theta_adv_train[:self.npoints, :self.nlevs]+self.theta_phys_train[:self.npoints, :self.nlevs], self.nn_norm.t_mean[0,:self.nlevs], self.nn_norm.t_stdscale[0,:self.nlevs]]
 
                                     }
@@ -288,8 +367,10 @@ class ConcatDataset(torch.utils.data.Dataset):
                                     }
             self.ydata_and_norm = {
                                     'qphys_test':[self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.qphys_mean[0,:self.nlevs], self.nn_norm.qphys_stdscale[0,:self.nlevs]],
+                                    # 'qphys_test':[self.qphys_test[:self.npoints, :3], self.nn_norm.qphys_mean[0,:3], self.nn_norm.qphys_stdscale[0,:3]],
                                     'theta_phys_test':[self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.tphys_mean[0,:self.nlevs], self.nn_norm.tphys_stdscale[0,:self.nlevs]],
                                     'qtot_next_test':[self.q_tot_test[:self.npoints, :self.nlevs]+self.q_tot_adv_test[:self.npoints, :self.nlevs]+self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean[0,:self.nlevs], self.nn_norm.q_stdscale[0,:self.nlevs]],
+                                    # 'qtot_next_test':[self.q_tot_test[:self.npoints, :3]+self.q_tot_adv_test[:self.npoints, :3]+self.qphys_test[:self.npoints, :3], self.nn_norm.q_mean[0,:3], self.nn_norm.q_stdscale[0,:3]],
                                     'theta_next_test':[self.theta_test[:self.npoints, :self.nlevs]+self.theta_adv_test[:self.npoints, :self.nlevs]+self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean[0,:self.nlevs], self.nn_norm.t_stdscale[0,:self.nlevs]]
                                     }
          
@@ -353,7 +434,7 @@ class ConcatDataset(torch.utils.data.Dataset):
                 i = y+"_test"
             y_var_data[i] = self.__transform(torch.from_numpy(self.ydata_and_norm[i][0][indx]), self.ydata_and_norm[i][1], self.ydata_and_norm[i][2])
 
-         for y2 in self.yvars2:
+        for y2 in self.yvars2:
             if self.dat_type == "train":
                 i = y2+"_train"
             elif self.dat_type == "test":
@@ -380,31 +461,36 @@ class ConcatDataset(torch.utils.data.Dataset):
             if self.dat_type == "train":
                 x = torch.cat([x_var_data['qtot_train'] - x_var_data['qadv_train'], x_var_data['theta_train'] + x_var_data['theta_adv_train'], x_var_data['sw_toa_train'], x_var_data['shf_train'], x_var_data['lhf_train']])
                 y = torch.cat([y_var_data['qphys_train'],y_var_data['theta_phys_train']])
-                x = torch.cat([x_var_data[k+'_train'] for k in self.xvars])
-                y = torch.cat([y_var_data[k+'_train'] for k in self.yvars])
             elif self.dat_type == "test":
                 x = torch.cat([x_var_data['qtot_test'] - x_var_data['qadv_test'], x_var_data['theta_test'] + x_var_data['theta_adv_test'], x_var_data['sw_toa_test'], x_var_data['shf_test'], x_var_data['lhf_test']])
                 y = torch.cat([y_var_data['qphys_test'], y_var_data['theta_phys_test']])
 
-        return x,y
-        # x = torch.cat([torch.from_numpy(d[i]) for d in self.xdat])
-        # y = torch.cat([torch.from_numpy(d[i]) for d in self.ydat])
-        # x_ = self.__transform(x, self.xmean, self.xstd)
-        # y_ = self.__transform(y, self.ymean, self.ystd)
-        # return (x_,y_)
+        return x,y,y2
 
     def __len__(self):
         return min(len(d) for d in self.xdat)
 
-    def split_xdata(self, indata):
+    def split_data(self, indata, xyz='x'):
+        """
+        Split x,y data into constituents
+        """
         split_data = {}
-        for i,x in enumerate(self.xvars):
-            l,h = self.xdata_idx[i]
+        data_idx = {'x':self.xdata_idx,'y':self.ydata_idx,'y2':self.ydata_idx2}
+        xyvars = {'x':self.xvars,'y':self.yvars,'y2':self.yvars2}
+        for i,x in enumerate(xyvars[xyz]):
+            l,h = data_idx[xyz][i]
             split_data[x] = indata[...,l:h]
         return split_data
 
-    def split_ydata(self, indata):
-        split_data = {}
-        for i,y in enumerate(self.yvars):
-            split_data[y] = indata[...,self.ydata_idx[i][0]:self.ydata_idx[i][1]]
-        return split_data   
+    # def split_xdata(self, indata):
+    #     split_data = {}
+    #     for i,x in enumerate(self.xvars):
+    #         l,h = self.xdata_idx[i]
+    #         split_data[x] = indata[...,l:h]
+    #     return split_data
+
+    # def split_ydata(self, indata):
+    #     split_data = {}
+    #     for i,y in enumerate(self.yvars):
+    #         split_data[y] = indata[...,self.ydata_idx[i][0]:self.ydata_idx[i][1]]
+    #     return split_data   

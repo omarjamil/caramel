@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Start by copying relevant files over
-rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress caramel_train.py model.py data_io.py mo-ojamil@login.isambard:/home/mo-ojamil/ML/CRM/code/torch
+rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress caramel.py train.py model.py data_io.py mo-ojamil@login.isambard:/home/mo-ojamil/ML/CRM/code/torch
 rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress isambard_run.sub mo-ojamil@login.isambard:/home/mo-ojamil/ML/CRM/code/torch
 
 # Copy data

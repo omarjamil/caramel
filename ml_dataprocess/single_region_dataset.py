@@ -309,7 +309,7 @@ def nn_dataset_per_subdomain_raw(region:str, in_prefix="031525", suite_id="u-br8
             
             if s in [99181, 99182]:
                 print("Multiplying advected quantity {0} with 600.".format(nn_data_stashes[s]))
-                var *= 600.
+                var *= 3600.
             data_labels.append(varname)
             raw_data.append(var)
         
@@ -394,4 +394,4 @@ if __name__ == "__main__":
     # combine_subdomains(region, in_prefix="030405", suite_id="u-br800")
     # nn_dataset(region, in_prefix="030405", suite_id="u-br800", truncate=False, global_profile=True)
     # nn_dataset_per_subdomain(region, in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", truncate=False, global_profile=True)
-    nn_dataset_per_subdomain_raw(region, in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False)
+    nn_dataset_per_subdomain_raw(region, in_prefix="3h_0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False)

@@ -17,7 +17,20 @@ import traceback
 # leave out 0N0E as that does not get read into iris properly
 regions=['0N100W','0N130W','0N15W','0N160E','0N160W','0N30W','0N50E','0N70E','0N88E','10N100W','10N120W','10N140W','10N145E','10N160E','10N170W','10N30W','10N50W','10N60E','10N88E','10S120W','10S140W','10S15W','10S170E','10S170W','10S30W','10S5E','10S60E','10S88E','10S90W','20N135E','20N145W','20N170E','20N170W','20N30W','20N55W','20N65E','20S0E','20S100W','20S105E','20S130W','20S160W','20S30W','20S55E','20S80E','21N115W','29N65W','30N130W','30N145E','30N150W','30N170E','30N170W','30N25W','30N45W','30S100W','30S10E','30S130W','30S15W','30S160W','30S40W','30S60E','30S88E','40N140W','40N150E','40N160W','40N170E','40N25W','40N45W','40N65W','40S0E','40S100E','40S100W','40S130W','40S160W','40S50E','40S50W','50N140W','50N149E','50N160W','50N170E','50N25W','50N45W','50S150E','50S150W','50S30E','50S30W','50S88E','50S90W','60N15W','60N35W','60S0E','60S140E','60S140W','60S70E','60S70W','70N0E','70S160W','70S40W','80N150W']
 
-suite_id="u-bs572_20170116-30_conc"
+# suite_id="u-bs572_20170116-30_conc"
+suite_id ="u-bs572_20170101-15_conc"
+
+def nooverlap_smooth(arrayin, window=6):
+    """
+    Moving average with non-overlapping window
+    """
+    if arrayin.ndim > 1:
+        x,y=arrayin.shape
+        averaged = np.mean(arrayin.reshape(window,x//window,y,order='F'),axis=0)
+    else:
+        x = arrayin.shape[0]
+        averaged = np.mean(arrayin.reshape(window,x//window, order='F'), axis=0)
+    return averaged
 
 def combine_q_tednencies(region):
     """
@@ -297,9 +310,39 @@ def main_combine_day_tseries(region: str, stashes: list, days_range=[3,4,5], mon
         sys.stderr.write(traceback.format_exc())
         return 1
 
+def average_data(region: str, stashes: list, in_prefix):
+    # region='10N160E'
+    # Start from day 2 to ignore spin up day 1
+    try:
+        # for stash in [10,12182,16004,12181]:
+        for stash in stashes:
+            for subdomain in range(64):
+                # combine_day_tseries(start_date, end_date, region, subdomain, stash)
+                in_filename =  "{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3),str(stash).zfill(5))
+                out_filename = "3h_{0}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{3}.nc".format(in_prefix,region,str(subdomain).zfill(3),str(stash).zfill(5))
+                in_location='/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/'.format(region, str(stash).zfill(5), suite_id)
+                print("Reading {0}".format(in_location+in_filename))
+                cube = iris.load_cube(in_location+in_filename)
+                name = cube.standard_name
+                ave_data = nooverlap_smooth(cube.data, window=18)
+                if ave_data.data.ndim > 1:
+                    time = iris.coords.DimCoord(np.arange(ave_data.shape[0]), long_name="time")
+                    levels = iris.coords.DimCoord(np.arange(ave_data.shape[1]), long_name="model_levels")
+                    ave_cube = iris.cube.Cube(ave_data, dim_coords_and_dims=[(time,0),(levels,1)], standard_name=name)
+                else:
+                    time = iris.coords.DimCoord(np.arange(ave_data.shape[0]), long_name="time")
+                    ave_cube = iris.cube.Cube(ave_data, dim_coords_and_dims=[(time,0)], standard_name=name)
+                iris.fileformats.netcdf.save(ave_cube,in_location+out_filename)            
+        return 0
+    except Exception as e:
+        sys.stderr.write("error: " + str(e))
+        sys.stderr.write(traceback.format_exc())
+        return 1
+
 def calc_tendencies(region: str, in_prefix: str="30"):
     tendencies.main_Q_dot(region, suite_id, in_prefix=in_prefix)
     tendencies.main_T_dot(region, suite_id, in_prefix=in_prefix)   
+
 
 if __name__ == "__main__":
     argument = sys.argv[1]
@@ -309,6 +352,7 @@ if __name__ == "__main__":
     # stashes = [16004, 12181, 10, 12182, 254,12183,12,12184,272,12189,273,12190] #T, qv, qcl, qcf, qg
     # stashes = [4,24,1202,1205,1207,1208,1235,2201,2207,2205,3217,3225,3226,3234,3236,3245,4203,4204,9217,30405,30406,30461,16222,99181,99182]
     stashes = [int(stash)]
+
 
     if argument == '1':
         main_check_files_exist(region, stashes)
@@ -324,8 +368,12 @@ if __name__ == "__main__":
         ret = main_combine_day_tseries(region, stashes, days_range=range(16,31), month=1)
         if ret == 0:
             os.remove(tmpf.name)
+    elif argument == '3a':
+        in_prefix = "161718192021222324252627282930"
+        # in_prefix = "0203040506070809101112131415"
+        average_data(region, stashes, in_prefix)
     elif argument == '4':
-        combine_q(region, in_prefix="161718192021222324252627282930")
+        combine_q(region, in_prefix="3h_161718192021222324252627282930")
     elif argument == '5':
-        calc_tendencies(region, in_prefix="161718192021222324252627282930")
+        calc_tendencies(region, in_prefix="3h_0203040506070809101112131415")
     

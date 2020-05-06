@@ -14,7 +14,7 @@ regions=('0N100W' '0N130W' '0N15W' '0N160E' '0N160W' '0N30W' '0N50E' '0N70E' '0N
 
 
 # poll submit to avoid job numbers limit
-# option=3
+# option='3a'
 # r=0
 # while [ $r -lt ${#regions[@]} ]
 # do
@@ -34,7 +34,7 @@ regions=('0N100W' '0N130W' '0N15W' '0N160E' '0N160W' '0N30W' '0N50E' '0N70E' '0N
 #     fi
 #     sleep 2.5
 # done
-
+# 
 option=5 # 4 or 5
 for region in ${regions[@]}
 do
@@ -43,6 +43,7 @@ do
     eval $command
 done
 
+# option='3a'
 # for region in ${regions[@]}
 # do
 #     for s in ${stashes[@]}

@@ -16,7 +16,7 @@ def nooverlap_smooth(arrayin, window=6):
     Moving average with non-overlapping window
     """
     x,y=arrayin.shape
-    averaged = np.mean(arrayin.reshape(window,x//window,y),axis=0)
+    averaged = np.mean(arrayin.reshape(window,x//window,y,order='F'),axis=0)
     return averaged
 
 def read_combined_tseries(filepath: str, region: str, var_name: str, var_stash: int):
