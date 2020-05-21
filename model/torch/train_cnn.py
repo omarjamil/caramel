@@ -89,7 +89,7 @@ def set_args():
         print("Inputs: {0} Ouputs: {1}".format(args.xvars, args.yvars2))
 
     # args.hidden_size = 512 
-    args.model_name = "qnext_{0}_in_{1}_out_{2}_epch_{3}_btch_{4}_{5}_{6}_cnn.tar".format(
+    args.model_name = "qnext_{0}_in_{1}_out_{2}_epch_{3}_btch_{4}_{5}_{6}_cnn3b.tar".format(
                                                                                     str(args.in_channels).zfill(3),
                                                                                     str(args.nb_classes).zfill(3),
                                                                                     str(args.epochs).zfill(3),

@@ -83,7 +83,7 @@ def scm(model, datasetfile, args):
     qnext_inv = yt_inverse_split['qtot_next']
 
     # qnext_ml = x_split['qtot'].data.numpy()
-    qnext_ml = qnext.data.numpy()
+    qnext_ml = qnext.data.numpy().copy()
     tnext_ml = x_split['theta'].data.numpy()
     
     # q_in = x_split['qtot'][0]
@@ -131,8 +131,8 @@ def scm(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_006_lyr_183_in_045_out_0228_hdn_030_epch_00500_btch_023001AQT_mse_163001AQT_normalise_skip.tar"
-    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_063.hdf5"
+    model_file = model_loc+"qnext_006_lyr_183_in_045_out_0228_hdn_010_epch_00500_btch_023001AQT_mse_163001AQT_normalise_skip_sigmoid.tar"
+    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
     normaliser_region = "163001AQ_normalise"
     data_region = "0N100W"
     args = set_args(model_file, normaliser_region, data_region)

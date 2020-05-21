@@ -70,20 +70,15 @@ def scm_cnn(model, datasetfile, args):
     
     x,x2,y,y2,xmean,xstd,xmean2,xstd2,ymean,ystd,ymean2,ystd2 = nn_data.get_data()
     # model = set_model(args)
-    yp = model(x)
+    # yp = model(x)
     qtot_denorm = nn_data._inverse_transform(x[:,0,:], xmean[0,:], xstd[0,:])
     qadv_inv = nn_data._inverse_transform(x[:,1,:], xmean[1,:], xstd[1,:])
     theta_denorm = nn_data._inverse_transform(x[:,2,:], xmean[2,:], xstd[2,:])
     theta_adv_inv = nn_data._inverse_transform(x[:,3,:], xmean[3,:], xstd[3,:])
 
     yinv = nn_data._inverse_transform(y,ymean,ystd)
-    ypinv = nn_data._inverse_transform(yp,ymean,ystd)
 
-    qtotn_test_denorm = yinv[:,:args.nlevs]
-    qtotn_predict_denorm = ypinv[:,:args.nlevs]
-    
     qtotn_test_norm = y[:,:args.nlevs]
-    qtotn_predict_norm = yp[:,:args.nlevs]
     
     qnext_ml = qtotn_test_norm.data.numpy().copy()
     # tnext_ml = x_split['theta'].data.numpy()
@@ -97,10 +92,10 @@ def scm_cnn(model, datasetfile, args):
         # print("q_in, q_true: ", q_in.data.numpy()[0], x_split['qtot'].data.numpy()[t,0])
         qnext_ml[t] = q_in.data.numpy()[:]
         # tnext_ml[t] = t_in.data.numpy()[:]
-        inputs = torch.cat([q_in,qadv[t],t_in,tadv[t],swtoa[t],shf[t],lhf[t]])
+        inputs = torch.stack([q_in,qadv[t],t_in[t],tadv[t]]).view((1,args.in_channels,args.nlevs))
         # inputs = torch.cat([q_in,t_in,swtoa[t],shf[t],lhf[t]])
         yp_ = model(inputs)
-        q_in = yp_[:,:args.nlevs]
+        q_in = yp_[0,:args.nlevs]
         # t_in = yp_[:,args.nlevs:]
         # print("q_ml:", q_in.data.numpy()[0])
     yt_inverse = nn_data._inverse_transform(y,ymean,ystd)
@@ -125,7 +120,7 @@ def scm_cnn(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_004_in_045_out_010_epch_00500_btch_023001AQT_mse_163001AQT_normalise_cnn.tar"
+    model_file = model_loc+"qnext_004_in_045_out_010_epch_00500_btch_023001AQT_mae_163001AQT_normalise_cnn.tar"
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_011.hdf5"
     normaliser_region = "163001AQ_normalise"
     data_region = "0N100W"

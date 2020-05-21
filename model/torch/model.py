@@ -59,8 +59,8 @@ class MLPSkip(torch.nn.Module):
         for l in self.fcs:
             x = self.act(l(x))
         x = self.act(self.skip(x) + inputs)
-        # x = self.sigmoid(self.out(x))
-        x = self.out(x)
+        x = self.sigmoid(self.out(x))
+        # x = self.out(x)
         return x
 
 class MLP_BN(torch.nn.Module):
@@ -82,6 +82,58 @@ class MLP_BN(torch.nn.Module):
         x = self.act(self.fc1(x))
         for l in self.fcs:
             x = self.act(self.bn(l(x)))
+        x = self.out(x)
+        return x
+
+class ConvNN5(torch.nn.Module):
+    def __init__(self, in_channels, n_levs, nb_classes,
+        act=torch.nn.LeakyReLU):
+        super(ConvNN5, self).__init__()
+        self.act = act()
+        self.conv1 = torch.nn.Conv1d(in_channels, 8, 4, stride=1, padding=1)
+        self.conv2 = torch.nn.Conv1d(8, 8, 4, stride=1, padding=1)
+        self.conv3 = torch.nn.Conv1d(8, 16, 4, stride=1, padding=1)
+        self.conv4 = torch.nn.Conv1d(16, 32, 4, stride=1, padding=1)
+        self.conv5 = torch.nn.Conv1d(32, 4, 4, stride=1, padding=1)
+        # If three convolutions with above values, final length = nlevs - 3
+        self.final_length = n_levs - 5
+        self.fc1 = torch.nn.Linear(4*self.final_length, 2*self.final_length)
+        self.fc2 = torch.nn.Linear(2*self.final_length, int(1.5*self.final_length))
+        self.out = torch.nn.Linear(int(1.5*self.final_length),nb_classes)
+
+    def forward(self, x):
+        x = self.act(self.conv1(x))
+        x = self.act(self.conv2(x))
+        x = self.act(self.conv3(x))
+        x = self.act(self.conv4(x))
+        x = self.act(self.conv5(x))
+        x = x.view(-1,4*self.final_length)
+        x = self.act(self.fc1(x))
+        x = self.act(self.fc2(x))
+        x = self.out(x)
+        return x
+
+class ConvNN3b(torch.nn.Module):
+    def __init__(self, in_channels, n_levs, nb_classes,
+        act=torch.nn.LeakyReLU):
+        super(ConvNN3b, self).__init__()
+        self.act = act()
+        self.conv1 = torch.nn.Conv1d(in_channels, 40, 4, stride=1, padding=1)
+        self.conv2 = torch.nn.Conv1d(40, 40, 4, stride=1, padding=1)
+        self.conv3 = torch.nn.Conv1d(40, 16, 4, stride=1, padding=1)
+        # If three convolutions with above values, final length = nlevs - 3
+        self.final_length = n_levs - 3
+        self.fc1 = torch.nn.Linear(int(16*self.final_length), int(10*self.final_length))
+        self.fc2 = torch.nn.Linear(int(10*self.final_length), int(10*self.final_length))
+        self.out = torch.nn.Linear(int(10*self.final_length),nb_classes)
+
+    def forward(self, x):
+        x = self.act(self.conv1(x))
+        x = self.act(self.conv2(x))
+        x = self.act(self.conv3(x))
+        x = x.view(-1,16*self.final_length)
+        x = self.act(self.fc1(x))
+        x = self.act(self.fc2(x))
         x = self.out(x)
         return x
 
