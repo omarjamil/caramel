@@ -78,6 +78,7 @@ def plot_variables(dataset_file,nn_norm, data_frac, nlevs):
     ax = axs[0,2]
     ax.plot(np.arange(nlevs), qadv[0,:],'k-',label='qadv')
     ax.plot(np.arange(nlevs), qadv_mean,'k.',label='qadv_mean')
+    # ax.plot(np.arange(nlevs), qadv[0,:]/qtot_mean,'r.-',label='qadv/qtot')
     ax.fill_between(np.arange(nlevs),qadv[0,:]-qadv_std,qadv[0,:]+qadv_std)
     ax.legend()
 
@@ -97,9 +98,9 @@ def plot_variables(dataset_file,nn_norm, data_frac, nlevs):
     plt.show()
 
 if __name__ == "__main__":
-    training_data_file = "/project/spice/radiation/ML/CRM/data/models/datain/train_data_023001AQ3H.hdf5"
-    normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/021501AQ3H_normalise/"
-    # normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/021501AQ3H_standardise_mx/"
+    training_data_file = "/project/spice/radiation/ML/CRM/data/models/datain/train_data_023001AQ3HT.hdf5"
+    # normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/021501AQ3H_normalise/"
+    normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/163001AQ3HT_normalise/"
     data_norm = data_io.NormalizersData(normaliser)
     data_frac = 0.01
     nlevs = 45

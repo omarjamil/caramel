@@ -35,10 +35,11 @@ regions=('0N100W' '0N130W' '0N15W' '0N160E' '0N160W' '0N30W' '0N50E' '0N70E' '0N
 #     sleep 2.5
 # done
 # 
-option=5 # 4 or 5
+option=4a # 4 or 5
 for region in ${regions[@]}
 do
     command="sbatch preprocess_data.sbatch $option $region 00000"
+    # command="bash preprocess_data.sbatch $option $region 00000"
     echo $command
     eval $command
 done

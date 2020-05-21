@@ -309,7 +309,7 @@ def nn_dataset_per_subdomain_raw(region:str, in_prefix="031525", suite_id="u-br8
             
             if s in [99181, 99182]:
                 print("Multiplying advected quantity {0} with 600.".format(nn_data_stashes[s]))
-                var *= 3600.
+                var *= 10800 #3600.
             data_labels.append(varname)
             raw_data.append(var)
         
