@@ -46,7 +46,12 @@ def set_model(model_file, args):
     args.region=args.data_region
     in_features = (args.nlevs*(len(args.xvars)-3)+3)
     print(in_features)
-    mlp = model.ConvNN(args.in_channels, args.nlevs, args.nb_classes)
+    # mlp = model.ConvNN(args.in_channels, args.nlevs, args.nb_classes)
+    # mlp = model.ConvNN5(args.in_channels, args.nlevs, args.nb_classes)
+    # mlp = model.ConvNN3b(args.in_channels, args.nlevs, args.nb_classes)
+    # mlp = model.ConvNN3Skip(args.in_channels, args.nlevs, args.nb_classes)
+    # mlp = model.ConvNN3Skip(args.in_channels, args.nlevs, args.nb_classes, args.n_filters, args.n_nodes)
+    mlp = model.ConvNN2Pool(args.in_channels, args.nlevs, args.nb_classes, args.n_filters, args.n_nodes)
     # Load the save model 
     print("Loading PyTorch model: {0}".format(model_file))
     checkpoint = torch.load(model_file, map_location=torch.device('cpu'))
@@ -110,6 +115,7 @@ def scm_cnn(model, datasetfile, args):
 
     output = {'qtot_next':qnext_inv.data.numpy(), 
             'qtot_next_ml':qnext_ml_inv.data.numpy(),
+            'qtot':qtot_denorm.data.numpy(),
             # 'theta_next':tnext_inv.data.numpy(), 
             # 'theta_next_ml':tnext_ml_inv.data.numpy()
     }
@@ -120,8 +126,8 @@ def scm_cnn(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_004_in_045_out_010_epch_00500_btch_023001AQT_mae_163001AQT_normalise_cnn.tar"
-    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_011.hdf5"
+    model_file = model_loc+"qnext_004_in_045_out_020_epch_00500_btch_023001AQT_mse_163001AQT_normalise_dfrac_1p0_20_filt_10_nx_cnn2pool.tar"
+    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
     normaliser_region = "163001AQ_normalise"
     data_region = "0N100W"
     args = set_args(model_file, normaliser_region, data_region)

@@ -32,6 +32,7 @@ parser.add_argument('--normaliser', type=str,
 parser.add_argument('--nlevs', type=int, default=45, metavar='N',
                     help='Number of vertical levels to user')
 
+
 args_parser = parser.parse_args()
 
 class dotdict(dict):
@@ -57,7 +58,8 @@ def set_args():
         args.data_region = '021501AQ1H'
         args.normaliser = '021501AQ1H_standardise_mx'
         args.loss = 'mae'
-        args.nb_hidden_layers = 9
+        args.n_fiters = 20
+        args.n_nodes = 10
         args.nlevs = 30
         args.data_fraction = 0.01
 
@@ -88,7 +90,7 @@ def set_args():
 
     # args.hidden_size = 512 
     args.hidden_size = int(1.0 * args.in_features + args.nb_classes)
-    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_skip.tar".format(str(args.nb_hidden_layers).zfill(3),
+    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_skip_noact.tar".format(str(args.nb_hidden_layers).zfill(3),
                                                                                     str(args.in_features).zfill(3),
                                                                                     str(args.nb_classes).zfill(3),
                                                                                     str(args.hidden_size).zfill(4),
@@ -96,7 +98,8 @@ def set_args():
                                                                                     str(args.batch_size).zfill(5),
                                                                                     args.identifier, 
                                                                                     args.loss,
-                                                                                    args.normaliser)
+                                                                                    args.normaliser
+                                                                                    )
 
     # Get the data
     if args.isambard:

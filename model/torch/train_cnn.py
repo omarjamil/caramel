@@ -11,7 +11,7 @@ parser.add_argument('--with-cuda', action='store_true', default=False,
                     help='enables CUDA training')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+parser.add_argument('--log-interval', type=int, default=100, metavar='N',
                     help='how many batches to wait before logging training status')
 parser.add_argument('--chkpt-interval', type=int, default=10, metavar='N',
                     help='how many epochs before saving a checkpoint')
@@ -31,6 +31,10 @@ parser.add_argument('--normaliser', type=str,
                     help='Normalisation to use: standardise or normalise')
 parser.add_argument('--nlevs', type=int, default=45, metavar='N',
                     help='Number of vertical levels to user')
+parser.add_argument('--n-filters', type=int, default=20, metavar='N',
+                    help='Number of filters in conv layers')
+parser.add_argument('--n-nodes', type=int, default=10, metavar='N',
+                    help='Multiplier for number of nodes for the fully connected layers in CNN')
 
 args_parser = parser.parse_args()
 
@@ -89,14 +93,18 @@ def set_args():
         print("Inputs: {0} Ouputs: {1}".format(args.xvars, args.yvars2))
 
     # args.hidden_size = 512 
-    args.model_name = "qnext_{0}_in_{1}_out_{2}_epch_{3}_btch_{4}_{5}_{6}_cnn3b.tar".format(
+    args.model_name = "qnext_{0}_in_{1}_out_{2}_epch_{3}_btch_{4}_{5}_{6}_dfrac_{7}_{8}_filt_{9}_nx_cnn3skip.tar".format(
                                                                                     str(args.in_channels).zfill(3),
                                                                                     str(args.nb_classes).zfill(3),
                                                                                     str(args.epochs).zfill(3),
                                                                                     str(args.batch_size).zfill(5),
                                                                                     args.identifier, 
                                                                                     args.loss,
-                                                                                    args.normaliser)
+                                                                                    args.normaliser,
+                                                                                    str(args.data_fraction).replace('.','p'),
+                                                                                    args.n_filters,
+                                                                                    args.n_nodes)
+    print(args.model_name)                                                                                   
 
     # Get the data
     if args.isambard:

@@ -76,7 +76,10 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 def set_model(args):
     # mlp = model.ConvNN(args.in_channels, args.nlevs, args.nb_classes)
     # mlp = model.ConvNN5(args.in_channels, args.nlevs, args.nb_classes)
-    mlp = model.ConvNN3b(args.in_channels, args.nlevs, args.nb_classes)
+    # mlp = model.ConvNN3b(args.in_channels, args.nlevs, args.nb_classes)
+    mlp = model.ConvNN3Skip(args.in_channels, args.nlevs, args.nb_classes, args.n_filters, args.n_nodes)
+    # mlp = model.ConvNN2Pool(args.in_channels, args.nlevs, args.nb_classes, args.n_filters, args.n_nodes)
+    # mlp = model.ConvNN3Skip2(args.in_channels, args.nlevs, args.nb_classes, args.n_filters, args.n_nodes)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
     print("Number of traninable parameter: {0}".format(pytorch_total_params))
 

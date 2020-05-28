@@ -1,5 +1,6 @@
 import data_io
 import torch
+import matplotlib.pyplot as plt
 
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""
@@ -50,7 +51,7 @@ def loader_loop():
     args.locations = {"train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
                     "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser)}
     args.region = "023001AQT"
-    args.data_fraction = 0.01
+    args.data_fraction = 0.001
     args.batch_size = 10
     args.nlevs = 45
     train_ldr = train_dataloader_CNN(args)
@@ -59,6 +60,8 @@ def loader_loop():
     for batch_idx, batch in enumerate(train_ldr):
         # x,y,y2 = batch
         x,x2,y,y2 = batch
+        # plt.imshow(x[0].T)
+        # plt.show()
         print("X", x.shape)
         print("X2", x2.shape)
         print("Y", y.shape)
@@ -104,5 +107,5 @@ if __name__ == "__main__":
     # stacked = torch.stack([ones,twos,threes],dim=1)
     # print(stacked)
     # print(stacked.shape)
-    # loader_loop()
-    test_validation_io()
+    loader_loop()
+    # test_validation_io()

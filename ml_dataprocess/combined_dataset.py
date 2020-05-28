@@ -253,6 +253,91 @@ def combine_surface_level_files(in_prefix="031525", suite_id="u-bj775_", new_reg
             print("Saving file {0}".format(outfile))
             iris.fileformats.netcdf.save(var_cube, outfile)
 
+def timeseries_multi_level_files(in_prefix="031525", suite_id="u-br800", new_region="9999LEAU", n_steps=2001):
+    """
+    Combine all the regions into a single file
+    """
+    # new_region = "9999NEWS"
+    out_basedir = "/project/spice/radiation/ML/CRM/data/{1}/{0}/".format(new_region, suite_id)
+    try:
+        os.makedirs(out_basedir)
+    except OSError:
+        pass
+
+    for s in multi_stashes:
+        for subdomain in range(64):
+            out_dir = out_basedir+"concat_stash_{0}/".format(str(s).zfill(5))
+            try:
+                os.makedirs(out_dir)
+            except OSError:
+                pass
+            outfile="{0}/{3}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{4}_t{5}.nc".format(out_dir, new_region, str(subdomain).zfill(3),in_prefix, str(s).zfill(5), n_steps)
+            var_ = None
+            var_cube = None
+            irx = 0
+            for r in regions:
+                in_dir = "/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/".format(r,str(s).zfill(5), suite_id)
+                in_file = "{0}/{3}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{4}.nc".format(in_dir, r, str(subdomain).zfill(3),in_prefix, str(s).zfill(5))
+                # print("Processing file: {0}".format(in_file))
+                # data = Dataset(in_file)
+                data = iris.load_cube(in_file).data
+                var = data[:n_steps,:].reshape(n_steps//29,29,-1)
+                if irx == 0:
+                    var_ = var
+                else:
+                    var_ = np.vstack((var_,var))
+                irx += 1
+            npoints = iris.coords.DimCoord(np.arange(var_.shape[0]), long_name="samples")
+            time = iris.coords.DimCoord(np.arange(var_.shape[1]), long_name="time")
+            levels = iris.coords.DimCoord(np.arange(var_.shape[2]), long_name="model_levels")
+            var_cube = iris.cube.Cube(var_, dim_coords_and_dims=[(npoints,0),(time,1),(levels,2)])
+            var_cube.var_name = multi_stashes[s]
+            var_cube.attributes['STASHES'] = str(s).zfill(5)
+            print("Saving file {0}".format(outfile))
+            iris.fileformats.netcdf.save(var_cube, outfile)
+
+def timeseries_surface_level_files(in_prefix="031525", suite_id="u-bj775_", new_region="9999LEAU", n_steps=2001):
+    """
+    Combine all the regions into a single file
+    """
+    # new_region = "9999NEWS"
+    out_basedir = "/project/spice/radiation/ML/CRM/data/{1}/{0}/".format(new_region,suite_id)
+    try:
+        os.makedirs(out_basedir)
+    except OSError:
+        pass
+
+    for s in surface_stashes:
+        for subdomain in range(64):
+            out_dir = out_basedir+"concat_stash_{0}/".format(str(s).zfill(5))
+            try:
+                os.makedirs(out_dir)
+            except OSError:
+                pass
+            outfile="{0}/{3}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{4}_t{5}.nc".format(out_dir, new_region, str(subdomain).zfill(3),in_prefix, str(s).zfill(5),n_steps)
+            var_ = None
+            var_cube = None
+            irx = 0
+            for r in regions:
+                in_dir = "/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/".format(r,str(s).zfill(5), suite_id)
+                in_file = "{0}/{3}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{4}.nc".format(in_dir, r, str(subdomain).zfill(3),in_prefix, str(s).zfill(5))
+                # print("Processing file: {0}".format(in_file))
+                # data = Dataset(in_file)
+                data = iris.load_cube(in_file).data
+                var = data[:n_steps].reshape(n_steps//29,29,-1)
+                if irx == 0:
+                    var_ = var
+                else:
+                    var_ = np.vstack((var_,var))
+                irx += 1
+            npoints = iris.coords.DimCoord(np.arange(var_.shape[0]), long_name="samples")
+            time = iris.coords.DimCoord(np.arange(var_.shape[1]), long_name="time")
+            var_cube = iris.cube.Cube(var_, dim_coords_and_dims=[(npoints,0),(time,1)])
+            var_cube.var_name = surface_stashes[s]
+            var_cube.attributes['STASHES'] = str(s).zfill(5)
+            print("Saving file {0}".format(outfile))
+            iris.fileformats.netcdf.save(var_cube, outfile)
+
 def combine_subdomains(region: str, in_prefix="031525", suite_id="u-br800"):
     """
     After combining data from all the regions
@@ -481,12 +566,22 @@ if __name__ == "__main__":
     # in_prefix = "161718192021222324252627282930"
     # suite_id = "u-bs572_20170116-30_conc"
     # new_region = "163001AQT"
-    in_prefix = "0203040506070809101112131415"
-    suite_id = "u-bs572_20170101-15_conc"
-    new_region = "021501AQT"
+    # in_prefix = "0203040506070809101112131415"
+    # suite_id = "u-bs572_20170101-15_conc"
+    # new_region = "021501AQT"
     # combine_multi_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
     # combine_surface_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
     # combine_subdomains(new_region, in_prefix=in_prefix, suite_id=suite_id)
     # nn_dataset_raw(new_region, in_prefix=in_prefix, suite_id=suite_id, truncate=False)
     # nn_dataset_std(new_region, in_prefix=in_prefix, suite_id=suite_id, truncate=False)
-    nn_normalisation_vars(new_region, in_prefix=in_prefix, suite_id=suite_id)
+    # nn_normalisation_vars(new_region, in_prefix=in_prefix, suite_id=suite_id)
+    
+    # in_prefix = "161718192021222324252627282930"
+    # suite_id = "u-bs572_20170116-30_conc"
+    # new_region = "163001AQTT3"
+    in_prefix = "0203040506070809101112131415"
+    suite_id = "u-bs572_20170101-15_conc"
+    new_region = "021501AQTT3"
+    n_steps = 2001 # 2001 for 02-15 ; 2146 for 16-30
+    # timeseries_multi_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region, n_steps=n_steps)
+    timeseries_surface_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region, n_steps=n_steps)
