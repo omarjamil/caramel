@@ -119,9 +119,9 @@ def visualise_scm_predictions_qt(np_file, figname):
 def visualise_tseries(npfile,level):
     # data = np.load(np_file)
     data = h5py.File(npfile, 'r')
-    q_ml = data['qtot_next_ml'][:200]
-    q_ = data['qtot_next'][:200]
-    qpersist = np.zeros(data['qtot'][:200].shape)
+    q_ml = data['qtot_next_ml'][:]
+    q_ = data['qtot_next'][:]
+    qpersist = np.zeros(data['qtot'][:].shape)
     qpersist[:] = data['qtot'][0]
 
     q_y_lim = (np.min(q_[:,level]), np.max(q_[:,level]))
@@ -762,7 +762,7 @@ def plot_scm_mae(np_file):
     plt.show()
 
 if __name__ == "__main__":
-    model_name="qnext_004_in_045_out_020_epch_00500_btch_023001AQT_mse_163001AQT_normalise_dfrac_1p0_20_filt_10_nx_cnn2pool"
+    model_name="qnext_006_lyr_183_in_045_out_0228_hdn_030_epch_00500_btch_023001AQT_mse_163001AQT_normalise_skip"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)

@@ -1,0 +1,38 @@
+With Joe Heaton help:
+
+This is how I was able to use Jupyter notebooks on my desktop to run on a Nvidia P100 "Pascal" compute node on Isambard
+
+* Run an interactive job on a Pascal node. Make a note of which node you landed on (pascal-00[1-4]), run `hostname` if you're not sure.
+qsub -I -q pascalq -l walltime=01:00:00
+
+* Launch Jupyter on the node: 
+conda activate torch
+module load cuda10.1/blas/10.1.243
+module load cuda10.1/fft/10.1.243
+module load cuda10.1/toolkit/10.1.243
+module load cudnn/7.0
+jupyter notebook --no-browser
+
+* In another terminal. This forwards port 8888 from the compute node to the login node
+ssh mo-ojamil@login.isambard
+ssh -q -N -L 8888:localhost:8888 pascal-002
+ .
+
+* In another terminal, run
+ssh -q -N -L 8888:localhost:8888 login.isambard
+
+* Jupyter should be accessible from your desktop firefox (if you ran these commands in VDI then use your VDI browser!), make sure to access it using the link generated in your interactive job as it contains an access token in the URL.
+
+
+
+The documentation for accessing the system is here: https://gw4-isambard.github.io/docs/
+
+I haven't tested whether the notebooks are properly GPU-accelerated, if you could confirm this that would be appreciated! We may need to load some more modules before running the notebook, most likely `module load cuda10.1/toolkit/10.1.243` if you require the CUDA stack.
+
+ 
+
+A simpler version of this approach can also be used to access the Power9 nodes which are equipped with Nvidia V100 "Volta" should you require more powa! I recommended the Pascals to start with so you don't have the additional headache of a different CPU architecture.
+
+ 
+
+As for the inconvenience of getting data to Isambard, it's not as seamless as our internal systems but our Internet link can manage 20MB/s from VDI to Isambard and if you require a large dataset to be shifted over I can accelerate ad-hoc by transferring it in a magical way. Your account should have a 50GB quota, which can be bumped up if you have a user-case.

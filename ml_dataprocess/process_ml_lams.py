@@ -15,7 +15,7 @@ from cjm_functions import extract_fields_for_advective_tendencies
 from cjm_functions import generate_filename_in
 from cjm_functions import retrieve_a_file
 
-roseid='u-bs572'
+roseid='u-bs573'
 
 def daterange(start_date, end_date):
     for n in range(int ((end_date - start_date).days)):

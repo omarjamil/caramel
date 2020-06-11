@@ -1,7 +1,7 @@
 #!/bin/bash -l
-#SBATCH --mem=60000
+#SBATCH --mem=24000
 #SBATCH --ntasks=24
-#SBATCH --time=360
+#SBATCH --time=30
 #SBATCH --qos=normal
 #SBATCH --wckey=combined_dataset
 #SBATCH --output=/scratch/ojamil/slurmout/%j.cmbdo

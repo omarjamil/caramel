@@ -1,6 +1,6 @@
 import argparse
 import torch
-import caramel_cnn
+import caramel_resnet
 
 parser = argparse.ArgumentParser(description='Train Q')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
@@ -93,7 +93,7 @@ def set_args():
         print("Inputs: {0} Ouputs: {1}".format(args.xvars, args.yvars2))
 
     # args.hidden_size = 512 
-    args.model_name = "qnext_{0}_in_{1}_out_{2}_epch_{3}_btch_{4}_{5}_{6}_dfrac_{7}_{8}_filt_{9}_nx_cnn3skip.tar".format(
+    args.model_name = "qnext_{0}_in_{1}_out_{2}_epch_{3}_btch_{4}_{5}_{6}_dfrac_{7}_resnet.tar".format(
                                                                                     str(args.in_channels).zfill(3),
                                                                                     str(args.nb_classes).zfill(3),
                                                                                     str(args.epochs).zfill(3),
@@ -101,9 +101,7 @@ def set_args():
                                                                                     args.identifier, 
                                                                                     args.loss,
                                                                                     args.normaliser,
-                                                                                    str(args.data_fraction).replace('.','p'),
-                                                                                    args.n_filters,
-                                                                                    args.n_nodes)
+                                                                                    str(args.data_fraction).replace('.','p'))
     print(args.model_name)                                                                                   
 
     # Get the data
@@ -113,12 +111,12 @@ def set_args():
                 "hist_loc":"/home/mo-ojamil/ML/CRM/data/models",
                 "model_loc":"/home/mo-ojamil/ML/CRM/data/models/torch",
                 "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(args.normaliser)}
-    elif args.aws:
-        args.locations={ "train_test_datadir":"~/omarjami-ml/caramel/datain",
-                "chkpnt_loc":"~/omarjami-ml/caramel/models/chkpts",
-                "hist_loc":"~/omarjami-ml/caramel/models",
-                "model_loc":"~/omarjami-ml/caramel/models/torch",
-                "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(args.normaliser)}
+    # elif args.aws:
+    #     args.locations={ "train_test_datadir":"~/omarjami-ml/caramel/datain",
+    #             "chkpnt_loc":"~/omarjami-ml/caramel/models/chkpts",
+    #             "hist_loc":"~/omarjami-ml/caramel/models",
+    #             "model_loc":"~/omarjami-ml/caramel/models/torch",
+    #             "normaliser_loc":"~/omarjami-ml/caramel/normaliser/{0}".format(args.normaliser)}
     else:
         args.locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
                 "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
@@ -129,5 +127,5 @@ def set_args():
 
 if __name__ == "__main__":
     args = set_args()
-    model, loss_function, optimizer, scheduler = caramel_cnn.set_model(args)
-    training_loss, validation_loss = caramel_cnn.train_loop(model, loss_function, optimizer, scheduler, args)
+    model, loss_function, optimizer, scheduler = caramel_resnet.set_model(args)
+    training_loss, validation_loss = caramel_resnet.train_loop(model, loss_function, optimizer, scheduler, args)
