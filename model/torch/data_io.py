@@ -121,9 +121,9 @@ class Data_IO_validation(object):
                                 'qadv_test':[self.q_tot_adv_test[:self.npoints, :self.nlevs], self.nn_norm.qadv_mean[0,:self.nlevs], self.nn_norm.qadv_stdscale[0,:self.nlevs]],
                                 'theta_test':[self.theta_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean[0,:self.nlevs], self.nn_norm.t_stdscale[0,:self.nlevs]],
                                 'theta_adv_test':[self.theta_adv_test[:self.npoints, :self.nlevs], self.nn_norm.tadv_mean[0,:self.nlevs], self.nn_norm.tadv_stdscale[0,:self.nlevs]],
-                                'sw_toa_test':[self.sw_toa_test[:self.npoints], self.nn_norm.sw_toa_mean, self.nn_norm.sw_toa_stdscale],
-                                'shf_test':[self.shf_test[:self.npoints], self.nn_norm.upshf_mean, self.nn_norm.upshf_stdscale],
-                                'lhf_test':[self.lhf_test[:self.npoints], self.nn_norm.uplhf_mean, self.nn_norm.uplhf_stdscale]
+                                'sw_toa_test':[self.sw_toa_test[:self.npoints], self.nn_norm.sw_toa_mean[0,:], self.nn_norm.sw_toa_stdscale[0,:]],
+                                'shf_test':[self.shf_test[:self.npoints], self.nn_norm.upshf_mean[0,:], self.nn_norm.upshf_stdscale[0,:]],
+                                'lhf_test':[self.lhf_test[:self.npoints], self.nn_norm.uplhf_mean[0,:], self.nn_norm.uplhf_stdscale[0,:]]
                                 }
         self.ydata_and_norm = {
                                 'qphys_test':[self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.qphys_mean[0,:self.nlevs], self.nn_norm.qphys_stdscale[0,:self.nlevs]],
@@ -443,9 +443,9 @@ class ConcatDataset(torch.utils.data.Dataset):
                                     'qadv_train':[self.q_tot_adv_train[:self.npoints, :self.nlevs], self.nn_norm.qadv_mean[0,:self.nlevs], self.nn_norm.qadv_stdscale[0,:self.nlevs]],
                                     'theta_train':[self.theta_train[:self.npoints, :self.nlevs], self.nn_norm.t_mean[0,:self.nlevs], self.nn_norm.t_stdscale[0,:self.nlevs]],
                                     'theta_adv_train':[self.theta_adv_train[:self.npoints, :self.nlevs], self.nn_norm.tadv_mean[0,:self.nlevs], self.nn_norm.tadv_stdscale[0,:self.nlevs]],
-                                    'sw_toa_train':[self.sw_toa_train[:self.npoints], self.nn_norm.sw_toa_mean, self.nn_norm.sw_toa_stdscale],
-                                    'shf_train':[self.shf_train[:self.npoints], self.nn_norm.upshf_mean, self.nn_norm.upshf_stdscale],
-                                    'lhf_train':[self.lhf_train[:self.npoints], self.nn_norm.uplhf_mean, self.nn_norm.uplhf_stdscale]
+                                    'sw_toa_train':[self.sw_toa_train[:self.npoints], self.nn_norm.sw_toa_mean[0,:], self.nn_norm.sw_toa_stdscale[0,:]],
+                                    'shf_train':[self.shf_train[:self.npoints], self.nn_norm.upshf_mean[0,:], self.nn_norm.upshf_stdscale[0,:]],
+                                    'lhf_train':[self.lhf_train[:self.npoints], self.nn_norm.uplhf_mean[0,:], self.nn_norm.uplhf_stdscale[0,:]]
                                     }
             self.ydata_and_norm = {
                                     'qphys_train':[self.qphys_train[:self.npoints, :self.nlevs], self.nn_norm.qphys_mean[0,:self.nlevs], self.nn_norm.qphys_stdscale[0,:self.nlevs]],
@@ -505,9 +505,9 @@ class ConcatDataset(torch.utils.data.Dataset):
                                     'qadv_test':[self.q_tot_adv_test[:self.npoints, :self.nlevs], self.nn_norm.qadv_mean[0,:self.nlevs], self.nn_norm.qadv_stdscale[0,:self.nlevs]],
                                     'theta_test':[self.theta_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean[0,:self.nlevs], self.nn_norm.t_stdscale[0,:self.nlevs]],
                                     'theta_adv_test':[self.theta_adv_test[:self.npoints, :self.nlevs], self.nn_norm.tadv_mean[0,:self.nlevs], self.nn_norm.tadv_stdscale[0,:self.nlevs]],
-                                    'sw_toa_test':[self.sw_toa_test[:self.npoints], self.nn_norm.sw_toa_mean, self.nn_norm.sw_toa_stdscale],
-                                    'shf_test':[self.shf_test[:self.npoints], self.nn_norm.upshf_mean, self.nn_norm.upshf_stdscale],
-                                    'lhf_test':[self.lhf_test[:self.npoints], self.nn_norm.uplhf_mean, self.nn_norm.uplhf_stdscale]
+                                    'sw_toa_test':[self.sw_toa_test[:self.npoints], self.nn_norm.sw_toa_mean[0,:], self.nn_norm.sw_toa_stdscale[0,:]],
+                                    'shf_test':[self.shf_test[:self.npoints], self.nn_norm.upshf_mean[0,:], self.nn_norm.upshf_stdscale[0,:]],
+                                    'lhf_test':[self.lhf_test[:self.npoints], self.nn_norm.uplhf_mean[0,:], self.nn_norm.uplhf_stdscale[0,:]]
                                     }
             self.ydata_and_norm = {
                                     'qphys_test':[self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.qphys_mean[0,:self.nlevs], self.nn_norm.qphys_stdscale[0,:self.nlevs]],

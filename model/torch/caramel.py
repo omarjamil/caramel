@@ -74,8 +74,8 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 
 
 def set_model(args):
-    # mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    # mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLPDrop(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
@@ -87,6 +87,8 @@ def set_model(args):
         loss_function = torch.nn.functional.mse_loss #torch.nn.MSELoss()
     elif args.loss == "mink":
         loss_function = minkowski_error
+    elif args.loss == "huber":
+        loss_function = torch.nn.functional.smooth_l1_loss
     optimizer, scheduler = configure_optimizers(mlp)
 
     if args.warm_start:

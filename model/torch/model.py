@@ -41,7 +41,7 @@ class MLPDrop(torch.nn.Module):
 
 class MLPSkip(torch.nn.Module):
     def __init__(self, in_features, nb_classes, nb_hidden_layer, 
-        hidden_size, act=torch.nn.ReLU):
+        hidden_size, act=torch.nn.LeakyReLU):
         super(MLPSkip, self).__init__()
         print("Model with skip connections")
         self.act = act()
@@ -338,6 +338,97 @@ class Conv2dwSkip(torch.nn.Module):
         x = self.out(x + input.view(-1,self.in_channels*self.n_levs))
         return x
 
+
+class ResidualBlock(torch.nn.Module):
+
+    def __init__(self, channels):
+        
+        super(ResidualBlock, self).__init__()
+        # self.conv_1 = torch.nn.Conv2d(in_channels=channels[0],
+        #                               out_channels=channels[1],
+        #                               kernel_size=(3, 3),
+        #                               stride=(2, 2),
+        #                               padding=1)
+        self.conv_1 = torch.nn.Conv2d(in_channels=channels[0],
+                                      out_channels=channels[1],
+                                      kernel_size=(3, 5),
+                                      stride=(2, 2),
+                                      padding=1)
+        self.conv_1_bn = torch.nn.BatchNorm2d(channels[1])
+                                    
+        self.conv_2 = torch.nn.Conv2d(in_channels=channels[1],
+                                      out_channels=channels[2],
+                                      kernel_size=(1, 1),
+                                      stride=(1, 1),
+                                      padding=0)   
+        self.conv_2_bn = torch.nn.BatchNorm2d(channels[2])
+
+        # self.conv_shortcut_1 = torch.nn.Conv2d(in_channels=channels[0],
+        #                                        out_channels=channels[2],
+        #                                        kernel_size=(1, 1),
+        #                                        stride=(2, 2),
+        #                                        padding=0)  
+        self.conv_shortcut_1 = torch.nn.Conv2d(in_channels=channels[0],
+                                               out_channels=channels[2],
+                                               kernel_size=(1, 3),
+                                               stride=(2, 2),
+                                               padding=0)   
+        self.conv_shortcut_1_bn = torch.nn.BatchNorm2d(channels[2])
+
+    def forward(self, x):
+        shortcut = x
+        
+        out = self.conv_1(x)
+        # out = self.conv_1_bn(out)
+        # print("out 1", out.shape)
+        out = F.relu(out)
+
+        out = self.conv_2(out)
+        # print("out 2", out.shape)
+
+        # out = self.conv_2_bn(out)
+        
+        # match up dimensions using a linear function (no relu)
+        shortcut = self.conv_shortcut_1(shortcut)
+        # print("shortcut", shortcut.shape)
+
+        # shortcut = self.conv_shortcut_1_bn(shortcut)
+        
+        out += shortcut
+        # print("out 4", out.shape)
+
+        out = F.relu(out)
+        # print("out 5", out.shape)
+
+        return out
+
+class ConvNNet(torch.nn.Module):
+
+    def __init__(self, in_channels, num_classes):
+        super(ConvNNet, self).__init__()
+        
+        self.residual_block_1 = ResidualBlock(channels=[in_channels, 8, 16])
+        self.residual_block_2 = ResidualBlock(channels=[16, 32, 64])
+        self.residual_block_3 = ResidualBlock(channels=[64, 128, 256])
+    
+        # self.linear_1 = torch.nn.Linear(5*13*64, num_classes)
+        self.linear_1 = torch.nn.Linear(3*5*256, num_classes)
+
+        
+    def forward(self, x):
+
+        out = self.residual_block_1.forward(x)
+        out = self.residual_block_2.forward(out)
+        out = self.residual_block_3.forward(out)
+        # logits = self.linear_1(out.view(-1, 5*13*64))
+        logits = self.linear_1(out.view(-1, 3*5*256))
+        # probas = F.softmax(logits, dim=1)
+        return logits
+
+
+#########################
+
+
 class ConvNet(torch.nn.Module):
 
     def __init__(self, in_channels, n_levs, num_classes):
@@ -346,61 +437,88 @@ class ConvNet(torch.nn.Module):
         #########################
         ### 1st residual block
         #########################
-        # 18x52x4 => 9x26x16
+        # 18x52x4 => 9x26x8
         self.conv_1 = torch.nn.Conv2d(in_channels=4,
-                                      out_channels=16,
+                                      out_channels=8,
                                       kernel_size=(3, 3),
                                       stride=(2, 2),
                                       padding=1)
-        self.conv_1_bn = torch.nn.BatchNorm2d(16)
+        self.conv_1_bn = torch.nn.BatchNorm2d(8)
                                     
-        # 89x26x16 => 9x26x32
-        self.conv_2 = torch.nn.Conv2d(in_channels=16,
-                                      out_channels=32,
+        # 89x26x8 => 9x26x16
+        self.conv_2 = torch.nn.Conv2d(in_channels=8,
+                                      out_channels=16,
                                       kernel_size=(1, 1),
                                       stride=(1, 1),
                                       padding=0)   
-        self.conv_2_bn = torch.nn.BatchNorm2d(32)
+        self.conv_2_bn = torch.nn.BatchNorm2d(16)
         
-        # 18x52x4 => 9x26x32
+        # 18x52x4 => 9x26x16
         self.conv_shortcut_1 = torch.nn.Conv2d(in_channels=4,
-                                               out_channels=32,
+                                               out_channels=16,
                                                kernel_size=(1, 1),
                                                stride=(2, 2),
                                                padding=0)   
-        self.conv_shortcut_1_bn = torch.nn.BatchNorm2d(32)
+        self.conv_shortcut_1_bn = torch.nn.BatchNorm2d(16)
         
         #########################
         ### 2nd residual block
         #########################
-        # 9x26x32 => 5x13x64 
-        self.conv_3 = torch.nn.Conv2d(in_channels=32,
-                                      out_channels=64,
+        # 9x26x16 => 5x13x32 
+        self.conv_3 = torch.nn.Conv2d(in_channels=16,
+                                      out_channels=32,
                                       kernel_size=(3, 3),
                                       stride=(2, 2),
                                       padding=1)
-        self.conv_3_bn = torch.nn.BatchNorm2d(64)
+        self.conv_3_bn = torch.nn.BatchNorm2d(32)
                                     
-        # 5x13x64 => 5x13x128
-        self.conv_4 = torch.nn.Conv2d(in_channels=64,
-                                      out_channels=128,
+        # 5x13x32 => 5x13x64
+        self.conv_4 = torch.nn.Conv2d(in_channels=32,
+                                      out_channels=64,
                                       kernel_size=(1, 1),
                                       stride=(1, 1),
                                       padding=0)   
-        self.conv_4_bn = torch.nn.BatchNorm2d(128)
+        self.conv_4_bn = torch.nn.BatchNorm2d(64)
         
-        # 9x26x32 => 5x13x128 
-        self.conv_shortcut_2 = torch.nn.Conv2d(in_channels=32,
-                                               out_channels=128,
+        # 9x26x32 => 5x13x64 
+        self.conv_shortcut_2 = torch.nn.Conv2d(in_channels=16,
+                                               out_channels=64,
                                                kernel_size=(1, 1),
                                                stride=(2, 2),
                                                padding=0)   
-        self.conv_shortcut_2_bn = torch.nn.BatchNorm2d(128)
+        self.conv_shortcut_2_bn = torch.nn.BatchNorm2d(64)
+
+        # #########################
+        # ### 3rd residual block
+        # #########################
+        # # 5x13x64 => 3x7x64 
+        # self.conv_5 = torch.nn.Conv2d(in_channels=64,
+        #                               out_channels=64,
+        #                               kernel_size=(3, 3),
+        #                               stride=(2, 2),
+        #                               padding=1)
+        # self.conv_5_bn = torch.nn.BatchNorm2d(64)
+                                    
+        # # 3x7x64 => 3x7x128
+        # self.conv_6 = torch.nn.Conv2d(in_channels=64,
+        #                               out_channels=128,
+        #                               kernel_size=(1, 1),
+        #                               stride=(1, 1),
+        #                               padding=0)   
+        # self.conv_6_bn = torch.nn.BatchNorm2d(128)
+        
+        # # 5x13x64 => 3x7x128 
+        # self.conv_shortcut_3 = torch.nn.Conv2d(in_channels=64,
+        #                                        out_channels=128,
+        #                                        kernel_size=(1, 1),
+        #                                        stride=(2, 2),
+        #                                        padding=0)   
+        # self.conv_shortcut_3_bn = torch.nn.BatchNorm2d(128)
 
         #########################
         ### Fully connected
         #########################        
-        self.linear_1 = torch.nn.Linear(5*13*128, num_classes)
+        self.linear_1 = torch.nn.Linear(5*13*64, num_classes)
 
         
     def forward(self, x):
@@ -446,6 +564,188 @@ class ConvNet(torch.nn.Module):
         #########################
         ### Fully connected
         #########################   
-        logits = self.linear_1(out.view(-1, 5*13*128))
+        logits = self.linear_1(out.view(-1, 5*13*64))
         # probas = F.softmax(logits, dim=1)
         return logits
+
+#########################
+########   AE    #######
+class AE(torch.nn.Module):
+    def __init__(self, in_features, act=torch.nn.ReLU):
+        super(AE, self).__init__()
+        print("Model AE")
+        self.act = act()
+        self.fc1 = torch.nn.Linear(in_features, 50)
+        self.fc2 = torch.nn.Linear(50, 50)
+        self.fc31 = torch.nn.Linear(50, 50)
+        # self.fc32 = torch.nn.Linear(10, 3)
+        self.fc4 = torch.nn.Linear(50, 50)
+        self.fc5 = torch.nn.Linear(50, 50)
+        self.fc6 = torch.nn.Linear(50, in_features)
+
+    def forward(self,x):
+        x = self.act(self.fc1(x))
+        x = self.act(self.fc2(x))
+        x = self.act(self.fc31(x))
+        x = self.act(self.fc4(x))
+        x = self.act(self.fc5(x))
+        x = self.fc6(x)
+        return x
+
+#########################
+########   VAE    #######
+
+class VAE(torch.nn.Module):
+    def __init__(self, in_features, act=torch.nn.ReLU):
+        super(VAE, self).__init__()
+        print("Model VAE")
+        self.act = act()
+        self.fc1 = torch.nn.Linear(in_features, 50)
+        self.fc2 = torch.nn.Linear(50, 10)
+        self.fc31 = torch.nn.Linear(10, 5)
+        self.fc32 = torch.nn.Linear(10, 5)
+        self.fc4 = torch.nn.Linear(5, 10)
+        self.fc5 = torch.nn.Linear(10, 50)
+        self.fc6 = torch.nn.Linear(50, in_features)
+
+    def encode(self, x):
+        h1 = self.act(self.fc1(x))
+        h2 = self.act(self.fc2(h1))
+        return self.fc31(h2), self.fc32(h2)
+
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5*logvar)
+        eps = torch.randn_like(std)
+        return mu + eps*std
+
+    def decode(self, z):
+        h4 = self.act(self.fc4(z))
+        h5 = self.act(self.fc5(h4))
+        return self.fc6(h5)
+        # return torch.sigmoid(self.fc4(h3))
+
+    def forward(self, x):
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+        return self.decode(z), mu, logvar
+
+##########################
+### ResNet 18
+##########################
+
+
+def conv3x3(in_planes, out_planes, stride=1):
+    """3x3 convolution with padding"""
+    return torch.nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                     padding=1, bias=False)
+
+
+class BasicBlock(torch.nn.Module):
+    expansion = 1
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None):
+        super(BasicBlock, self).__init__()
+        self.conv1 = conv3x3(inplanes, planes, stride)
+        self.bn1 = torch.nn.BatchNorm2d(planes)
+        self.relu = torch.nn.ReLU(inplace=True)
+        self.conv2 = conv3x3(planes, planes)
+        self.bn2 = torch.nn.BatchNorm2d(planes)
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
+
+
+
+
+class ResNet(torch.nn.Module):
+
+    def __init__(self, block, layers, num_classes, in_dim):
+        self.inplanes = 64
+        super(ResNet, self).__init__()
+        self.conv1 = torch.nn.Conv2d(in_dim, 64, kernel_size=7, stride=2, padding=3,
+                               bias=False)
+        self.bn1 = torch.nn.BatchNorm2d(64)
+        self.relu = torch.nn.ReLU(inplace=True)
+        self.maxpool = torch.nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.layer1 = self._make_layer(block, 64, layers[0])
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+        self.avgpool = torch.nn.AvgPool2d(7, stride=1)
+        self.fc = torch.nn.Linear(1024 * block.expansion, num_classes)
+        # self.fc = torch.nn.Linear(512 * block.expansion, num_classes)
+
+        for m in self.modules():
+            if isinstance(m, torch.nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, (2. / n)**.5)
+            elif isinstance(m, torch.nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+
+    def _make_layer(self, block, planes, blocks, stride=1):
+        downsample = None
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = torch.nn.Sequential(
+                torch.nn.Conv2d(self.inplanes, planes * block.expansion,
+                          kernel_size=1, stride=stride, bias=False),
+                torch.nn.BatchNorm2d(planes * block.expansion),
+            )
+
+        layers = []
+        layers.append(block(self.inplanes, planes, stride, downsample))
+        self.inplanes = planes * block.expansion
+        for i in range(1, blocks):
+            layers.append(block(self.inplanes, planes))
+
+        return torch.nn.Sequential(*layers)
+
+    def forward(self, x):
+        # print("0", x.shape)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+        # print("1", x.shape)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        # print("2", x.shape)
+        # because MNIST is already 1x1 here:
+        # disable avg pooling
+        #x = self.avgpool(x)
+        
+        x = x.view(x.size(0), -1)
+        # print("N", x.shape)
+        logits = self.fc(x)
+        # probas = F.softmax(logits, dim=1)
+        return logits
+
+
+
+def resnet18(num_classes, in_dim):
+    """Constructs a ResNet-18 model."""
+    model = ResNet(block=BasicBlock, 
+                   layers=[2, 2, 2, 2],
+                   num_classes=num_classes,
+                   in_dim=in_dim)
+    return model
+

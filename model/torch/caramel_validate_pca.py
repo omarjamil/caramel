@@ -30,13 +30,17 @@ def set_args(model_file, normaliser, data_region):
                 "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/chkpts",
                 "hist_loc":"/home/mo-ojamil/ML/CRM/data/models",
                 "model_loc":"/home/mo-ojamil/ML/CRM/data/models/torch",
-                "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(args.normaliser)}
+                "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(args.normaliser),
+                "pca_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/"}
     else:
         args.locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
                 "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
                 "hist_loc":"/project/spice/radiation/ML/CRM/data/models/history",
                 "model_loc":"/project/spice/radiation/ML/CRM/data/models/torch",
-                "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser)}
+                "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser),
+                "pca_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/"}
+
+   
     # args.xvars=['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
     # args.yvars=['qtot_next', 'theta_next']
     # args.yvars2=['qphys', 'theta_phys']
@@ -52,20 +56,18 @@ def set_model(model_file, args):
     # in_features = (args.nlevs*(len(args.xvars)-3)+3)
     # print(in_features)
     # if not args.train_on_y2:
-    #     nb_classes = (args.nlevs*(len(args.yvars)))
-    #     # nb_classes = 1 #(args.nlevs*(len(args.yvars)))
+        # nb_classes = (args.nlevs*(len(args.yvars)))
+        # nb_classes = 1 #(args.nlevs*(len(args.yvars)))
     # else:
-    #     nb_classes = (args.nlevs*(len(args.yvars2)))
-    # # in_features, nb_classes=(args.nlevs*4+3),(args.nlevs*2)
-    # # hidden_size = 512
-    # hidden_size = int(1. * in_features + nb_classes)
+        # nb_classes = (args.nlevs*(len(args.yvars2)))
+    # in_features, nb_classes=(args.nlevs*4+3),(args.nlevs*2)
+    # hidden_size = 512
     in_features = args.in_features
-    print(in_features)
     nb_classes = args.nb_classes
-    nb_hidden_layers = args.nb_hidden_layers
     hidden_size = args.hidden_size
-    # mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
-    mlp = nn_model.MLPSkip(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
+    # hidden_size = int(1. * in_features + nb_classes)
+    mlp = nn_model.MLP(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
+    # mlp = nn_model.MLPSkip(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLPDrop(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # Load the save model 
     print("Loading PyTorch model: {0}".format(model_file))
@@ -138,15 +140,18 @@ def evaluate_qtphys(model, datasetfile, args):
         for k, v in output.items():  
             hfile.create_dataset(k,data=v)
 
-def evaluate_qphys(model, datasetfile, args):
+def evaluate_qphys(model, datasetfile, xpca, ypca, args):
     nn_data = data_io.Data_IO_validation(args.region, args.nlevs, datasetfile, args.locations['normaliser_loc'], 
                         xvars=args.xvars,
                         yvars=args.yvars,
                         yvars2=args.yvars2,
                         add_adv=False)
     x,y,y2,xmean,xstd,ymean,ystd,ymean2,ystd2 = nn_data.get_data()
+    xpcs, y2pcs = torch.from_numpy(xpca.transform(x)), torch.from_numpy(ypca.transform(y2))
     # model = set_model(args)
-    yp = model(x)
+    # yp = model(x)
+    yppcs= model(xpcs)
+    yp = torch.from_numpy(ypca.inverse_transform(yppcs.data.numpy()))
     # print(yp[0:100],y2[0:100])
     xinv = nn_data._inverse_transform(x,xmean,xstd)
     yinv = nn_data._inverse_transform(y2,ymean2,ystd2)
@@ -161,12 +166,12 @@ def evaluate_qphys(model, datasetfile, args):
     # ['qphys', 'theta_phys']
     qphys_predict_denorm = ypinv_split['qphys']
     qphys_test_denorm = yinv_split['qphys']
-    theta_phys_predict_denorm = ypinv_split['theta_phys']
-    theta_phys_test_denorm = yinv_split['theta_phys']
+    # theta_phys_predict_denorm = ypinv_split['theta_phys']
+    # theta_phys_test_denorm = yinv_split['theta_phys']
     qphys_predict_norm = yp_split['qphys']
     qphys_test_norm = y_split['qphys']
-    theta_phys_predict_norm = yp_split['theta_phys']
-    theta_phys_test_norm = y_split['theta_phys']
+    # theta_phys_predict_norm = yp_split['theta_phys']
+    # theta_phys_test_norm = y_split['theta_phys']
     qtot_test_norm = x_split['qtot']
     qadv_test_norm = x_split['qadv']
     theta_test_norm = x_split['theta']
@@ -175,16 +180,12 @@ def evaluate_qphys(model, datasetfile, args):
     qadv_test_denorm = xinv_split['qadv']
     theta_denorm = xinv_split['theta']
     theta_adv_denorm = xinv_split['theta_adv']
-    hfilename = args.model_name.replace('.tar','_qtphys.hdf5')
+    hfilename = args.model_name.replace('.tar','_qphys.hdf5')
 
     output={'qphys_predict':qphys_predict_denorm.data.numpy(),
             'qphys_test':qphys_test_denorm.data.numpy(), 
-            'tphys_predict':theta_phys_predict_denorm.data.numpy(),
-            'tphys_test':theta_phys_test_denorm.data.numpy(),
             'qphys_predict_norm':qphys_predict_norm.data.numpy(),
             'qphys_test_norm':qphys_test_norm.data.numpy(), 
-            'tphys_predict_norm':theta_phys_predict_norm.data.numpy(),
-            'tphys_test_norm':theta_phys_test_norm.data.numpy(),
             'qtot_test_norm':qtot_test_norm.data.numpy(),
             'qadv_test_norm':qadv_test_norm.data.numpy(),
             'theta_test_norm':theta_test_norm.data.numpy(), 
@@ -357,16 +358,19 @@ def evaluate_qt_next(model, datasetfile, args):
         for k, v in output.items():  
             hfile.create_dataset(k,data=v)
 
-def evaluate_qnext(model, datasetfile, args):
+def evaluate_qnext(model, datasetfile, xpca, ypca, args):
     nn_data = data_io.Data_IO_validation(args.region, args.nlevs, datasetfile, args.locations['normaliser_loc'], 
                         xvars=args.xvars,
                         yvars=args.yvars,
                         yvars2=args.yvars2,
                         add_adv=False)
-    
     x,y,y2,xmean,xstd,ymean,ystd,ymean2,ystd2 = nn_data.get_data()
+    xpcs, y2pcs = torch.from_numpy(xpca.transform(x)), torch.from_numpy(ypca.transform(y2))
     # model = set_model(args)
-    yp = model(x)
+    # yp = model(x)
+    yppcs= model(xpcs)
+    yp = torch.from_numpy(ypca.inverse_transform(yppcs.data.numpy()))
+
     xinv = nn_data._inverse_transform(x,xmean,xstd)
     xinv_split = nn_data.split_data(xinv,xyz='x')
     yinv = nn_data._inverse_transform(y,ymean,ystd)
@@ -485,14 +489,19 @@ def evaluate_tnext(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_008_lyr_283_in_070_out_0353_hdn_010_epch_00500_btch_023001AQT_mae_023001AQ_standardise_mx.tar"
+    model_file = model_loc+"qnext_006_lyr_064_in_020_out_0120_hdn_020_epch_00500_btch_023001AQT_mse_023001AQ_standardise_mx_pca.tar"
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
     # normaliser_region = "023001AQ_normalise"
     normaliser_region = "023001AQ_standardise_mx"
     data_region = "0N100W"
     args = set_args(model_file, normaliser_region, data_region)
+    args.xpca_file = args.locations["pca_loc"]+"023001AQ_pca/xpca_vars_283_nlevs_70_pcs_64.joblib"
+    args.ypca_file = args.locations["pca_loc"]+"023001AQ_pca/ypca_qnext_70_nlevs_70_pcs_20.joblib"
     model = set_model(model_file, args)
+    xpca = joblib.load(args.xpca_file)
+    ypca = joblib.load(args.ypca_file)
+    # evaluate_qphys(model, datasetfile, xpca, ypca, args)
     # evaluate_qtphys(model, datasetfile, args)
     # evaluate_add_adv(model, datasetfile, args)
-    evaluate_qnext(model, datasetfile, args)
+    evaluate_qnext(model, datasetfile, xpca, ypca, args)
     # evaluate_qt_next(model, datasetfile, args)

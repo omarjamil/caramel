@@ -1,6 +1,6 @@
 import argparse
 import torch
-import caramel
+import caramel_pca
 
 parser = argparse.ArgumentParser(description='Train Q')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
@@ -80,19 +80,23 @@ def set_args():
     # args.yvars2 = ['theta_phys']
     args.train_on_y2 = False
     args.region=args.data_region
-    args.in_features = (args.nlevs*(len(args.xvars)-3)+3)
-    if not args.train_on_y2:
-        args.nb_classes = (args.nlevs*(len(args.yvars)))
-        # args.nb_classes = 1 #(args.nlevs*(len(args.yvars)))
-        print("Inputs: {0} Ouputs: {1}".format(args.xvars, args.yvars))
-    else:
-        args.nb_classes = (args.nlevs*(len(args.yvars2)))
-        # args.nb_classes = 1 #(args.nlevs*(len(args.yvars2)))
-        print("Inputs: {0} Ouputs: {1}".format(args.xvars, args.yvars2))
+    # args.in_features = (args.nlevs*(len(args.xvars)-3)+3)
+    args.in_features = 64
+    args.nb_classes = 20
+   
+    # if not args.train_on_y2:
+    #     args.nb_classes = (args.nlevs*(len(args.yvars)))
+    #     # args.nb_classes = 1 #(args.nlevs*(len(args.yvars)))
+    #     print("Inputs: {0} Ouputs: {1}".format(args.xvars, args.yvars))
+    # else:
+    #     args.nb_classes = (args.nlevs*(len(args.yvars2)))
+    #     # args.nb_classes = 1 #(args.nlevs*(len(args.yvars2)))
+    #     print("Inputs: {0} Ouputs: {1}".format(args.xvars, args.yvars2))
 
     # args.hidden_size = 512 
-    args.hidden_size = int(1.0 * args.in_features + args.nb_classes)
-    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}.tar".format(str(args.nb_hidden_layers).zfill(3),
+    # args.hidden_size = int(1.0 * args.in_features + args.nb_classes)
+    args.hidden_size = 120
+    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_pca.tar".format(str(args.nb_hidden_layers).zfill(3),
                                                                                     str(args.in_features).zfill(3),
                                                                                     str(args.nb_classes).zfill(3),
                                                                                     str(args.hidden_size).zfill(4),
@@ -109,16 +113,23 @@ def set_args():
                 "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/chkpts",
                 "hist_loc":"/home/mo-ojamil/ML/CRM/data/models",
                 "model_loc":"/home/mo-ojamil/ML/CRM/data/models/torch",
-                "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(args.normaliser)}
+                "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(args.normaliser),
+                "pca_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/"
+            }
     else:
         args.locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
                 "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
                 "hist_loc":"/project/spice/radiation/ML/CRM/data/models/history",
                 "model_loc":"/project/spice/radiation/ML/CRM/data/models/torch",
-                "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser)}
+                "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser),
+                "pca_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/"}
+
+    args.xpca_file = args.locations["pca_loc"]+"023001AQ_pca/xpca_vars_283_nlevs_70_pcs_64.joblib"
+    args.ypca_file = args.locations["pca_loc"]+"023001AQ_pca/ypca_qnext_70_nlevs_70_pcs_20.joblib"
+
     return args
 
 if __name__ == "__main__":
     args = set_args()
-    model, loss_function, optimizer, scheduler = caramel.set_model(args)
-    training_loss, validation_loss = caramel.train_loop(model, loss_function, optimizer, scheduler, args)
+    model, loss_function, optimizer, scheduler = caramel_pca.set_model(args)
+    training_loss, validation_loss = caramel_pca.train_loop(model, loss_function, optimizer, scheduler, args)

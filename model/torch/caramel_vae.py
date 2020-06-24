@@ -20,6 +20,26 @@ def minkowski_error(prediction, target, minkowski_parameter=1.5):
     loss = torch.mean(error)
     return loss
 
+def kld_loss(mu, logvar):
+    # see Appendix B from VAE paper:
+    # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
+    # https://arxiv.org/abs/1312.6114
+    # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    return KLD
+
+def reconstruction_loss(recon_x,x):
+    l1_loss = torch.nn.functional.l1_loss
+    MAE = l1_loss(recon_x,x,reduction='mean')
+    return MAE
+
+def loss_function(recon_x, x, mu, logvar):
+    
+    recon_loss = reconstruction_loss(recon_x, x)
+    kld = kld_loss(mu, logvar)
+
+    return recon_loss, kld
+
 def configure_optimizers(model):
     optimizer =  torch.optim.Adam(model.parameters(), lr=1.e-3)
     # optimizer =  torch.optim.SGD(mlp.parameters(), lr=0.01)
@@ -28,18 +48,23 @@ def configure_optimizers(model):
     return optimizer, scheduler
 
 
-def training_step(batch, batch_idx, model, loss_function, optimizer, device, train_on_y2=False):
+def training_step(batch, batch_idx, model, loss_function, optimizer, device, beta, train_on_y2=False):
     """
     """
-    x, x2, y, y2 = batch
-    # print(x.shape)
+    x, y, y2 = batch
+    y = x.clone()
     x = x.to(device)
     if train_on_y2:
         y = y2.to(device)
     else:
         y = y.to(device)
-    output = model(x)
-    loss = loss_function(output,y, reduction='mean')
+    output, mu, logvar = model(x)
+    # loss = loss_function(output,y, reduction='mean')
+    recon_loss, kld = loss_function(output,y, mu, logvar)
+    if beta > 1.:
+        beta = 1.
+    beta = 0.001
+    loss = recon_loss + beta*kld
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
@@ -48,16 +73,20 @@ def training_step(batch, batch_idx, model, loss_function, optimizer, device, tra
 def validation_step(batch, batch_idx, model, loss_function, device, train_on_y2=False):
     """
     """
-    x, y2, y, y2 = batch
+    x,y, y2 = batch
+    y = x.clone()
     x = x.to(device)
     if train_on_y2:
         y = y2.to(device)
     else:
         y = y.to(device)
     with torch.no_grad():
-        output = model(x)
-        loss = loss_function(output, y, reduction='mean')
-    return loss
+        output, mu, logvar = model(x)
+        # loss = loss_function(output, y, reduction='mean')
+        # print("ouptut",output[0,:5])
+        # print("y",y[0,:5])
+        recon_loss, kld = loss_function(output, y, mu, logvar)
+    return recon_loss
 
 
 def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, training_loss: list, validation_loss: list, model_name: str, locations: dict, args):
@@ -75,21 +104,18 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 
 
 def set_model(args):
-    # mlp = model.ConvNet(args.in_channels, args.nlevs, args.nb_classes)
-    mlp = model.ConvNNet(args.in_channels, args.nb_classes)
-    # mlp = model.resnet18(args.nb_classes, args.in_channels)
+    mlp = model.VAE(args.in_features)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
     print("Number of traninable parameter: {0}".format(pytorch_total_params))
 
-    if args.loss == "mae":
-        loss_function = torch.nn.functional.l1_loss #torch.nn.L1Loss()
-    elif args.loss == "mse":
-        loss_function = torch.nn.functional.mse_loss #torch.nn.MSELoss()
-    elif args.loss == "mink":
-        loss_function = minkowski_error
-    elif args.loss == "huber":
-        loss_function = torch.nn.functional.smooth_l1_loss
-
+    # if args.loss == "mae":
+    #     loss_function = torch.nn.functional.l1_loss #torch.nn.L1Loss()
+    # elif args.loss == "mse":
+    #     loss_function = torch.nn.functional.mse_loss #torch.nn.MSELoss()
+    # elif args.loss == "mink":
+    #     loss_function = minkowski_error
+    # elif args.loss == "huber":
+    #     loss_function = torch.nn.functional.smooth_l1_loss
     optimizer, scheduler = configure_optimizers(mlp)
 
     if args.warm_start:
@@ -110,18 +136,18 @@ def set_model(args):
     return mlp, loss_function, optimizer, scheduler
 
 def train_dataloader(args):
-    train_dataset_file = "{0}/cnn_train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
+    train_dataset_file = "{0}/train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
     train_loader = torch.utils.data.DataLoader(
-             data_io.ConcatDatasetCNN2D("train",args.nlevs,train_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
-             xvars2=args.xvars2, yvars=args.yvars, yvars2=args.yvars2, data_frac=args.data_fraction),
+             data_io.ConcatDataset("train",args.nlevs,train_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
+             yvars=args.yvars, yvars2=args.yvars2, data_frac=args.data_fraction, add_adv=False),
              batch_size=args.batch_size, shuffle=True)
     return train_loader
 
 def test_dataloader(args):
-    test_dataset_file = "{0}/cnn_test_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
+    test_dataset_file = "{0}/test_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
     validation_loader = torch.utils.data.DataLoader(
-             data_io.ConcatDatasetCNN2D("test",args.nlevs, test_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
-             xvars2=args.xvars2, yvars=args.yvars, yvars2=args.yvars2, data_frac=args.data_fraction),
+             data_io.ConcatDataset("test",args.nlevs, test_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
+             yvars=args.yvars, yvars2=args.yvars2, data_frac=args.data_fraction, add_adv=False),
              batch_size=args.batch_size, shuffle=False)
     return validation_loader
 
@@ -140,10 +166,14 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
         for batch_idx, batch in enumerate(train_ldr):
             # Sets the model into training mode
             model.train()
-            loss = training_step(batch, batch_idx, model, loss_function, optimizer, args.device, train_on_y2=args.train_on_y2)
-            train_loss += loss.item()
+            if epoch == 1:
+                beta = 0.
+            else:
+                beta = epoch * 0.1
+            loss = training_step(batch, batch_idx, model, loss_function, optimizer, args.device, beta, train_on_y2=args.train_on_y2)
+            train_loss += loss#.item()
             if batch_idx % args.log_interval == 0:
-                x,x2,y, y2=batch
+                x,y, y2=batch
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.2e}'.format(epoch, 
                 batch_idx * len(x), len(train_ldr.dataset),100. * batch_idx / len(train_ldr),
                 loss.item() / len(x)))
@@ -156,7 +186,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
         for batch_idx, batch in enumerate(test_ldr):
             model.eval()
             loss = validation_step(batch, batch_idx, model, loss_function, args.device, train_on_y2=args.train_on_y2)
-            test_loss += loss.item()
+            test_loss += loss#.item()
         average_loss_val = test_loss / len(test_ldr.dataset)
         print('====> validation loss: {:.2e}'.format(average_loss_val))
         validation_loss.append(average_loss_val)

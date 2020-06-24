@@ -31,14 +31,15 @@ def configure_optimizers(model):
 def training_step(batch, batch_idx, model, loss_function, optimizer, device, train_on_y2=False):
     """
     """
-    x, x2, y, y2 = batch
-    # print(x.shape)
+    x, y, y2 = batch
+    y = x.clone()
     x = x.to(device)
     if train_on_y2:
         y = y2.to(device)
     else:
         y = y.to(device)
     output = model(x)
+    # print(output)
     loss = loss_function(output,y, reduction='mean')
     optimizer.zero_grad()
     loss.backward()
@@ -48,7 +49,8 @@ def training_step(batch, batch_idx, model, loss_function, optimizer, device, tra
 def validation_step(batch, batch_idx, model, loss_function, device, train_on_y2=False):
     """
     """
-    x, y2, y, y2 = batch
+    x,y, y2 = batch
+    y = x.clone()
     x = x.to(device)
     if train_on_y2:
         y = y2.to(device)
@@ -57,6 +59,8 @@ def validation_step(batch, batch_idx, model, loss_function, device, train_on_y2=
     with torch.no_grad():
         output = model(x)
         loss = loss_function(output, y, reduction='mean')
+        # print("ouptut",output[0,:5])
+        # print("y",y[0,:5])
     return loss
 
 
@@ -75,9 +79,7 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 
 
 def set_model(args):
-    # mlp = model.ConvNet(args.in_channels, args.nlevs, args.nb_classes)
-    mlp = model.ConvNNet(args.in_channels, args.nb_classes)
-    # mlp = model.resnet18(args.nb_classes, args.in_channels)
+    mlp = model.AE(args.in_features)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
     print("Number of traninable parameter: {0}".format(pytorch_total_params))
 
@@ -89,7 +91,6 @@ def set_model(args):
         loss_function = minkowski_error
     elif args.loss == "huber":
         loss_function = torch.nn.functional.smooth_l1_loss
-
     optimizer, scheduler = configure_optimizers(mlp)
 
     if args.warm_start:
@@ -110,18 +111,18 @@ def set_model(args):
     return mlp, loss_function, optimizer, scheduler
 
 def train_dataloader(args):
-    train_dataset_file = "{0}/cnn_train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
+    train_dataset_file = "{0}/train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
     train_loader = torch.utils.data.DataLoader(
-             data_io.ConcatDatasetCNN2D("train",args.nlevs,train_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
-             xvars2=args.xvars2, yvars=args.yvars, yvars2=args.yvars2, data_frac=args.data_fraction),
+             data_io.ConcatDataset("train",args.nlevs,train_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
+             yvars=args.yvars, yvars2=args.yvars2, data_frac=args.data_fraction, add_adv=False),
              batch_size=args.batch_size, shuffle=True)
     return train_loader
 
 def test_dataloader(args):
-    test_dataset_file = "{0}/cnn_test_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
+    test_dataset_file = "{0}/test_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
     validation_loader = torch.utils.data.DataLoader(
-             data_io.ConcatDatasetCNN2D("test",args.nlevs, test_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
-             xvars2=args.xvars2, yvars=args.yvars, yvars2=args.yvars2, data_frac=args.data_fraction),
+             data_io.ConcatDataset("test",args.nlevs, test_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
+             yvars=args.yvars, yvars2=args.yvars2, data_frac=args.data_fraction, add_adv=False),
              batch_size=args.batch_size, shuffle=False)
     return validation_loader
 
@@ -143,7 +144,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
             loss = training_step(batch, batch_idx, model, loss_function, optimizer, args.device, train_on_y2=args.train_on_y2)
             train_loss += loss.item()
             if batch_idx % args.log_interval == 0:
-                x,x2,y, y2=batch
+                x,y, y2=batch
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.2e}'.format(epoch, 
                 batch_idx * len(x), len(train_ldr.dataset),100. * batch_idx / len(train_ldr),
                 loss.item() / len(x)))

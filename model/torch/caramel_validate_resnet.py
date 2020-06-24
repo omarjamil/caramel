@@ -49,14 +49,9 @@ def set_model(model_file, args):
     # n_inputs,n_outputs=140,70
     print(args.xvars)
     args.region=args.data_region
-    in_features = (args.nlevs*(len(args.xvars)-3)+3)
-    print(in_features)
-    # mlp = model.ConvNN(args.in_channels, args.nlevs, args.nb_classes)
-    # mlp = model.ConvNN5(args.in_channels, args.nlevs, args.nb_classes)
-    # mlp = model.ConvNN3b(args.in_channels, args.nlevs, args.nb_classes)
-    # mlp = model.ConvNN3Skip(args.in_channels, args.nlevs, args.nb_classes)
-    # mlp = model.ConvNN3Skip(args.in_channels, args.nlevs, args.nb_classes, args.n_filters, args.n_nodes)
-    mlp = model.ConvNN2Pool(args.in_channels, args.nlevs, args.nb_classes, args.n_filters, args.n_nodes)
+    # mlp = model.resnet18(args.nb_classes, args.in_channels)
+    # mlp = model.ConvNet(args.in_channels, args.nlevs, args.nb_classes)
+    mlp = model.ConvNNet(args.in_channels, args.nb_classes)
     # Load the save model 
     print("Loading PyTorch model: {0}".format(model_file))
     checkpoint = torch.load(model_file, map_location=torch.device('cpu'))
@@ -67,122 +62,54 @@ def set_model(model_file, args):
         print(param_tensor, "\t", mlp.state_dict()[param_tensor].size())
     return mlp
 
-
+def test_dataloader(args):
+    test_dataset_file = "{0}/cnn_test_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
+    validation_loader = torch.utils.data.DataLoader(
+             data_io.ConcatDatasetCNN2D("test",args.nlevs, test_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
+             xvars2=args.xvars2, yvars=args.yvars, yvars2=args.yvars2, data_frac=args.data_fraction),
+             batch_size=args.batch_size, shuffle=False)
+    return validation_loader
 
 def evaluate_qnext(model, datasetfile, args):
-    nn_data = data_io.Data_IO_validation_CNN(args.region, args.nlevs, datasetfile, args.locations['normaliser_loc'], 
-                        xvars=args.xvars,
-                        xvars2=args.xvars2,
-                        yvars=args.yvars,
-                        yvars2=args.yvars2)
-    
-    x,x2,y,y2,xmean,xstd,xmean2,xstd2,ymean,ystd,ymean2,ystd2 = nn_data.get_data()
-    # model = set_model(args)
-    yp = model(x)
-    qtot_denorm = nn_data._inverse_transform(x[:,0,:], xmean[0,:], xstd[0,:])
-    qadv_inv = nn_data._inverse_transform(x[:,1,:], xmean[1,:], xstd[1,:])
-    theta_denorm = nn_data._inverse_transform(x[:,2,:], xmean[2,:], xstd[2,:])
-    theta_adv_inv = nn_data._inverse_transform(x[:,3,:], xmean[3,:], xstd[3,:])
-
-    yinv = nn_data._inverse_transform(y,ymean,ystd)
-    ypinv = nn_data._inverse_transform(yp,ymean,ystd)
-
-    qtotn_test_denorm = yinv[:,:args.nlevs]
-    qtotn_predict_denorm = ypinv[:,:args.nlevs]
-    
-    qtotn_test_norm = y[:,:args.nlevs]
-    qtotn_predict_norm = yp[:,:args.nlevs]
+ 
+    args.data_fraction = 0.01
+    args.batch_size = 10
+    test_ldr = test_dataloader(args)
+    predictions = np.zeros([1, args.nlevs])
+    truth = np.zeros([1,args.nlevs])
+    persistence = np.zeros([1,args.nlevs])
+    for batch_idx, batch in enumerate(test_ldr):
+        print("Processing batch {0}".format(batch_idx))
+        model.eval()
+        x, y2, y, y2 = batch
+        x = x.to(args.device)
+        if args.train_on_y2:
+            y = y2.to(args.device)
+        else:
+            y = y.to(args.device)
+        with torch.no_grad():
+            output = model(x)
+            predictions = np.concatenate([predictions, output.data.numpy()[:]])
+            truth = np.concatenate([truth, y.data.numpy()[:]])
+            persistence = np.concatenate([persistence, x.data.numpy()[:,0,-1,:]])
+        
 
     hfilename = args.model_name.replace('.tar','_qnext.hdf5')
 
-    output={'qtotn_predict':qtotn_predict_denorm.data.numpy(),
-            'qtotn_test':qtotn_test_denorm.data.numpy(), 
-            # 'thetan_predict':thetan_predict_denorm.data.numpy(),
-            # 'thetan_test':thetan_test_denorm.data.numpy(),
-            'qtotn_predict_norm':qtotn_predict_norm.data.numpy(),
-            'qtotn_test_norm':qtotn_test_norm.data.numpy(), 
-            # 'thetan_predict_norm':thetan_predict_norm.data.numpy(),
-            # 'thetan_test_norm':thetan_test_norm.data.numpy(),
-            # 'qphys_ml':qphys_ml.data.numpy(), 
-            # 'qphys':qphys_denorm.data.numpy(),
-            # 'theta_phys_ml':theta_phys_ml.data.numpy(), 
-            # 'theta_phys':theta_phys_denorm.data.numpy(),
-            'qtot':qtot_denorm.data.numpy(), 
-            'theta':theta_denorm.data.numpy()
+    output={'qtotn_predict':np.array(predictions),
+            'qtotn_test':np.array(truth), 
+            'qtot':np.array(persistence)
             }
     
     with h5py.File(hfilename, 'w') as hfile:
         for k, v in output.items():  
             hfile.create_dataset(k,data=v)
 
-def evaluate_tnext(model, datasetfile, args):
-    nn_data = data_io.Data_IO_validation(args.region, args.nlevs, datasetfile, args.locations['normaliser_loc'], 
-                        xvars=args.xvars,
-                        yvars=args.yvars,
-                        yvars2=args.yvars2,
-                        add_adv=False)
-    x,y,y2,xmean,xstd,ymean,ystd,ymean2,ystd2 = nn_data.get_data()
-    # model = set_model(args)
-    yp = model(x)
-    xinv = nn_data._inverse_transform(x,xmean,xstd)
-    xinv_split = nn_data.split_data(xinv,xyz='x')
-    yinv = nn_data._inverse_transform(y,ymean,ystd)
 
-    ypinv = nn_data._inverse_transform(yp,ymean,ystd)
-    yinv_split = nn_data.split_data(yinv,xyz='y')
-    ypinv_split = nn_data.split_data(ypinv, xyz='y')
-    y_split = nn_data.split_data(y, xyz='y')
-    yp_split = nn_data.split_data(yp, xyz='y')
-
-    y2inv = nn_data._inverse_transform(y2,ymean2,ystd2)
-    y2inv_split = nn_data.split_data(y2inv, xyz='y2')
-    # ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
-    # ['qphys', 'theta_phys']
-    qtot_denorm = xinv_split['qtot']
-    theta_denorm = xinv_split['theta']
-    # qadv_denorm = xinv_split['qadv']
-    # theta_adv_denorm = xinv_split['theta_adv']
-
-    qtotn_predict_denorm = ypinv_split['qtot_next']
-    qtotn_test_denorm = yinv_split['qtot_next']
-    thetan_predict_denorm = ypinv_split['theta_next']
-    thetan_test_denorm = yinv_split['theta_next']
-    qtotn_predict_norm = yp_split['qtot_next']
-    qtotn_test_norm = y_split['qtot_next']
-    thetan_predict_norm = yp_split['theta_next']
-    thetan_test_norm = y_split['theta_next']
-    
-    qphys_denorm = y2inv_split['qphys']
-    theta_phys_denorm = y2inv_split['theta_phys']
-    # qphys_ml = qtotn_predict_denorm - qtot_denorm - qadv_denorm
-    # theta_phys_ml = thetan_predict_denorm - theta_denorm - theta_adv_denorm
-
-   
-    hfilename = args.model_name.replace('.tar','_qtphys.hdf5')
-
-    output={'qtotn_predict':qtotn_predict_denorm.data.numpy(),
-            'qtotn_test':qtotn_test_denorm.data.numpy(), 
-            'thetan_predict':thetan_predict_denorm.data.numpy(),
-            'thetan_test':thetan_test_denorm.data.numpy(),
-            'qtotn_predict_norm':qtotn_predict_norm.data.numpy(),
-            'qtotn_test_norm':qtotn_test_norm.data.numpy(), 
-            'thetan_predict_norm':thetan_predict_norm.data.numpy(),
-            'thetan_test_norm':thetan_test_norm.data.numpy(),
-            # 'qphys_ml':qphys_ml.data.numpy(), 
-            'qphys':qphys_denorm.data.numpy(),
-            # 'theta_phys_ml':theta_phys_ml.data.numpy(), 
-            'theta_phys':theta_phys_denorm.data.numpy(),
-            'qtot':qtot_denorm.data.numpy(), 
-            'theta':theta_denorm.data.numpy()
-            }
-    
-    with h5py.File(hfilename, 'w') as hfile:
-        for k, v in output.items():  
-            hfile.create_dataset(k,data=v)
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_004_in_045_out_020_epch_00500_btch_023001AQT_mse_163001AQT_normalise_dfrac_1p0_20_filt_10_nx_cnn2pool.tar"
+    model_file = model_loc+"qnext_004_in_052_out_040_epch_00500_btch_023001AQTT3T19_mae_023001AQ_standardise_mx_dfrac_1p0_3x5convnnet.tar"
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
     normaliser_region = "163001AQT_normalise"
     data_region = "0N100W"

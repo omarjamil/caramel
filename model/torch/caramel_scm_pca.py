@@ -29,35 +29,35 @@ def set_args(model_file, normaliser_region, data_region):
                 "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/chkpts",
                 "hist_loc":"/home/mo-ojamil/ML/CRM/data/models",
                 "model_loc":"/home/mo-ojamil/ML/CRM/data/models/torch",
-                "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(args.normaliser)}
+                "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(args.normaliser),
+                "pca_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/"}
     else:
         args.locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
                 "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
                 "hist_loc":"/project/spice/radiation/ML/CRM/data/models/history",
                 "model_loc":"/project/spice/radiation/ML/CRM/data/models/torch",
-                "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser)}
+                "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser),
+                "pca_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/"}
     return args
 
 def set_model(model_file, args):
 
     # Define the Model
-    # print(args.xvars)
-    # args.region=args.data_region
+    print(args.xvars)
+    args.region=args.data_region
     # in_features = (args.nlevs*(len(args.xvars)-3)+3)
     # if not args.train_on_y2:
     #     nb_classes = (args.nlevs*(len(args.yvars)))
     # else:
     #     nb_classes = (args.nlevs*(len(args.yvars2)))
-    # # n_inputs,n_outputs=140,70
-    # # in_features, nb_classes=(args.nlevs*4+3),(args.nlevs*2)
-    # hidden_size = int(1. * in_features + nb_classes)
     in_features = args.in_features
-    print(in_features)
     nb_classes = args.nb_classes
-    nb_hidden_layers = args.nb_hidden_layers
     hidden_size = args.hidden_size
-    # mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
-    mlp = nn_model.MLPSkip(in_features, nb_classes, nb_hidden_layers, hidden_size)
+    # n_inputs,n_outputs=140,70
+    # in_features, nb_classes=(args.nlevs*4+3),(args.nlevs*2)
+    # hidden_size = int(1. * in_features + nb_classes)
+    mlp = nn_model.MLP(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
+    # mlp = nn_model.MLPSkip(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLPDrop(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # Load the save model 
     print("Loading PyTorch model: {0}".format(model_file))
@@ -69,7 +69,7 @@ def set_model(model_file, args):
         print(param_tensor, "\t", mlp.state_dict()[param_tensor].size())
     return mlp
 
-def scm(model, datasetfile, args):
+def scm(model, datasetfile, xpca, ypca, args):
     """
     SCM type run with qt_next prediction model
     """
@@ -102,23 +102,18 @@ def scm(model, datasetfile, args):
 
     for t in range(len(x)):
         # prediction
-        # print("t {0}".format(t))
         # print("q_in, q_true: ", q_in.data.numpy()[0], x_split['qtot'].data.numpy()[t,0])
         qnext_ml[t] = q_in.data.numpy()[:]
         # tnext_ml[t] = t_in.data.numpy()[:]
         inputs = torch.cat([q_in,qadv[t],t_in[t],tadv[t],swtoa[t],shf[t],lhf[t]])
-        # print(q_in.shape, t_in[t].shape, swtoa[t].shape, lhf[t].shape, lhf[t].shape)
-        # inputs = torch.cat([q_in,t_in[t],swtoa[t],shf[t],lhf[t]])
-        yp_ = model(inputs)
+        # print(inputs.shape)
+        inputs_pca = torch.from_numpy(xpca.transform(inputs.reshape(1,-1)).reshape(-1))
+        yppcs = model(inputs_pca)
+        yp_ = torch.from_numpy(ypca.inverse_transform(yppcs.data.numpy()))
+
         yp_split = nn_data.split_data(yp_,xyz='y')
-        # q_in = yp_split['qtot_next']
-        ####### Artificially remove negative values
-        ypdata = yp_split['qtot_next'].data.numpy().copy()
-        pdata = nn_data._inverse_transform(yp_split['qtot_next'], ymean, ystd).data.numpy()
-        # print(pdata[pdata < 0.])
-        ypdata[pdata < 0.] = q_in.data.numpy()[pdata < 0.]
-        q_in = torch.from_numpy(ypdata)
-        ########      
+        # yp_split['qtot_next'] = torch.max(yp_split['qtot_next'],torch.tensor([1.e-6]))
+        q_in = yp_split['qtot_next']
         # t_in = yp_split['theta_next']
         # print("q_ml:", q_in.data.numpy()[0])
     
@@ -139,7 +134,7 @@ def scm(model, datasetfile, args):
             # 'theta_next':tnext_inv.data.numpy(), 
             # 'theta_next_ml':tnext_ml_inv.data.numpy()
     }
-    hfilename = args.model_name.replace('.tar','_scm.hdf5') 
+    hfilename = args.model_name.replace('.tar','_pca_scm.hdf5') 
     with h5py.File(hfilename, 'w') as hfile:
         for k, v in output.items():  
             hfile.create_dataset(k,data=v)
@@ -148,11 +143,16 @@ def scm(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_008_lyr_283_in_070_out_0353_hdn_010_epch_00500_btch_023001AQT_mae_023001AQ_standardise_mx.tar"
+    model_file = model_loc+"qnext_006_lyr_064_in_020_out_0120_hdn_020_epch_00500_btch_023001AQT_mse_023001AQ_standardise_mx_pca.tar"
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
     normaliser_region = "023001AQ_standardise_mx"
     data_region = "0N100W"
     args = set_args(model_file, normaliser_region, data_region)
+    args.xpca_file = args.locations["pca_loc"]+"023001AQ_pca/xpca_vars_283_nlevs_70_pcs_64.joblib"
+    args.ypca_file = args.locations["pca_loc"]+"023001AQ_pca/ypca_qnext_70_nlevs_70_pcs_20.joblib"
     model = set_model(model_file, args)
-    scm(model, datasetfile, args)
+    xpca = joblib.load(args.xpca_file)
+    ypca = joblib.load(args.ypca_file)
+    # model = set_model(model_file, args)
+    scm(model, datasetfile, xpca, ypca, args)
     
