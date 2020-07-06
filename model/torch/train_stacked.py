@@ -1,6 +1,6 @@
 import argparse
 import torch
-import caramel
+import caramel_stacked as caramel
 
 parser = argparse.ArgumentParser(description='Train Q')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
@@ -26,7 +26,9 @@ parser.add_argument('--loss', type=str, help='loss function to use', default='ma
 parser.add_argument('--nb-hidden-layers', type=int, default=6, metavar='N',
                     help='Number of hidden layers (default: 6)')
 parser.add_argument('--data-fraction', type=float, default=1.,
-                    help='fraction of data to use for training and testing (default: 1)')      
+                    help='fraction of data points to use for training and testing (default: 1)')  
+parser.add_argument('--samples-fraction', type=float, default=1.,
+                    help='fraction of samples to use for training and testing (default: 1)')      
 parser.add_argument('--normaliser', type=str, 
                     help='Normalisation to use: standardise or normalise')
 parser.add_argument('--nlevs', type=int, default=45, metavar='N',
@@ -80,6 +82,8 @@ def set_args():
     args.yvars2 = ['qphys']
     # args.yvars2 = ['theta_phys']
     args.train_on_y2 = False
+    args.no_norm = False
+    args.lev_norm = True
     args.region=args.data_region
     args.in_features = (args.nlevs*(len(args.xvars)-3)+3)
     if not args.train_on_y2:
@@ -93,7 +97,7 @@ def set_args():
 
     # args.hidden_size = 512 
     args.hidden_size = int(1.0 * args.in_features + args.nb_classes)
-    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}.tar".format(str(args.nb_hidden_layers).zfill(3),
+    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_stkd.tar".format(str(args.nb_hidden_layers).zfill(3),
                                                                                     str(args.in_features).zfill(3),
                                                                                     str(args.nb_classes).zfill(3),
                                                                                     str(args.hidden_size).zfill(4),

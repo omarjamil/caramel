@@ -17,7 +17,14 @@ nn_data_stashes = {
     3217:"surface_upward_sensible_heat_flux",
     3234:"surface_upward_latent_heat_flux",
     99904:"t_phys",
-    99983:"q_phys"
+    99983:"q_phys",
+    3:"y_wind",
+    2:"x_wind",
+    253:"m01s00i253",
+    408:"air_pressure",
+    150:"upward_air_velocity",
+    99822:"q_tot_diff",
+    99905:"air_potential_temperature_diff"
 }
 
 multi_stashes = {
@@ -394,4 +401,5 @@ if __name__ == "__main__":
     # combine_subdomains(region, in_prefix="030405", suite_id="u-br800")
     # nn_dataset(region, in_prefix="030405", suite_id="u-br800", truncate=False, global_profile=True)
     # nn_dataset_per_subdomain(region, in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", truncate=False, global_profile=True)
-    nn_dataset_per_subdomain_raw(region, in_prefix="3h_0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False)
+    # nn_dataset_per_subdomain_raw(region, in_prefix="3h_0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False)
+    nn_dataset_per_subdomain_raw(region, in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False)

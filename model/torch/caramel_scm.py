@@ -56,8 +56,8 @@ def set_model(model_file, args):
     nb_classes = args.nb_classes
     nb_hidden_layers = args.nb_hidden_layers
     hidden_size = args.hidden_size
-    # mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
-    mlp = nn_model.MLPSkip(in_features, nb_classes, nb_hidden_layers, hidden_size)
+    mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
+    # mlp = nn_model.MLPSkip(in_features, nb_classes, nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLPDrop(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # Load the save model 
     print("Loading PyTorch model: {0}".format(model_file))
@@ -87,8 +87,9 @@ def scm(model, datasetfile, args):
     qnext = yt_split['qtot_next']
     qnext_inv = yt_inverse_split['qtot_next']
 
-    x_inv = nn_data._inverse_transform(x,xmean,xstd)
-    x_inv_split = nn_data.split_data(x_inv,xyz='x')
+    # x_inv = nn_data._inverse_transform(x,xmean,xstd)
+    # x_inv_split = nn_data.split_data(x_inv,xyz='x')
+    x_inv_split = nn_data._inverse_transform_split(x_split,xmean,xstd,xyz='x')
     qtot_inv = x_inv_split['qtot']
     qnext_ml = qnext.data.numpy().copy()
     tnext_ml = x_split['theta'].data.numpy()
@@ -96,17 +97,27 @@ def scm(model, datasetfile, args):
     # q_in = x_split['qtot'][0]
     q_in = qnext[0]
     t_in = x_split['theta']
-    qadv, tadv, swtoa, shf, lhf = x_split['qadv'], x_split['theta_adv'], x_split['sw_toa'], x_split['shf'], x_split['lhf']
+    pressure = x_split['p'] 
+    rho = x_split['rho'] 
+    xwind = x_split['xwind'] 
+    ywind = x_split['ywind'] 
+    zwind = x_split['zwind']
+    swtoa = x_split['sw_toa']
+    shf = x_split['shf']
+    lhf = x_split['lhf']
+
+    # qadv, tadv, swtoa, shf, lhf = x_split['qadv'], x_split['theta_adv'], x_split['sw_toa'], x_split['shf'], x_split['lhf']
     # swtoa, shf, lhf = x_split['sw_toa'], x_split['shf'], x_split['lhf']
     
 
-    for t in range(len(x)):
+    for t in range(len(x)-1):
         # prediction
         # print("t {0}".format(t))
         # print("q_in, q_true: ", q_in.data.numpy()[0], x_split['qtot'].data.numpy()[t,0])
         qnext_ml[t] = q_in.data.numpy()[:]
         # tnext_ml[t] = t_in.data.numpy()[:]
-        inputs = torch.cat([q_in,qadv[t],t_in[t],tadv[t],swtoa[t],shf[t],lhf[t]])
+        # inputs = torch.cat([q_in,qadv[t],t_in[t],tadv[t],swtoa[t],shf[t],lhf[t]])
+        inputs = torch.cat([q_in,t_in[t],pressure[t],rho[t],xwind[t],ywind[t],zwind[t],shf[t],lhf[t],swtoa[t]])
         # print(q_in.shape, t_in[t].shape, swtoa[t].shape, lhf[t].shape, lhf[t].shape)
         # inputs = torch.cat([q_in,t_in[t],swtoa[t],shf[t],lhf[t]])
         yp_ = model(inputs)
@@ -148,9 +159,9 @@ def scm(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_008_lyr_283_in_070_out_0353_hdn_010_epch_00500_btch_023001AQT_mae_023001AQ_standardise_mx.tar"
+    model_file = model_loc+"qnext_006_lyr_388_in_055_out_0443_hdn_010_epch_00200_btch_023001AQTS_mae_023001AQT_normalise_60_glb_stkd.tar"
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
-    normaliser_region = "023001AQ_standardise_mx"
+    normaliser_region = "023001AQT_normalise_60_glb"
     data_region = "0N100W"
     args = set_args(model_file, normaliser_region, data_region)
     model = set_model(model_file, args)

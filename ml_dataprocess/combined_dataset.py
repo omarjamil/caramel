@@ -21,21 +21,33 @@ nn_data_stashes = {
     3217:"surface_upward_sensible_heat_flux",
     3234:"surface_upward_latent_heat_flux",
     99904:"t_phys",
-    99983:"q_phys"
+    99983:"q_phys",
+    3:"y_wind",
+    2:"x_wind",
+    253:"m01s00i253",
+    408:"air_pressure",
+    150:"upward_air_velocity",
+    99822:"q_tot_diff",
+    99905:"air_potential_temperature_diff"
 }
 
-nn_data_stashes = {
-    99904:"t_phys",
-    99983:"q_phys",
-    4:"air_potential_temperature",
-    99181:"unknown",
-    99182:"unknown",
-    99821:"q_tot",
-    1207:"toa_incoming_shortwave_flux",
-    3217:"surface_upward_sensible_heat_flux",
-    3234:"surface_upward_latent_heat_flux"
+# nn_data_stashes = {
+#     99904:"t_phys",
+#     99983:"q_phys",
+#     4:"air_potential_temperature",
+#     99181:"unknown",
+#     99182:"unknown",
+#     99821:"q_tot",
+#     1207:"toa_incoming_shortwave_flux",
+#     3217:"surface_upward_sensible_heat_flux",
+#     3234:"surface_upward_latent_heat_flux",
+#     3:"y_wind",
+#     2:"x_wind",
+#     253:"m01s00i253",
+#     408:"air_pressure",
+#     150:"upward_air_velocity"
    
-}
+# }
 
 multi_stashes = {
     4:"air_potential_temperature",
@@ -57,8 +69,16 @@ multi_stashes = {
     # 99182:"q_adv",
     99821:"q_tot",
     99904:"t_phys",
-    99983:"q_phys"
+    99983:"q_phys",
+    3:"y_wind",
+    2:"x_wind",
+    253:"m01s00i253",
+    408:"air_pressure",
+    150:"upward_air_velocity",
+    99822:"q_tot_diff",
+    99905:"air_potential_temperature_diff"
 }
+
 surface_stashes = {
     24:"surface_temperature",
     1202:"m01s01i202",
@@ -201,7 +221,7 @@ def combine_multi_level_files(in_prefix="031525", suite_id="u-br800", new_region
                 # print("Processing file: {0}".format(in_file))
                 # data = Dataset(in_file)
                 data = iris.load_cube(in_file).data
-                if s in [99904, 99983]:
+                if s in [99904, 99983, 99822, 99905]:
                     # var = data[multi_stashes[s]][:]
                     var = data[:]
                 else:
@@ -265,6 +285,103 @@ def combine_surface_level_files(in_prefix="031525", suite_id="u-bj775_", new_reg
             var_cube.attributes['STASHES'] = str(s).zfill(5)
             print("Saving file {0}".format(outfile))
             iris.fileformats.netcdf.save(var_cube, outfile)
+
+def stack_surface_level_files(in_prefix="031525", suite_id="u-bj775_", new_region="9999LEAU"):
+    """
+    Combine all the regions into a single file
+    """
+    # new_region = "9999NEWS"
+    out_basedir = "/project/spice/radiation/ML/CRM/data/{1}/{0}/".format(new_region,suite_id)
+    try:
+        os.makedirs(out_basedir)
+    except OSError:
+        pass
+
+    for s in surface_stashes:
+        for subdomain in range(64):
+            out_dir = out_basedir+"concat_stash_{0}/".format(str(s).zfill(5))
+            try:
+                os.makedirs(out_dir)
+            except OSError:
+                pass
+            outfile="{0}/{3}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{4}.nc".format(out_dir, new_region, str(subdomain).zfill(3),in_prefix, str(s).zfill(5))
+            var_ = None
+            var_cube = None
+            irx = 0
+            for r in regions:
+                in_dir = "/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/".format(r,str(s).zfill(5), suite_id)
+                in_file = "{0}/{3}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{4}.nc".format(in_dir, r, str(subdomain).zfill(3),in_prefix, str(s).zfill(5))
+                # print("Processing file: {0}".format(in_file))
+                # data = Dataset(in_file)
+                data = iris.load_cube(in_file).data
+                if s in [99904, 99983]:
+                    # var = data[surface_stashes[s]][:]
+                    var = data[:]
+                else:
+                    # var = data[surface_stashes[s]][:-1]
+                    var = data[:-1]
+                if irx == 0:
+                    var_ = var.reshape((1,)+var.shape+(1,))
+                else:
+                    var_ = np.vstack((var_,var.reshape((1,)+var.shape+(1,))))
+                irx += 1
+            npoints = iris.coords.DimCoord(np.arange(var_.shape[0]), long_name="samples")
+            time = iris.coords.DimCoord(np.arange(var_.shape[1]), long_name="time")
+            levels = iris.coords.DimCoord(np.arange(var_.shape[2]), long_name="model_levels")
+            var_cube = iris.cube.Cube(var_, dim_coords_and_dims=[(npoints,0),(time,1), (levels,2)])
+            var_cube.var_name = surface_stashes[s]
+            var_cube.attributes['STASHES'] = str(s).zfill(5)
+            print("Saving file {0}".format(outfile))
+            iris.fileformats.netcdf.save(var_cube, outfile)
+
+def stack_multi_level_files(in_prefix="031525", suite_id="u-br800", new_region="9999LEAU"):
+    """
+    Combine all the regions into a single file
+    """
+    # new_region = "9999NEWS"
+    out_basedir = "/project/spice/radiation/ML/CRM/data/{1}/{0}/".format(new_region, suite_id)
+    try:
+        os.makedirs(out_basedir)
+    except OSError:
+        pass
+
+    for s in multi_stashes:
+        for subdomain in range(64):
+            out_dir = out_basedir+"concat_stash_{0}/".format(str(s).zfill(5))
+            try:
+                os.makedirs(out_dir)
+            except OSError:
+                pass
+            outfile="{0}/{3}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{4}.nc".format(out_dir, new_region, str(subdomain).zfill(3),in_prefix, str(s).zfill(5))
+            var_ = None
+            var_cube = None
+            irx = 0
+            for r in regions:
+                in_dir = "/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}/".format(r,str(s).zfill(5), suite_id)
+                in_file = "{0}/{3}_days_{1}_km1p5_ra1m_30x30_subdomain_{2}_{4}.nc".format(in_dir, r, str(subdomain).zfill(3),in_prefix, str(s).zfill(5))
+                # print("Processing file: {0}".format(in_file))
+                # data = Dataset(in_file)
+                data = iris.load_cube(in_file).data
+                if s in [99904, 99983, 99822, 99905]:
+                    # var = data[multi_stashes[s]][:]
+                    var = data[:]
+                else:
+                    # var = data[multi_stashes[s]][:-1,:]
+                    var = data[:-1,:]
+                if irx == 0:
+                    var_ = var.reshape((1,)+var.shape)
+                else:
+                    var_ = np.vstack((var_,var.reshape((1,)+var.shape)))
+                irx += 1
+            npoints = iris.coords.DimCoord(np.arange(var_.shape[0]), long_name="samples")
+            time = iris.coords.DimCoord(np.arange(var_.shape[1]), long_name="time")
+            levels = iris.coords.DimCoord(np.arange(var_.shape[2]), long_name="model_levels")
+            var_cube = iris.cube.Cube(var_, dim_coords_and_dims=[(npoints,0),(time,1),(levels,2)])
+            var_cube.var_name = multi_stashes[s]
+            var_cube.attributes['STASHES'] = str(s).zfill(5)
+            print("Saving file {0}".format(outfile))
+            iris.fileformats.netcdf.save(var_cube, outfile)
+
 
 def timeseries_multi_level_files(in_prefix="031525", suite_id="u-br800", new_region="9999LEAU", block=7):
     """
@@ -367,6 +484,7 @@ def combine_subdomains(region: str, in_prefix="031525", suite_id="u-br800"):
     now combine data from all the subregions into a single dataset per stash 
     """
     stashes = {**surface_stashes, **multi_stashes}
+    # stashes = {**multi_stashes}
     for s in stashes:
         inoutdir = "/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}".format(region, str(s).zfill(5), suite_id)
         outfile = "{0}/{1}_days_{2}_km1p5_ra1m_30x30_{3}.nc".format(inoutdir, in_prefix, region, str(s).zfill(5))
@@ -605,6 +723,81 @@ def save_standardisemx_data_vars(dataset: np.array([]), region: str, save_fname:
         for k, v in params.items():  
             hfile.create_dataset(k,data=v)
 
+def nn_dataset_stacked_raw(region:str, in_prefix="031525", suite_id="u-br800"):
+    """
+    Create CNN dataset. This save raw data as well as normalised
+    """   
+    # NN input data
+    nn_var_names = {
+        4:"air_potential_temperature",
+        99181:"t_adv",
+        99182:"q_adv",
+        99821:"q_tot",
+        1207:"toa_incoming_shortwave_flux",
+        3217:"surface_upward_sensible_heat_flux",
+        3234:"surface_upward_latent_heat_flux",
+        99904:"t_phys",
+        99983:"q_phys",
+        3:"y_wind",
+        2:"x_wind",
+        253:"m01s00i253",
+        408:"air_pressure",
+        150:"upward_air_velocity",
+        99822:"q_tot_diff",
+        99905:"air_potential_temperature_diff"
+    }
+    data_labels = []
+    raw_data_dict = {}
+    raw_data = []
+
+    for s in nn_data_stashes:
+        indir = "/project/spice/radiation/ML/CRM/data/{2}/{0}/concat_stash_{1}".format(region, str(s).zfill(5), suite_id)
+        for subdomain in range(64):
+            infile="{0}/{1}_days_{2}_km1p5_ra1m_30x30_subdomain_{3}_{4}.nc".format(indir, in_prefix, region, str(subdomain).zfill(3), str(s).zfill(5))
+            print("Processing {0}".format(infile))
+            dataf = Dataset(infile)
+            try:
+                var = dataf[nn_data_stashes[s]][:]
+            except:
+                var = dataf['unknown'][:]
+            if s in [99181, 99182]:
+                print("Multiplying advected quantity {0} with 600.".format(nn_var_names[s]))
+                # var *= 10800.
+                var *= 600.
+            raw_var = var
+            print("Variable {0} {1}".format(nn_var_names[s], raw_var.shape))
+            if nn_var_names[s] not in raw_data_dict.keys():
+                raw_data_dict[nn_var_names[s]] = raw_var
+            else:
+                raw_data_dict[nn_var_names[s]] = np.concatenate((raw_data_dict[nn_var_names[s]], raw_var), axis=0)
+    for v in raw_data_dict:
+        data_labels.append(v)
+        raw_data.append(raw_data_dict[v])
+    
+    data_labels = list(chain(*zip(data_labels,data_labels)))
+    train_test_datadir = "{0}/models/datain/".format(crm_data)
+
+    raw_data_split = train_test_split(*raw_data, shuffle=True, random_state=18, test_size=0.1)
+    fname = 'train_test_data_{0}_stacked_raw.hdf5'.format(region)
+    # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
+    with h5py.File(train_test_datadir+fname, 'w') as hfile:
+        i = 0
+        while (i < len(raw_data_split)):
+            train_name = data_labels[i]+"_train"
+            print("Saving data {0}".format(train_name))
+            train_data = raw_data_split[i]
+            if train_data.ndim == 1:
+                train_data = train_data.reshape(-1,1)
+            hfile.create_dataset(train_name,data=train_data)
+            i+=1
+            test_name = data_labels[i]+"_test"
+            print("Saving data {0}".format(test_name))
+            test_data = raw_data_split[i]
+            if test_data.ndim == 1:
+                test_data = test_data.reshape(-1,1)
+            hfile.create_dataset(test_name,data=test_data)
+            i+=1
+
 def save_standardise_data_vars(dataset: np.array([]), region: str, save_fname: str="std_fit.hdf5", levs: bool=True, robust: bool=False):
     """
     Manually standardise data based instead of using sklearn standarad scaler
@@ -642,12 +835,12 @@ def save_standardise_data_vars(dataset: np.array([]), region: str, save_fname: s
         for k, v in params.items():  
             hfile.create_dataset(k,data=v)
 
-def save_normalise_data_vars(dataset: np.array([]), region: str, save_fname: str="std_fit.hdf5", levs: bool=True):
+def save_normalise_data_vars(dataset: np.array([]), region: str, save_fname: str="std_fit.hdf5", levs: bool=True, final_lev=60):
     """
     Manually standardise data based instead of using sklearn standarad scaler
     robust: Use median and quantiles for scaling
     """
-    save_location = "{0}/models/normaliser/{1}_normalise/".format(crm_data,region)
+    save_location = "{0}/models/normaliser/{1}_normalise_{2}/".format(crm_data,region, final_lev)
     # save_location = "{0}/models/normaliser/{1}_noshuffle/".format(crm_data,region)
     try:
         os.makedirs(save_location)
@@ -655,11 +848,11 @@ def save_normalise_data_vars(dataset: np.array([]), region: str, save_fname: str
         pass
     # per level normalisation
     if levs:
-        mean = np.array([np.min(dataset, axis=0)])
-        scale = np.array([np.max(dataset, axis=0) - np.min(dataset, axis=0)])
+        mean = np.array([np.min(dataset[:,:final_lev], axis=0)])
+        scale = np.array([np.max(dataset[:,:final_lev], axis=0) - np.min(dataset, axis=0)])
     else:
-        mean = np.array([np.min(dataset)])
-        scale = np.array([np.max(dataset) - np.min(dataset)])
+        mean = np.array([np.min(dataset[:,:final_lev])])
+        scale = np.array([np.max(dataset[:,:final_lev]) - np.min(dataset[:,:final_lev])])
     params = {"mean_":mean, "scale_":scale}
     with h5py.File(save_location+save_fname, 'w') as hfile:
         for k, v in params.items():  
@@ -699,7 +892,12 @@ def nn_normalisation_vars(region:str, in_file):
     3217:"surface_upward_sensible_heat_flux",
     3234:"surface_upward_latent_heat_flux",
     99904:"t_phys",
-    99983:"q_phys"
+    99983:"q_phys",
+    3:"y_wind",
+    2:"x_wind",
+    253:"m01s00i253",
+    408:"air_pressure",
+    150:"upward_air_velocity"
 }
 
     indir = "/project/spice/radiation/ML/CRM/data/models/datain/"
@@ -711,7 +909,7 @@ def nn_normalisation_vars(region:str, in_file):
         std_fname=data_stashes[s]+".hdf5"
         # save_standardise_data_vars(var, region, save_fname=std_fname, levs=True)
         # save_standardisemx_data_vars(var, region, save_fname=std_fname, levs=True)
-        save_normalise_data_vars(var, region, save_fname=std_fname, levs=True)
+        save_normalise_data_vars(var, region, save_fname=std_fname, levs=False)
 
 if __name__ == "__main__":
     # Run the following in order 
@@ -719,27 +917,32 @@ if __name__ == "__main__":
     # u-bs573 has July runs so 0201507AQ
     # in_prefix = "161718192021222324252627282930"
     # suite_id = "u-bs572_20170116-30_conc"
-    # new_region = "163001AQT"
-    # in_prefix = "0203040506070809101112131415"
-    # suite_id = "u-bs572_20170101-15_conc"
-    # new_region = "021501AQT"
+    # new_region = "163001AQTS"
+    in_prefix = "0203040506070809101112131415"
+    suite_id = "u-bs572_20170101-15_conc"
+    new_region = "021501AQTS"
     # combine_multi_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
     # combine_surface_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
     # combine_subdomains(new_region, in_prefix=in_prefix, suite_id=suite_id)
     # nn_dataset_raw(new_region, in_prefix=in_prefix, suite_id=suite_id, truncate=False)
+    # nn_dataset_stacked_raw(new_region, in_prefix=in_prefix, suite_id=suite_id)
     # nn_dataset_std(new_region, in_prefix=in_prefix, suite_id=suite_id, truncate=False)
     # nn_normalisation_vars(new_region, in_prefix=in_prefix, suite_id=suite_id)
-    # new_region = "023001AQ"
-    # in_file = "train_data_023001AQ_raw.hdf5"
-    # nn_normalisation_vars(new_region, in_file)
+    new_region = "023001AQT"
+    in_file = "train_data_023001AQT.hdf5"
+    nn_normalisation_vars(new_region, in_file)
+
+    # Stack subdomains data
+    # stack_multi_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
+    # stack_surface_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
     
     # in_prefix = "161718192021222324252627282930"
     # suite_id = "u-bs572_20170116-30_conc"
     # new_region = "163001AQTT3"
-    in_prefix = "0203040506070809101112131415"
-    suite_id = "u-bs572_20170101-15_conc"
-    new_region = "021501AQTT3"
-    block = 7 # number of time steps in each block after reshape it will (n_stesp//block,block,nlevs)
+    # in_prefix = "0203040506070809101112131415"
+    # suite_id = "u-bs572_20170101-15_conc"
+    # new_region = "021501AQTT3"
+    # block = 7 # number of time steps in each block after reshape it will (n_stesp//block,block,nlevs)
     # timeseries_multi_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region, block=block)
     # timeseries_surface_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region, block=block)
-    cnn_dataset_raw(region=new_region, in_prefix=in_prefix, suite_id=suite_id,block=block)
+    # cnn_dataset_raw(region=new_region, in_prefix=in_prefix, suite_id=suite_id,block=block)

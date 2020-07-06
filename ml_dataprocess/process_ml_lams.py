@@ -16,7 +16,7 @@ from cjm_functions import generate_filename_in
 from cjm_functions import retrieve_a_file
 
 roseid='u-bs573'
-
+roseid='u-bs572_20170116-30_pp'
 def daterange(start_date, end_date):
     for n in range(int ((end_date - start_date).days)):
         yield start_date + timedelta(n)   
@@ -131,9 +131,14 @@ def multi_level(start_day: int, start_month: int, region: str):
     # list_stash_code=[4,4,181,10,182,254,183,12,184,272,189,273,190]
     # list_stream=['c','b','d','c','d','c','d','c','d','c','d','c','d']
     # Ocean only runs
-    list_stash_sec = [0, 16, 0, 0, 0, 0, 0]
-    list_stash_code = [4, 4, 10, 254, 12, 272, 273]
-    list_stream = ['c', 'd', 'c', 'c', 'c', 'c', 'c']
+    # list_stash_sec = [0, 16, 0, 0, 0, 0, 0]
+    # list_stash_code = [4, 4, 10, 254, 12, 272, 273]
+    # list_stream = ['c', 'd', 'c', 'c', 'c', 'c', 'c']
+
+    # winds (u,v,w) density
+    list_stash_sec = [0,0,0,0,0]
+    list_stash_code = [2,3,150,253,408]
+    list_stream = ['e', 'e', 'e', 'f','f']
     ###############################################################
     # Below here are things you probably will not need to change.
     ###############################################################

@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --mem=12000
 #SBATCH --ntasks=4
-#SBATCH --time=360
+#SBATCH --time=60
 #SBATCH --qos=normal
 #SBATCH --wckey=preprocess_data
 #SBATCH --output=/scratch/ojamil/slurmout/%j.out

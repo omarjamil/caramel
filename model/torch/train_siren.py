@@ -1,6 +1,6 @@
 import argparse
 import torch
-import caramel
+import caramel_siren as caramel
 
 parser = argparse.ArgumentParser(description='Train Q')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
@@ -70,9 +70,8 @@ def set_args():
 
     # Define the Model
     # n_inputs,n_outputs=140,70
-    # args.xvars = ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
+    args.xvars = ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
     # args.xvars = ['qadv', 'theta_adv', 'sw_toa', 'shf', 'lhf']
-    args.xvars = ['qtot', 'theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
     # args.xvars = ['qtot', 'theta', 'sw_toa', 'shf', 'lhf']
     # args.yvars = ['qtot_next', 'theta_next']
     args.yvars = ['qtot_next']
@@ -93,7 +92,7 @@ def set_args():
 
     # args.hidden_size = 512 
     args.hidden_size = int(1.0 * args.in_features + args.nb_classes)
-    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}.tar".format(str(args.nb_hidden_layers).zfill(3),
+    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_siren.tar".format(str(args.nb_hidden_layers).zfill(3),
                                                                                     str(args.in_features).zfill(3),
                                                                                     str(args.nb_classes).zfill(3),
                                                                                     str(args.hidden_size).zfill(4),

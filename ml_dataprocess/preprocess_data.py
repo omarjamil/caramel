@@ -15,10 +15,9 @@ import traceback
 
 # Ocean only from u-bs572 and u-bs573 set aside for validation '0N100W'
 # leave out 0N0E as that does not get read into iris properly
-regions=['0N100W','0N130W','0N15W','0N160E','0N160W','0N30W','0N50E','0N70E','0N88E','10N100W','10N120W','10N140W','10N145E','10N160E','10N170W','10N30W','10N50W','10N60E','10N88E','10S120W','10S140W','10S15W','10S170E','10S170W','10S30W','10S5E','10S60E','10S88E','10S90W','20N135E','20N145W','20N170E','20N170W','20N30W','20N55W','20N65E','20S0E','20S100W','20S105E','20S130W','20S160W','20S30W','20S55E','20S80E','21N115W','29N65W','30N130W','30N145E','30N150W','30N170E','30N170W','30N25W','30N45W','30S100W','30S10E','30S130W','30S15W','30S160W','30S40W','30S60E','30S88E','40N140W','40N150E','40N160W','40N170E','40N25W','40N45W','40N65W','40S0E','40S100E','40S100W','40S130W','40S160W','40S50E','40S50W','50N140W','50N149E','50N160W','50N170E','50N25W','50N45W','50S150E','50S150W','50S30E','50S30W','50S88E','50S90W','60N15W','60N35W','60S0E','60S140E','60S140W','60S70E','60S70W','70N0E','70S160W','70S40W','80N150W']
+# regions=['0N100W','0N130W','0N15W','0N160E','0N160W','0N30W','0N50E','0N70E','0N88E','10N100W','10N120W','10N140W','10N145E','10N160E','10N170W','10N30W','10N50W','10N60E','10N88E','10S120W','10S140W','10S15W','10S170E','10S170W','10S30W','10S5E','10S60E','10S88E','10S90W','20N135E','20N145W','20N170E','20N170W','20N30W','20N55W','20N65E','20S0E','20S100W','20S105E','20S130W','20S160W','20S30W','20S55E','20S80E','21N115W','29N65W','30N130W','30N145E','30N150W','30N170E','30N170W','30N25W','30N45W','30S100W','30S10E','30S130W','30S15W','30S160W','30S40W','30S60E','30S88E','40N140W','40N150E','40N160W','40N170E','40N25W','40N45W','40N65W','40S0E','40S100E','40S100W','40S130W','40S160W','40S50E','40S50W','50N140W','50N149E','50N160W','50N170E','50N25W','50N45W','50S150E','50S150W','50S30E','50S30W','50S88E','50S90W','60N15W','60N35W','60S0E','60S140E','60S140W','60S70E','60S70W','70N0E','70S160W','70S40W','80N150W']
 
-suite_id="u-bs572_20170116-30_conc"
-# suite_id ="u-bs572_20170101-15_conc"
+
 
 def nooverlap_smooth(arrayin, window=6):
     """
@@ -32,7 +31,7 @@ def nooverlap_smooth(arrayin, window=6):
         averaged = np.mean(arrayin.reshape(window,x//window, order='F'), axis=0)
     return averaged
 
-def combine_q_tednencies(region):
+def combine_q_tednencies(region, suite_id):
     """
     combine qcl, qv, qcf, qg, qrain tendencies into a single one
     """
@@ -91,7 +90,7 @@ def combine_q_tednencies(region):
         iris.fileformats.netcdf.save(q,"/project/spice/radiation/ML/CRM/data/{2}/{1}/q_tot/30_days_50S69W_km1p5_ra1m_30x30_subdomain_{0}_q_tot.nc".format(str(i).zfill(3), region, suite_id))
         i += 1
 
-def combine_q(region, in_prefix="30"):
+def combine_q(region, suite_id, in_prefix="30"):
     """
     combine qcl, qv, qcf, qg, qrain into a single one
     """
@@ -131,7 +130,7 @@ def combine_q(region, in_prefix="30"):
         i += 1
 
 
-def check_files_exist(region: str, date: datetime, subdomain: int, stash: int):
+def check_files_exist(region: str, date: datetime, subdomain: int, stash: int, suite_id):
     """
     Check all the files that will be used in combine_files_per_subdomain
     actually exist.
@@ -154,7 +153,7 @@ def check_files_exist(region: str, date: datetime, subdomain: int, stash: int):
         if not fpath.is_file():
             print("Does not exits: {0}".format(location+f))
             
-def combine_files_per_subdomain(region: str, date: datetime, subdomain: int, stash: int):
+def combine_files_per_subdomain(region: str, date: datetime, subdomain: int, stash: int, suite_id):
     """
     Combine files per subdomain and per day for a given
     stash code
@@ -195,7 +194,7 @@ def combine_files_per_subdomain(region: str, date: datetime, subdomain: int, sta
     print("Saving file {0}".format(out_filename))
     iris.fileformats.netcdf.save(cubelist.concatenate()[0],out_filename)
 
-def combine_day_tseries(start_date: datetime, end_date: datetime, region: str, subdomain: int, stash: int):
+def combine_day_tseries(start_date: datetime, end_date: datetime, region: str, subdomain: int, stash: int, suite_id):
     """
     Combine the per day files into a single file 
     """
@@ -230,7 +229,7 @@ def combine_day_tseries(start_date: datetime, end_date: datetime, region: str, s
     print("Saving file {0}".format(out_filename))
     iris.fileformats.netcdf.save(cubelist.concatenate()[0],out_location+out_filename)
 
-def combine_day_tseries_dayrange(region: str, subdomain: int, stash: int, days_range=range(1,32), month=7):
+def combine_day_tseries_dayrange(region: str, subdomain: int, stash: int, suite_id, days_range=range(1,32), month=7):
     """
     Combine the per day files into a single file 
     """
@@ -265,27 +264,27 @@ def combine_day_tseries_dayrange(region: str, subdomain: int, stash: int, days_r
     print("Saving file {0}".format(out_filename))
     iris.fileformats.netcdf.save(cubelist.concatenate()[0],out_location+out_filename)
     
-def combine_files(region: str, day: int, stashes: list, month=7):
+def combine_files(region: str, day: int, stashes: list, suite_id, month=7):
     date = datetime.date(2017, month, day)
     #for stash in [10,12182,16004,12181]:
     for stash in stashes:    
         for subdomain in range(64):
-            combine_files_per_subdomain(region, date, subdomain, stash)
+            combine_files_per_subdomain(region, date, subdomain, stash, suite_id)
             
 
-def main_check_files_exist(region: str, stashes: list, month=7):
+def main_check_files_exist(region: str, stashes: list, suite_id, month=7):
     for day in range(1,32):
         date = datetime.date(2017, month, day)
         # for stash in [10,12182,16004,12181]:
         for stash in stashes:
             for subdomain in range(64):
-                check_files_exist(region, date, subdomain, stash)
+                check_files_exist(region, date, subdomain, stash, suite_id)
             
-def main_combine_files(region: str, stashes: list, days_range=range(1,31), month=7):
+def main_combine_files(region: str, stashes: list, suite_id, days_range=range(1,31), month=7):
     # day = sys.argv[1]
     try:
         for day in days_range:
-            combine_files(region, day, stashes, month=month)
+            combine_files(region, day, stashes, suite_id, month=month)
         return 0
     except Exception as e:
         sys.stderr.write("error: " + str(e))
@@ -295,7 +294,7 @@ def main_combine_files(region: str, stashes: list, days_range=range(1,31), month
     #print(day)
     #main_combine_files(day)
         
-def main_combine_day_tseries(region: str, stashes: list, days_range=[3,4,5], month=7):
+def main_combine_day_tseries(region: str, stashes: list, suite_id, days_range=[3,4,5], month=7):
     # region='10N160E'
     # Start from day 2 to ignore spin up day 1
     try:
@@ -303,14 +302,14 @@ def main_combine_day_tseries(region: str, stashes: list, days_range=[3,4,5], mon
         for stash in stashes:
             for subdomain in range(64):
                 # combine_day_tseries(start_date, end_date, region, subdomain, stash)
-                combine_day_tseries_dayrange(region, subdomain, stash, days_range=days_range, month=month)
+                combine_day_tseries_dayrange(region, subdomain, stash, suite_id, days_range=days_range, month=month)
         return 0
     except Exception as e:
         sys.stderr.write("error: " + str(e))
         sys.stderr.write(traceback.format_exc())
         return 1
 
-def average_data(region: str, stashes: list, in_prefix):
+def average_data(region: str, stashes: list, in_prefix, suite_id):
     # region='10N160E'
     # Start from day 2 to ignore spin up day 1
     try:
@@ -339,7 +338,7 @@ def average_data(region: str, stashes: list, in_prefix):
         sys.stderr.write(traceback.format_exc())
         return 1
 
-def create_delta(region, in_stash, out_stash, in_prefix: str="30"):
+def create_delta(region, in_stash, out_stash, suite_id, in_prefix: str="30"):
     """
     create a new variable that is q(n+1) - q(n) and t(n+1) - t(n)
     """
@@ -357,15 +356,17 @@ def create_delta(region, in_stash, out_stash, in_prefix: str="30"):
         cube = iris.load_cube(in_location+in_filename)
         diff = tendencies.array_diff(cube.data[:], 1)
         time_coord = iris.coords.DimCoord(cube.coord('time').points[:-1],standard_name="time",units=cube.coord('time').units)
-        # model_lev_coord = iris.coords.DimCoord(q_dat.coord('model_level_number').points,long_name="model_level_number")
-        model_lev_coord = iris.coords.DimCoord(cube.coord('model_levels').points,long_name="model_levels")
+        try:
+            model_lev_coord = iris.coords.DimCoord(cube.coord('model_level_number').points,long_name="model_level_number")
+        except:
+            model_lev_coord = iris.coords.DimCoord(cube.coord('model_levels').points,long_name="model_levels")
         # long_name = cube.long_name + "_diff"
         var_name = cube.var_name+"_diff"
         new_cube = iris.cube.Cube(diff,var_name=var_name, dim_coords_and_dims=[(time_coord,0),(model_lev_coord,1)])
         print("Saving diff data ... {0}".format(out_location+out_filename))
         iris.fileformats.netcdf.save(new_cube,out_location+out_filename)
 
-def calc_tendencies(region: str, in_prefix: str="30"):
+def calc_tendencies(region: str, suite_id, in_prefix: str="30"):
     tendencies.main_Q_dot(region, suite_id, in_prefix=in_prefix)
     tendencies.main_T_dot(region, suite_id, in_prefix=in_prefix)   
 
@@ -374,6 +375,10 @@ if __name__ == "__main__":
     argument = sys.argv[1]
     region = sys.argv[2]
     stash = sys.argv[3]
+    suite_id="u-bs572_20170116-30_conc"
+    # suite_id ="u-bs572_20170101-15_conc"
+    # suite_id="u-bs572_20170101-15_pp"
+    # suite_id = "u-bs572_20170116-30_pp"
 
     # stashes = [16004, 12181, 10, 12182, 254,12183,12,12184,272,12189,273,12190] #T, qv, qcl, qcf, qg
     # stashes = [4,24,1202,1205,1207,1208,1235,2201,2207,2205,3217,3225,3226,3234,3236,3245,4203,4204,9217,30405,30406,30461,16222,99181,99182]
@@ -381,35 +386,37 @@ if __name__ == "__main__":
 
 
     if argument == '1':
-        main_check_files_exist(region, stashes)
+        main_check_files_exist(region, stashes, suite_id)
     elif argument == '2':
         fname="{0}-{1}-{2}-{3}-pp-".format(suite_id,region,argument,stash)
         tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock',delete=False)
-        ret = main_combine_files(region, stashes, days_range=range(16,31), month=1)
+        ret = main_combine_files(region, stashes, suite_id, days_range=range(16,31), month=1)
         if ret == 0:
             os.remove(tmpf.name)
     elif argument == '3':
         fname="{0}-{1}-{2}-{3}-pp-".format(suite_id,region,argument,stash, month=1)
         tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock',delete=False)
-        ret = main_combine_day_tseries(region, stashes, days_range=range(16,31), month=1)
+        ret = main_combine_day_tseries(region, stashes, suite_id, days_range=range(16,31), month=1)
         if ret == 0:
             os.remove(tmpf.name)
     elif argument == '3a':
         in_prefix = "161718192021222324252627282930"
         # in_prefix = "0203040506070809101112131415"
-        average_data(region, stashes, in_prefix)
+        average_data(region, stashes, in_prefix, suite_id)
     elif argument == '4':
-        combine_q(region, in_prefix="3h_161718192021222324252627282930")
+        combine_q(region, suite_id, in_prefix="3h_161718192021222324252627282930")
     elif argument == '4a':
         # qtot stash 99821 - new stash 99822
         # t stash 00004 - new stash 99905
-        # in_stash = 4
-        # out_stash = 99905
-        in_stash = 99821
-        out_stash = 99822
-        in_prefix = "3h_161718192021222324252627282930"
+        in_stash = 4
+        out_stash = 99905
+        # in_stash = 99821
+        # out_stash = 99822
+        # in_prefix = "3h_161718192021222324252627282930"
         # in_prefix = "3h_0203040506070809101112131415"
-        create_delta(region, in_stash, out_stash, in_prefix=in_prefix)
+        # in_prefix = "0203040506070809101112131415"
+        in_prefix = "161718192021222324252627282930"
+        create_delta(region, in_stash, out_stash, suite_id, in_prefix=in_prefix)
     elif argument == '5':
-        calc_tendencies(region, in_prefix="3h_0203040506070809101112131415")
+        calc_tendencies(region, suite_id, in_prefix="3h_0203040506070809101112131415")
     

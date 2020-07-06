@@ -1,4 +1,5 @@
 import data_io
+import data_io_stacked
 import torch
 import matplotlib.pyplot as plt
 
@@ -25,6 +26,24 @@ def test_dataloader(args):
              batch_size=args.batch_size, shuffle=False)
     return validation_loader
 
+def train_dataloader_stacked(args):
+    train_dataset_file = "{0}/train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
+    train_loader = torch.utils.data.DataLoader(
+             data_io_stacked.ConcatDataset("train",args.nlevs,train_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
+             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm,
+             lev_norm=args.lev_norm),
+             batch_size=args.batch_size, shuffle=False)
+    return train_loader
+
+def test_dataloader_stacked(args):
+    test_dataset_file = "{0}/test_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
+    validation_loader = torch.utils.data.DataLoader(
+             data_io_stacked.ConcatDataset("test",args.nlevs, test_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
+             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm, 
+             lev_norm=args.lev_norm),
+             batch_size=args.batch_size, shuffle=False)
+    return validation_loader
+
 def train_dataloader_CNN(args):
     train_dataset_file = "{0}/cnn_train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
     train_loader = torch.utils.data.DataLoader(
@@ -41,7 +60,7 @@ def test_dataloader_CNN(args):
              batch_size=args.batch_size, shuffle=False)
     return validation_loader
 
-def loader_loop():
+def loader_loop_CNN():
     args = dotdict()
     args.xvars = ['qtot', 'qadv', 'theta', 'theta_adv']
     args.xvars2 = ['sw_toa', 'shf', 'lhf']
@@ -85,6 +104,56 @@ def loader_loop():
         print("Y", y.shape)
         print("Y2", y2.shape)
 
+def loader_loop_stacked():
+    args = dotdict()
+    # args.xvars = ['qtot', 'qadv', 'theta', 'theta_adv']
+    # args.xvars=["qtot", "qadv", "theta", "theta_adv", "sw_toa", "shf", "lhf", "p", "rho", "xwind", "ywind", "zwind"]
+    args.xvars=["qtot", "theta", "p", "rho", "xwind", "ywind", "zwind", "sw_toa", "shf", "lhf"]
+    args.xvars2 = ['sw_toa', 'shf', 'lhf']
+    args.yvars = ['qtot_next', 'theta_next']
+    args.yvars2 = ['qphys', 'theta_phys']
+    # args.normaliser = "023001AQT_normalise"
+    # args.normaliser = "023001AQT_standardise_mx"
+    # args.normaliser = "023001AQT_normalise"
+    args.normaliser = "023001AQT_normalise_60_glb"
+    args.locations = {"train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
+                    "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser)}
+    args.region = "023001AQTS"
+    args.data_fraction = 0.1
+    args.samples_fraction = 0.01
+    args.batch_size = 10
+    args.nlevs = 60
+    args.no_norm = False
+    args.lev_norm = False
+    train_ldr = train_dataloader_stacked(args)
+    test_ldr = test_dataloader_stacked(args)
+    cmap='plasma'
+    for batch_idx, batch in enumerate(train_ldr):
+        # x,y,y2 = batch
+        x,y,y2 = batch
+        print("X", x.shape)
+        fig, axs = plt.subplots(4,1,figsize=(14, 10), sharex=True)
+        c = axs[0].pcolor(x[:,:60].T, cmap=cmap, label='q')
+        fig.colorbar(c,ax=axs[0])
+        axs[0].legend()
+        c = axs[1].pcolor(x[:,60:120].T, cmap=cmap, label='t')
+        fig.colorbar(c,ax=axs[1])
+        axs[1].legend()
+        c = axs[2].pcolor(x[:,120:180].T, cmap=cmap, label='p')
+        fig.colorbar(c,ax=axs[2])
+        axs[2].legend()
+        c = axs[3].pcolor(x[:,180:240].T, cmap=cmap, label='rho')
+        fig.colorbar(c,ax=axs[3])
+        axs[3].legend()
+        plt.show()
+        # print("x0:", x[:,0,:,:].min(), x[:,0,:,:].max())
+        # print("x1:", x[:,1,:,:].min(), x[:,1,:,:].max())
+        # print("x2:", x[:,2,:,:].min(), x[:,2,:,:].max())
+        # print("x3:", x[:,3,:,:].min(), x[:,3,:,:].max())
+        # print("X2", x2.shape)
+        # print("Y", y.shape)
+        # print("Y2", y2.shape)
+
 def test_validation_io():
     args = dotdict()
     args.xvars = ['qtot', 'qadv', 'theta', 'theta_adv']
@@ -115,6 +184,7 @@ def test_validation_io():
     print(theta_inv[0,:])
     print(theta_adv_inv[0,:])
 
+
 if __name__ == "__main__":
     
     # ones = torch.ones((10,20))
@@ -125,5 +195,5 @@ if __name__ == "__main__":
     # stacked = torch.stack([ones,twos,threes],dim=1)
     # print(stacked)
     # print(stacked.shape)
-    loader_loop()
+    loader_loop_stacked()
     # test_validation_io()

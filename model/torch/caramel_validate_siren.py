@@ -7,7 +7,7 @@ import sys
 import os
 import h5py
 
-import model as nn_model
+import siren as nn_model
 import data_io
 
 
@@ -64,7 +64,8 @@ def set_model(model_file, args):
     nb_classes = args.nb_classes
     nb_hidden_layers = args.nb_hidden_layers
     hidden_size = args.hidden_size
-    mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
+    mlp = nn_model.Siren(in_features, hidden_size, nb_hidden_layers, nb_classes, outermost_linear=True)
+    # mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLPSkip(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLPDrop(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # Load the save model 
@@ -362,17 +363,13 @@ def evaluate_qnext(model, datasetfile, args):
                         xvars=args.xvars,
                         yvars=args.yvars,
                         yvars2=args.yvars2,
-                        lev_norm=args.lev_norm,
                         add_adv=False)
     
     x,y,y2,xmean,xstd,ymean,ystd,ymean2,ystd2 = nn_data.get_data()
     # model = set_model(args)
-    yp = model(x)
-    print(xmean.shape, xstd.shape,x.shape)
-    # xinv = nn_data._inverse_transform(x,xmean,xstd)
-    x_split = nn_data.split_data(x,xyz='x')
-    xinv_split = nn_data._inverse_transform_split(x_split,xmean,xstd,xyz='x')
-    # xinv_split = nn_data.split_data(xinv,xyz='x')
+    yp, coords = model(x)
+    xinv = nn_data._inverse_transform(x,xmean,xstd)
+    xinv_split = nn_data.split_data(xinv,xyz='x')
     yinv = nn_data._inverse_transform(y,ymean,ystd)
 
     ypinv = nn_data._inverse_transform(yp,ymean,ystd)
@@ -385,7 +382,6 @@ def evaluate_qnext(model, datasetfile, args):
     # y2inv_split = nn_data.split_data(y2inv, xyz='y2')
     # ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
     # ['qphys', 'theta_phys']
-    print(xinv_split.keys())
     qtot_denorm = xinv_split['qtot']
     # theta_denorm = xinv_split['theta']
     # qadv_denorm = xinv_split['qadv']
@@ -490,11 +486,10 @@ def evaluate_tnext(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_006_lyr_388_in_055_out_0443_hdn_010_epch_00200_btch_023001AQTS_mae_023001AQT_normalise_60_glb_stkd.tar"
+    model_file = model_loc+"qnext_008_lyr_283_in_070_out_0353_hdn_010_epch_00500_btch_023001AQT_mae_023001AQ_standardise_mx_siren.tar"
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
     # normaliser_region = "023001AQ_normalise"
-    # normaliser_region = "021501AQT_standardise_mx"
-    normaliser_region = "023001AQT_normalise_60_glb"
+    normaliser_region = "023001AQ_standardise_mx"
     data_region = "0N100W"
     args = set_args(model_file, normaliser_region, data_region)
     model = set_model(model_file, args)

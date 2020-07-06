@@ -1,7 +1,7 @@
 #!/usr/bin/env python	
 #
-# Cyril Morcrette (2018), Met Office, UK
-#
+# Cyril Morcrette (2019), Met Office, UK
+# Modified by Omar Jamil (2019)
 # Import some modules
 
 from datetime import timedelta
