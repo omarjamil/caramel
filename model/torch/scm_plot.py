@@ -177,8 +177,8 @@ def visualise_tseries(npfile,level, savename):
 
     figname = savename+"/"+savename+"_qnext_scm_lev_{0}.png".format(str(level).zfill(3))
     print("Saving {0}".format(figname))
-    # plt.savefig(figname)
-    # plt.close(fig)
+    plt.savefig(figname)
+    plt.close(fig)
     data.close()
     # ax = axs[1,0]
     # ax.plot(qphys_ml[:,level],'.-', label='qphys (ML)')
@@ -435,8 +435,8 @@ def visualise_tseries_q_next(npfile,level, savename):
     ax.set_ylabel('ML')
     figname = savename+"/"+savename+"_qnext_lev_{0}.png".format(str(level).zfill(3))
     print("Saving figure {0}".format(figname))
-    # plt.savefig(figname)
-    # plt.close(fig)
+    plt.savefig(figname)
+    plt.close(fig)
     data.close()
     # ax = axs[0,1]
     # ax.plot(qnext_ml_norm[:,level],'.-',label='qnext (ML) norm')
@@ -807,7 +807,7 @@ def plot_scm_mae(np_file):
     plt.show()
 
 if __name__ == "__main__":
-    model_name="qnext_006_lyr_388_in_055_out_0443_hdn_010_epch_00200_btch_023001AQTS_mae_023001AQT_normalise_60_glb_stkd"
+    model_name="qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00500_btch_023001AQT_mae_023001AQT_normalise_bnsig_skip_chkepo_014"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)
@@ -826,7 +826,7 @@ if __name__ == "__main__":
     visualise_scm_predictions_q(np_file, model_name)
     # visualise_scm_predictions_qt(np_file,figname)
     # plot_scm_mae(np_file)
-    for l in range(0,60,1):
+    for l in range(0,55,1):
         level=l
         visualise_tseries(np_file, level, model_name)
         # visualise_tseries_qphys(np_file_2,level)
@@ -836,4 +836,4 @@ if __name__ == "__main__":
         visualise_tseries_q_next(np_file_2, level, model_name)
         # visualise_tseries_t_next(np_file_2, level)
         # compare_qphys_predictions(np_file, np_file_2, level)
-        plt.show()
+        # plt.show()

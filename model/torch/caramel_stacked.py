@@ -74,8 +74,8 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 
 
 def set_model(args):
-    mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    # mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    # mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLPDrop(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
@@ -91,15 +91,15 @@ def set_model(args):
         loss_function = torch.nn.functional.smooth_l1_loss
     optimizer, scheduler = configure_optimizers(mlp)
 
-    if args.warm_start:
+    if args.warm_start is not None:
     # Load the save model 
-        checkpoint = torch.load(args.locations['model_loc']+'/'+args.model_name, map_location=args.device)
+        checkpoint = torch.load(args.locations['model_loc']+'/'+args.warm_start, map_location=args.device)
         mlp.load_state_dict(checkpoint['model_state_dict'])
         mlp.to(args.device)
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         loss = checkpoint['loss']
         epoch = checkpoint['epoch']
-        args.model_name = args.model_name.replace('.tar','_{0}.tar'.format(args.region))
+        args.model_name = args.model_name.replace('.tar','_{0}.tar'.format("cont"))
     else:
         mlp.to(args.device)
     print("Model's state_dict:")
@@ -112,8 +112,7 @@ def train_dataloader(args):
     train_dataset_file = "{0}/train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
     train_loader = torch.utils.data.DataLoader(
              data_io.ConcatDataset("train",args.nlevs,train_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
-             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm,
-             lev_norm=args.lev_norm),
+             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm),
              batch_size=args.batch_size, shuffle=False)
     return train_loader
 
@@ -121,8 +120,7 @@ def test_dataloader(args):
     test_dataset_file = "{0}/test_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
     validation_loader = torch.utils.data.DataLoader(
              data_io.ConcatDataset("test",args.nlevs, test_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
-             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm, 
-             lev_norm=args.lev_norm),
+             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm),
              batch_size=args.batch_size, shuffle=False)
     return validation_loader
 
@@ -162,7 +160,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
         average_loss_val = test_loss / len(test_ldr.dataset)
         print('====> validation loss: {:.2e}'.format(average_loss_val))
         validation_loss.append(average_loss_val)
-        if epoch % 5 == 0:
+        if epoch % 2 == 0:
             checkpoint_name = args.model_name.replace('.tar','_chkepo_{0}.tar'.format(str(epoch).zfill(3)))
             torch.save({'epoch':epoch,
                 'model_state_dict':model.state_dict(),

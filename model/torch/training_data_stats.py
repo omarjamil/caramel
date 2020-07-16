@@ -318,8 +318,9 @@ if __name__ == "__main__":
     # training_data_file = "/project/spice/radiation/ML/CRM/data/models/datain/train_data_023001AQ3HT.hdf5"
     training_data_file = "/project/spice/radiation/ML/CRM/data/models/datain/train_data_023001AQT.hdf5"
     # normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/021501AQ3H_normalise/"
-    normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/023001AQ_standardise_mx/"
+    # normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/023001AQ_standardise_mx/"
     # normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/023001AQ_normalise/"
+    normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/023001AQT_normalise_60_glb/"
     data_norm = data_io.NormalizersData(normaliser)
     data_frac = 0.01
     nlevs = 70

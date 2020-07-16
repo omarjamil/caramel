@@ -100,7 +100,7 @@ class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, dat_type, nlevs, dataset_file, normaliser, samples_frac=1.,data_frac=1., 
                 xvars=["qtot", "qadv", "theta", "theta_adv", "sw_toa", "shf", "lhf", "p", "rho", "xwind", "ywind", "zwind"],
                 yvars=["qtot_next", "theta_next"],
-                yvars2=["qphys", "theta_phys"], no_norm=False, lev_norm=True):
+                yvars2=["qphys", "theta_phys"], no_norm=False):
         super().__init__()
         self.dat_type = dat_type
         self.dataset_file = dataset_file
@@ -123,7 +123,6 @@ class ConcatDataset(torch.utils.data.Dataset):
         self.ydata_idx = []
         self.ydata_idx2 = []
         self.no_norm = no_norm
-        self.lev_norm = lev_norm
 
         print("Reading dataset file: {0}".format(dataset_file))
         dataset=h5py.File(dataset_file,"r")
@@ -164,11 +163,7 @@ class ConcatDataset(torch.utils.data.Dataset):
         self.v_slc1 = slice(0,self.nsamples)
         self.v_slc2 = slice(0,self.npoints)
         self.v_slc3 = slice(0,self.nlevs)
-        if self.lev_norm:
-            self.norm_slc = slice(self.nlevs)
-        else:
-            self.norm_slc = slice(0,None)
-            self.norm_slc2 = slice(0,None)
+        self.norm_slc = slice(self.nlevs)
         self.xdata_and_norm = {
                                 "qtot_"+self.dat_type:[self.q_tot_train[self.v_slc1, self.v_slc2, self.v_slc3], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
                                 "qadv_"+self.dat_type:[self.q_tot_adv_train[self.v_slc1, self.v_slc2, self.v_slc3], self.nn_norm.qadv_mean, self.nn_norm.qadv_stdscale],

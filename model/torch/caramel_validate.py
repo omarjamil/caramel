@@ -64,9 +64,11 @@ def set_model(model_file, args):
     nb_classes = args.nb_classes
     nb_hidden_layers = args.nb_hidden_layers
     hidden_size = args.hidden_size
-    mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
-    # mlp = nn_model.MLPSkip(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
+    # mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
+    mlp = nn_model.MLPSkip(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLPDrop(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
+    # mlp = nn_model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+
     # Load the save model 
     print("Loading PyTorch model: {0}".format(model_file))
     checkpoint = torch.load(model_file, map_location=torch.device('cpu'))
@@ -362,13 +364,12 @@ def evaluate_qnext(model, datasetfile, args):
                         xvars=args.xvars,
                         yvars=args.yvars,
                         yvars2=args.yvars2,
-                        lev_norm=args.lev_norm,
                         add_adv=False)
     
     x,y,y2,xmean,xstd,ymean,ystd,ymean2,ystd2 = nn_data.get_data()
     # model = set_model(args)
-    yp = model(x)
-    print(xmean.shape, xstd.shape,x.shape)
+    yp = model(x.float())
+    print(yp.shape, x.shape)
     # xinv = nn_data._inverse_transform(x,xmean,xstd)
     x_split = nn_data.split_data(x,xyz='x')
     xinv_split = nn_data._inverse_transform_split(x_split,xmean,xstd,xyz='x')
@@ -378,6 +379,7 @@ def evaluate_qnext(model, datasetfile, args):
     ypinv = nn_data._inverse_transform(yp,ymean,ystd)
     yinv_split = nn_data.split_data(yinv,xyz='y')
     ypinv_split = nn_data.split_data(ypinv, xyz='y')
+    print(ypinv_split['qtot_next'].shape)
     y_split = nn_data.split_data(y, xyz='y')
     yp_split = nn_data.split_data(yp, xyz='y')
 
@@ -490,11 +492,12 @@ def evaluate_tnext(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_006_lyr_388_in_055_out_0443_hdn_010_epch_00200_btch_023001AQTS_mae_023001AQT_normalise_60_glb_stkd.tar"
+    model_name = "qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00500_btch_023001AQT_mae_023001AQT_normalise_bnsig_skip_chkepo_014.tar"
+    model_file = model_loc+model_name
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
-    # normaliser_region = "023001AQ_normalise"
-    # normaliser_region = "021501AQT_standardise_mx"
-    normaliser_region = "023001AQT_normalise_60_glb"
+    normaliser_region = "023001AQT_normalise"
+    # normaliser_region = "023001AQT_standardise_mx"
+    # normaliser_region = "023001AQT_normalise_60_glb"
     data_region = "0N100W"
     args = set_args(model_file, normaliser_region, data_region)
     model = set_model(model_file, args)

@@ -74,8 +74,8 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 
 
 def set_model(args):
-    mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    # mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    # mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLPDrop(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
@@ -159,8 +159,16 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
         average_loss_val = test_loss / len(test_ldr.dataset)
         print('====> validation loss: {:.2e}'.format(average_loss_val))
         validation_loss.append(average_loss_val)
-        if epoch % 100 == 0:
-            checkpoint_save(epoch, model, optimizer, training_loss, validation_loss, args.model_name, args.locations, args)            
+        if epoch % 2 == 0:
+            checkpoint_name = args.model_name.replace('.tar','_chkepo_{0}.tar'.format(str(epoch).zfill(3)))
+            torch.save({'epoch':epoch,
+                'model_state_dict':model.state_dict(),
+                'optimizer_state_dict':optimizer.state_dict(),
+                'training_loss':training_loss,
+                'validation_loss':validation_loss,
+                'arguments':args},
+                args.locations['model_loc']+'/'+checkpoint_name)
+            # checkpoint_save(epoch, model, optimizer, training_loss, validation_loss, args.model_name, args.locations, args)            
      # Save the final model
     torch.save({'epoch':epoch,
                 'model_state_dict':model.state_dict(),

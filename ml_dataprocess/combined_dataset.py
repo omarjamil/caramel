@@ -716,8 +716,11 @@ def save_standardisemx_data_vars(dataset: np.array([]), region: str, save_fname:
             q1 = np.array([np.quantile(dataset, 0.10)])
             scale = q2 - q1
         else:
-            mean = np.array([np.mean(dataset)])
-            scale = np.array([np.std(dataset)])
+            nlevs = dataset.shape[1]
+            final_lev = 60
+            mean = np.ones(nlevs) * np.array([np.mean(dataset[:,:final_lev])])
+            scale = np.ones(nlevs) * np.array([np.std(dataset[:,:final_lev])])
+
     params = {"mean_":mean, "scale_":scale}
     with h5py.File(save_location+save_fname, 'w') as hfile:
         for k, v in params.items():  
@@ -804,6 +807,7 @@ def save_standardise_data_vars(dataset: np.array([]), region: str, save_fname: s
     robust: Use median and quantiles for scaling
     """
     save_location = "{0}/models/normaliser/{1}_standardise/".format(crm_data,region)
+    print(save_location)
     # save_location = "{0}/models/normaliser/{1}_noshuffle/".format(crm_data,region)
     try:
         os.makedirs(save_location)
@@ -847,12 +851,14 @@ def save_normalise_data_vars(dataset: np.array([]), region: str, save_fname: str
     except OSError:
         pass
     # per level normalisation
+    dataset = dataset[:,:final_lev]
     if levs:
-        mean = np.array([np.min(dataset[:,:final_lev], axis=0)])
-        scale = np.array([np.max(dataset[:,:final_lev], axis=0) - np.min(dataset, axis=0)])
+        mean = np.array([np.min(dataset, axis=0)])
+        scale = np.array([np.max(dataset, axis=0) - np.min(dataset, axis=0)])
     else:
-        mean = np.array([np.min(dataset[:,:final_lev])])
-        scale = np.array([np.max(dataset[:,:final_lev]) - np.min(dataset[:,:final_lev])])
+        mean = np.ones((1,dataset.shape[1])) * np.array([np.min(dataset)])
+        scale = np.ones((1,dataset.shape[1])) * (np.array([np.max(dataset) - np.min(dataset)]))
+        
     params = {"mean_":mean, "scale_":scale}
     with h5py.File(save_location+save_fname, 'w') as hfile:
         for k, v in params.items():  
@@ -907,9 +913,9 @@ def nn_normalisation_vars(region:str, in_file):
         print("Processing {0}".format(s))
         var = dataf[data_stashes[s]+"_train"][:]
         std_fname=data_stashes[s]+".hdf5"
-        # save_standardise_data_vars(var, region, save_fname=std_fname, levs=True)
+        save_standardise_data_vars(var, region, save_fname=std_fname, levs=True)
         # save_standardisemx_data_vars(var, region, save_fname=std_fname, levs=True)
-        save_normalise_data_vars(var, region, save_fname=std_fname, levs=False)
+        # save_normalise_data_vars(var, region, save_fname=std_fname, levs=False)
 
 if __name__ == "__main__":
     # Run the following in order 

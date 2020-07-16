@@ -93,7 +93,7 @@ def set_args():
 
     # args.hidden_size = 512 
     args.hidden_size = int(1.0 * args.in_features + args.nb_classes)
-    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}.tar".format(str(args.nb_hidden_layers).zfill(3),
+    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_bnsig_bnskip.tar".format(str(args.nb_hidden_layers).zfill(3),
                                                                                     str(args.in_features).zfill(3),
                                                                                     str(args.nb_classes).zfill(3),
                                                                                     str(args.hidden_size).zfill(4),

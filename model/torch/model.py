@@ -11,12 +11,14 @@ class MLP(torch.nn.Module):
         self.fcs = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
         self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
         self.out = torch.nn.Linear(hidden_size, nb_classes)
+        self.sig = torch.nn.Sigmoid()
         
     def forward(self, x):
         x = self.act(self.fc1(x))
         for l in self.fcs:
             x = self.act(l(x))
-        x = self.out(x)
+        # x = self.out(x)
+        x = self.sig(self.out(x))
         return x
 
 class MLPDrop(torch.nn.Module):
@@ -52,16 +54,21 @@ class MLPSkip(torch.nn.Module):
         self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
         self.skip = torch.nn.Linear(hidden_size,in_features)
         self.out = torch.nn.Linear(in_features, nb_classes)
+        self.sig = torch.nn.Sigmoid()
+        self.bn = torch.nn.BatchNorm1d(hidden_size)
+        self.bn_in = torch.nn.BatchNorm1d(in_features)
+
         
     def forward(self, x):
         inputs = x
-        x = self.act(self.fc1(x))
+        x = self.act(self.bn(self.fc1(x)))
         for l in self.fcs:
             x = self.act(l(x))
-        x = self.act(self.skip(x) + inputs)
+        x = self.act(self.skip(x) + self.bn_in(inputs))
         # x = self.act(self.skip(x))
         # x = self.sigmoid(self.out(x))
-        x = self.out(x)
+        # x = self.out(x)
+        x = self.sig(self.out(x))
         # x = self.out(x +  inputs)
         return x
 
@@ -79,12 +86,14 @@ class MLP_BN(torch.nn.Module):
         self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
         self.bn = torch.nn.BatchNorm1d(hidden_size)
         self.out = torch.nn.Linear(hidden_size, nb_classes)
-        
+        self.sig = torch.nn.Sigmoid()
     def forward(self, x):
-        x = self.act(self.fc1(x))
+        x = self.act(self.bn(self.fc1(x)))
+        # x = self.act(self.fc1(x))
         for l in self.fcs:
-            x = self.act(self.bn(l(x)))
-        x = self.out(x)
+            # x = self.act(self.bn(l(x)))
+            x = self.act(l(x))
+        x = self.sig(self.out(x))
         return x
 
 class ConvNN5(torch.nn.Module):

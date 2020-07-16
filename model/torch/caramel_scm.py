@@ -56,9 +56,10 @@ def set_model(model_file, args):
     nb_classes = args.nb_classes
     nb_hidden_layers = args.nb_hidden_layers
     hidden_size = args.hidden_size
-    mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
-    # mlp = nn_model.MLPSkip(in_features, nb_classes, nb_hidden_layers, hidden_size)
+    # mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
+    mlp = nn_model.MLPSkip(in_features, nb_classes, nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLPDrop(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
+    # mlp = nn_model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # Load the save model 
     print("Loading PyTorch model: {0}".format(model_file))
     checkpoint = torch.load(model_file, map_location=torch.device('cpu'))
@@ -76,7 +77,7 @@ def scm(model, datasetfile, args):
     nn_data = data_io.Data_IO_validation(args.region, args.nlevs, datasetfile, args.locations['normaliser_loc'],
                         xvars=args.xvars,
                         yvars=args.yvars,
-                        yvars2=args.yvars2, 
+                        yvars2=args.yvars2,
                         add_adv=False)
     x,y,y2,xmean,xstd,ymean,ystd,ymean2,ystd2 = nn_data.get_data()
     # model = set_model(args)
@@ -115,19 +116,22 @@ def scm(model, datasetfile, args):
         # print("t {0}".format(t))
         # print("q_in, q_true: ", q_in.data.numpy()[0], x_split['qtot'].data.numpy()[t,0])
         qnext_ml[t] = q_in.data.numpy()[:]
+        # print("ML", t, qnext_ml[t])
+        # print("True", t, qnext[t])
         # tnext_ml[t] = t_in.data.numpy()[:]
         # inputs = torch.cat([q_in,qadv[t],t_in[t],tadv[t],swtoa[t],shf[t],lhf[t]])
         inputs = torch.cat([q_in,t_in[t],pressure[t],rho[t],xwind[t],ywind[t],zwind[t],shf[t],lhf[t],swtoa[t]])
         # print(q_in.shape, t_in[t].shape, swtoa[t].shape, lhf[t].shape, lhf[t].shape)
         # inputs = torch.cat([q_in,t_in[t],swtoa[t],shf[t],lhf[t]])
-        yp_ = model(inputs)
+        yp_ = model(inputs.unsqueeze(0))
+        yp_ = yp_.view(-1)
         yp_split = nn_data.split_data(yp_,xyz='y')
         # q_in = yp_split['qtot_next']
         ####### Artificially remove negative values
         ypdata = yp_split['qtot_next'].data.numpy().copy()
         pdata = nn_data._inverse_transform(yp_split['qtot_next'], ymean, ystd).data.numpy()
         # print(pdata[pdata < 0.])
-        ypdata[pdata < 0.] = q_in.data.numpy()[pdata < 0.]
+        # ypdata[pdata < 0.] = q_in.data.numpy()[pdata < 0.]
         q_in = torch.from_numpy(ypdata)
         ########      
         # t_in = yp_split['theta_next']
@@ -159,9 +163,11 @@ def scm(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_006_lyr_388_in_055_out_0443_hdn_010_epch_00200_btch_023001AQTS_mae_023001AQT_normalise_60_glb_stkd.tar"
+    model_file = model_loc+"qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00500_btch_023001AQT_mae_023001AQT_normalise_bnsig_skip_chkepo_014.tar"
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
-    normaliser_region = "023001AQT_normalise_60_glb"
+    # normaliser_region = "023001AQT_normalise_60_glb"
+    # normaliser_region = "023001AQT_standardise_mx"
+    normaliser_region = "023001AQT_normalise"
     data_region = "0N100W"
     args = set_args(model_file, normaliser_region, data_region)
     model = set_model(model_file, args)

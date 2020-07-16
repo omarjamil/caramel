@@ -17,8 +17,8 @@ parser.add_argument('--chkpt-interval', type=int, default=10, metavar='N',
                     help='how many epochs before saving a checkpoint')
 parser.add_argument('--isambard', action='store_true', default=False,
                     help='Run on Isambard GPU')
-parser.add_argument('--warm-start', action='store_true', default=False,
-                    help='Continue training')
+parser.add_argument('--warm-start', type=str, default=None,
+                    help='Continue training from this model')
 parser.add_argument('--identifier', type=str, 
                     help='Added to model name as a unique identifier;  also needed for warm start from a previous model')                    
 parser.add_argument('--data-region', type=str, help='data region')
@@ -55,7 +55,7 @@ def set_args():
         args.with_cuda = False
         args.chkpt_interval = 10
         args.isambard = False
-        args.warm_start = False
+        args.warm_start = None
         args.identifier = '021501AQ1H'
         args.data_region = '021501AQ1H'
         args.normaliser = '021501AQ1H_standardise_mx'
@@ -97,16 +97,16 @@ def set_args():
 
     # args.hidden_size = 512 
     args.hidden_size = int(1.0 * args.in_features + args.nb_classes)
-    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_stkd.tar".format(str(args.nb_hidden_layers).zfill(3),
-                                                                                    str(args.in_features).zfill(3),
-                                                                                    str(args.nb_classes).zfill(3),
-                                                                                    str(args.hidden_size).zfill(4),
-                                                                                    str(args.epochs).zfill(3),
-                                                                                    str(args.batch_size).zfill(5),
-                                                                                    args.identifier, 
-                                                                                    args.loss,
-                                                                                    args.normaliser
-                                                                                    )
+    args.model_name = "qnext_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_stkd_bnsigm_bnskip.tar".format(str(args.nb_hidden_layers).zfill(3),
+                                                                                        str(args.in_features).zfill(3),
+                                                                                        str(args.nb_classes).zfill(3),
+                                                                                        str(args.hidden_size).zfill(4),
+                                                                                        str(args.epochs).zfill(3),
+                                                                                        str(args.batch_size).zfill(5),
+                                                                                        args.identifier, 
+                                                                                        args.loss,
+                                                                                        args.normaliser
+                                                                                        )
     print(args.model_name)
     # Get the data
     if args.isambard:

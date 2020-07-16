@@ -30,8 +30,7 @@ def train_dataloader_stacked(args):
     train_dataset_file = "{0}/train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
     train_loader = torch.utils.data.DataLoader(
              data_io_stacked.ConcatDataset("train",args.nlevs,train_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
-             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm,
-             lev_norm=args.lev_norm),
+             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm),
              batch_size=args.batch_size, shuffle=False)
     return train_loader
 
@@ -39,8 +38,7 @@ def test_dataloader_stacked(args):
     test_dataset_file = "{0}/test_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
     validation_loader = torch.utils.data.DataLoader(
              data_io_stacked.ConcatDataset("test",args.nlevs, test_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
-             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm, 
-             lev_norm=args.lev_norm),
+             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm),
              batch_size=args.batch_size, shuffle=False)
     return validation_loader
 
@@ -114,17 +112,17 @@ def loader_loop_stacked():
     args.yvars2 = ['qphys', 'theta_phys']
     # args.normaliser = "023001AQT_normalise"
     # args.normaliser = "023001AQT_standardise_mx"
-    # args.normaliser = "023001AQT_normalise"
-    args.normaliser = "023001AQT_normalise_60_glb"
+    # args.normaliser = "023001AQT_standardise"
+    args.normaliser = "023001AQT_normalise"
+    # args.normaliser = "023001AQT_normalise_60_glb"
     args.locations = {"train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
                     "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser)}
     args.region = "023001AQTS"
     args.data_fraction = 0.1
     args.samples_fraction = 0.01
-    args.batch_size = 10
+    args.batch_size = 201
     args.nlevs = 60
     args.no_norm = False
-    args.lev_norm = False
     train_ldr = train_dataloader_stacked(args)
     test_ldr = test_dataloader_stacked(args)
     cmap='plasma'

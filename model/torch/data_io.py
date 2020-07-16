@@ -100,7 +100,7 @@ class Data_IO_validation(object):
     def __init__(self, region, nlevs, dataset_file, normaliser, 
                 xvars=['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf', 'p', 'rho', 'xwind', 'ywind', 'zwind'],
                 yvars=['qtot_next', 'theta_next'],
-                yvars2=['qphys', 'theta_phys'], lev_norm=False, add_adv=False):
+                yvars2=['qphys', 'theta_phys'], add_adv=False):
         self.region = region
         self.nlevs = nlevs
         self.nn_norm = NormalizersData(normaliser)
@@ -128,7 +128,7 @@ class Data_IO_validation(object):
         self.ydata_idx = []
         self.ydata_idx2 = []
         self.add_adv = add_adv
-        self.lev_norm = lev_norm
+        self.dat_type = "test"
 
         print("Reading dataset file: {0}".format(dataset_file))
         dataset=h5py.File(dataset_file,'r')
@@ -150,61 +150,64 @@ class Data_IO_validation(object):
         self.zwind_test = dataset['upward_air_velocity_test']
 
         self.npoints = int(self.q_tot_test.shape[0])
-        if self.lev_norm:
-            norm_slc = slice(0,self.nlevs)
-        else:
-            norm_slc = slice(0,None)
+        self.norm_slc = slice(self.nlevs)
         self.xdata_and_norm = {
-                                'qtot_test':[self.q_tot_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean[norm_slc], self.nn_norm.q_stdscale[norm_slc]],
-                                'qadv_test':[self.q_tot_adv_test[:self.npoints, :self.nlevs], self.nn_norm.qadv_mean[norm_slc], self.nn_norm.qadv_stdscale[norm_slc]],
-                                'theta_test':[self.theta_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean[norm_slc], self.nn_norm.t_stdscale[norm_slc]],
-                                'theta_adv_test':[self.theta_adv_test[:self.npoints, :self.nlevs], self.nn_norm.tadv_mean[norm_slc], self.nn_norm.tadv_stdscale[norm_slc]],
-                                'sw_toa_test':[self.sw_toa_test[:self.npoints], self.nn_norm.sw_toa_mean[norm_slc], self.nn_norm.sw_toa_stdscale[norm_slc]],
-                                'shf_test':[self.shf_test[:self.npoints], self.nn_norm.upshf_mean[norm_slc], self.nn_norm.upshf_stdscale[norm_slc]],
-                                'lhf_test':[self.lhf_test[:self.npoints], self.nn_norm.uplhf_mean[norm_slc], self.nn_norm.uplhf_stdscale[norm_slc]],
-                                'p_test':[self.p_test[:self.npoints, :self.nlevs], self.nn_norm.pressure_mean[norm_slc], self.nn_norm.pressure_stdscale[norm_slc]],
-                                'rho_test':[self.rho_test[:self.npoints, :self.nlevs], self.nn_norm.rho_mean[norm_slc], self.nn_norm.rho_stdscale[norm_slc]],
-                                'xwind_test':[self.xwind_test[:self.npoints, :self.nlevs], self.nn_norm.xwind_mean[norm_slc], self.nn_norm.xwind_stdscale[norm_slc]],
-                                'ywind_test':[self.ywind_test[:self.npoints, :self.nlevs], self.nn_norm.ywind_mean[norm_slc], self.nn_norm.ywind_stdscale[norm_slc]],
-                                'zwind_test':[self.zwind_test[:self.npoints, :self.nlevs], self.nn_norm.zwind_mean[norm_slc], self.nn_norm.zwind_stdscale[norm_slc]],
+                                'qtot_test':[self.q_tot_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                'qadv_test':[self.q_tot_adv_test[:self.npoints, :self.nlevs], self.nn_norm.qadv_mean, self.nn_norm.qadv_stdscale],
+                                'theta_test':[self.theta_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale],
+                                'theta_adv_test':[self.theta_adv_test[:self.npoints, :self.nlevs], self.nn_norm.tadv_mean, self.nn_norm.tadv_stdscale],
+                                'sw_toa_test':[self.sw_toa_test[:self.npoints], self.nn_norm.sw_toa_mean, self.nn_norm.sw_toa_stdscale],
+                                'shf_test':[self.shf_test[:self.npoints], self.nn_norm.upshf_mean, self.nn_norm.upshf_stdscale],
+                                'lhf_test':[self.lhf_test[:self.npoints], self.nn_norm.uplhf_mean, self.nn_norm.uplhf_stdscale],
+                                'p_test':[self.p_test[:self.npoints, :self.nlevs], self.nn_norm.pressure_mean, self.nn_norm.pressure_stdscale],
+                                'rho_test':[self.rho_test[:self.npoints, :self.nlevs], self.nn_norm.rho_mean, self.nn_norm.rho_stdscale],
+                                'xwind_test':[self.xwind_test[:self.npoints, :self.nlevs], self.nn_norm.xwind_mean, self.nn_norm.xwind_stdscale],
+                                'ywind_test':[self.ywind_test[:self.npoints, :self.nlevs], self.nn_norm.ywind_mean, self.nn_norm.ywind_stdscale],
+                                'zwind_test':[self.zwind_test[:self.npoints, :self.nlevs], self.nn_norm.zwind_mean, self.nn_norm.zwind_stdscale],
                                 }
         self.ydata_and_norm = {
-                                'qphys_test':[self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.qphys_mean[norm_slc], self.nn_norm.qphys_stdscale[norm_slc]],
+                                'qphys_test':[self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.qphys_mean, self.nn_norm.qphys_stdscale],
                                 # 'qphys_test':[self.qphys_test[:self.npoints, :3], self.nn_norm.qphys_mean[norm_slc3], self.nn_norm.qphys_stdscale[norm_slc3]],
-                                'theta_phys_test':[self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.tphys_mean[norm_slc], self.nn_norm.tphys_stdscale[norm_slc]],
-                                # 'qtot_next_test':[self.q_tot_test[:self.npoints, :self.nlevs]+self.q_tot_adv_test[:self.npoints, :self.nlevs]+self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean[norm_slc], self.nn_norm.q_stdscale[norm_slc]],
-                                'qtot_next_test':[self.q_tot_test[:self.npoints-1, :self.nlevs]+self.q_tot_diff_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean[norm_slc], self.nn_norm.q_stdscale[norm_slc]],
+                                'theta_phys_test':[self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.tphys_mean, self.nn_norm.tphys_stdscale],
+                                # 'qtot_next_test':[self.q_tot_test[:self.npoints, :self.nlevs]+self.q_tot_adv_test[:self.npoints, :self.nlevs]+self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                'qtot_next_test':[self.q_tot_test[:self.npoints-1, :self.nlevs]+self.q_tot_diff_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
                                 # 'qtot_next_test':[self.q_tot_test[:self.npoints, :1]+self.q_tot_adv_test[:self.npoints, :1]+self.qphys_test[:self.npoints, :1], self.nn_norm.q_mean[norm_slc1], self.nn_norm.q_stdscale[norm_slc1]],
-                                # 'theta_next_test':[self.theta_test[:self.npoints, :self.nlevs]+self.theta_adv_test[:self.npoints, :self.nlevs]+self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean[norm_slc], self.nn_norm.t_stdscale[norm_slc]]
-                                'theta_next_test':[self.theta_test[:self.npoints-1, :self.nlevs]+self.theta_diff_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean[norm_slc], self.nn_norm.t_stdscale[norm_slc]]
+                                # 'theta_next_test':[self.theta_test[:self.npoints, :self.nlevs]+self.theta_adv_test[:self.npoints, :self.nlevs]+self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale]
+                                'theta_next_test':[self.theta_test[:self.npoints-1, :self.nlevs]+self.theta_diff_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale]
                                 }
         start_idx = 0
         for x in self.xvars:
-            i = x+"_test"
+            i = x+"_"+self.dat_type
             self.xdat.append(self.xdata_and_norm[i][0])
-            self.xmean.append(self.xdata_and_norm[i][1])
-            self.xstd.append(self.xdata_and_norm[i][2])
-            end_idx = start_idx + self.nlevs #len(self.xdata_and_norm[i][1])
+            mean = self.xdata_and_norm[i][1].reshape(-1)[self.norm_slc]
+            std = self.xdata_and_norm[i][2].reshape(-1)[self.norm_slc]
+            self.xmean.append(mean)
+            self.xstd.append(std)
+            end_idx = start_idx + self.xdata_and_norm[i][0].shape[1] #len(self.xdata_and_norm[i][1])
             self.xdata_idx.append((start_idx,end_idx))
             start_idx = end_idx
 
         start_idx = 0
         for y in self.yvars:
-            j = y+"_test"
+            j = y+"_"+self.dat_type
             self.ydat.append(self.ydata_and_norm[j][0])
-            self.ymean.append(self.ydata_and_norm[j][1])
-            self.ystd.append(self.ydata_and_norm[j][2])
-            end_idx = start_idx + self.nlevs #len(self.ydata_and_norm[j][1])
+            mean = self.ydata_and_norm[j][1].reshape(-1)[self.norm_slc]
+            std = self.ydata_and_norm[j][2].reshape(-1)[self.norm_slc]
+            self.ymean.append(mean)
+            self.ystd.append(std)
+            end_idx = start_idx + self.ydata_and_norm[j][0].shape[1]
             self.ydata_idx.append((start_idx,end_idx))
             start_idx = end_idx
-        
+
         start_idx = 0
         for y2 in self.yvars2:
-            k = y2+"_test"
+            k = y2+"_"+self.dat_type
             self.ydat2.append(self.ydata_and_norm[k][0])
-            self.ymean2.append(self.ydata_and_norm[k][1])
-            self.ystd2.append(self.ydata_and_norm[k][2])
-            end_idx = start_idx + self.nlevs #len(self.ydata_and_norm[k][1])
+            mean = self.ydata_and_norm[k][1].reshape(-1)[self.norm_slc]
+            std = self.ydata_and_norm[k][2].reshape(-1)[self.norm_slc]
+            self.ymean2.append(mean)
+            self.ystd2.append(std)
+            end_idx = start_idx + self.ydata_and_norm[k][0].shape[1]
             self.ydata_idx2.append((start_idx,end_idx))
             start_idx = end_idx
 
@@ -251,15 +254,21 @@ class Data_IO_validation(object):
 
         for x in self.xvars:
             i = x+"_test"
-            x_var_data[i] = self._transform(torch.from_numpy(self.xdata_and_norm[i][0][:]), self.xdata_and_norm[i][1], self.xdata_and_norm[i][2])
+            mean = self.xdata_and_norm[i][1].reshape(-1)[self.norm_slc]
+            std = self.xdata_and_norm[i][2].reshape(-1)[self.norm_slc]
+            x_var_data[i] = self._transform(torch.from_numpy(self.xdata_and_norm[i][0][:]), mean, std)
         
         for y in self.yvars:
             i = y+"_test"
-            y_var_data[i] = self._transform(torch.from_numpy(self.ydata_and_norm[i][0][:]), self.ydata_and_norm[i][1], self.ydata_and_norm[i][2])
+            mean = self.ydata_and_norm[i][1].reshape(-1)[self.norm_slc]
+            std = self.ydata_and_norm[i][2].reshape(-1)[self.norm_slc]
+            y_var_data[i] = self._transform(torch.from_numpy(self.ydata_and_norm[i][0][:]), mean, std)
         
         for y2 in self.yvars2:
             i = y2+"_test"
-            y_var_data2[i] = self._transform(torch.from_numpy(self.ydata_and_norm[i][0][:]), self.ydata_and_norm[i][1], self.ydata_and_norm[i][2])
+            mean = self.ydata_and_norm[i][1].reshape(-1)[self.norm_slc]
+            std = self.ydata_and_norm[i][2].reshape(-1)[self.norm_slc]
+            y_var_data2[i] = self._transform(torch.from_numpy(self.ydata_and_norm[i][0][:]), mean, std)
 
         return x_var_data, y_var_data, y_var_data2
 
@@ -280,15 +289,10 @@ class Data_IO_validation(object):
         Inverse the normalisation/standardisation on split data
         """
         inv_transformed_data = {}
-        if self.lev_norm:
-            mean_split = self.split_data(mean, xyz=xyz)
-            std_split = self.split_data(std, xyz=xyz)
-            for v in var:
-                inv_transformed_data[v] = var[v].mul(std_split[v]).add(mean_split[v])
-        else:
-            for i,v in enumerate(var):
-                inv_transformed_data[v] = var[v].mul(std[i]).add(mean[i])
-            
+        mean_split = self.split_data(mean, xyz=xyz)
+        std_split = self.split_data(std, xyz=xyz)
+        for v in var:
+            inv_transformed_data[v] = var[v].mul(std_split[v]).add(mean_split[v])
         return inv_transformed_data
 
     def get_data(self):
