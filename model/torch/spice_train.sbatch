@@ -1,6 +1,6 @@
 #!/bin/bash -l
-#SBATCH --mem=64000
-#SBATCH --ntasks=8
+#SBATCH --mem=72000
+#SBATCH --ntasks=12
 ##SBATCH --output=/scratch/ojamil/spice_train_slurmout
 #SBATCH --time=4200
 #SBATCH --qos=long

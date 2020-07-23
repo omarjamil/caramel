@@ -807,7 +807,7 @@ def plot_scm_mae(np_file):
     plt.show()
 
 if __name__ == "__main__":
-    model_name="qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00500_btch_023001AQT_mae_023001AQT_normalise_bnsig_skip_chkepo_014"
+    model_name="qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00106_btch_023001AQTS_mae_023001AQT_normalise_stkd_bnsigm_bnskip"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)

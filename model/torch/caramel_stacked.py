@@ -8,7 +8,8 @@ import h5py
 import argparse
 
 import model
-import data_io_stacked as data_io
+# import data_io_stacked as data_io
+import data_io_batched as data_io
 
 def minkowski_error(prediction, target, minkowski_parameter=1.5):
     """
@@ -74,8 +75,8 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 
 
 def set_model(args):
-    # mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    # mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLPDrop(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
@@ -110,18 +111,20 @@ def set_model(args):
 
 def train_dataloader(args):
     train_dataset_file = "{0}/train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
-    train_loader = torch.utils.data.DataLoader(
-             data_io.ConcatDataset("train",args.nlevs,train_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
-             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm),
-             batch_size=args.batch_size, shuffle=False)
+    train_dataset = data_io.ConcatDataset("train",args.nlevs, train_dataset_file, args.locations['normaliser_loc'], args.batch_size, xvars=args.xvars,
+             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm)
+    indices = list(range(train_dataset.__len__()))
+    train_sampler = torch.utils.data.SubsetRandomSampler(indices)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_sampler=None, batch_size=None, sampler=train_sampler, shuffle=False)
     return train_loader
 
 def test_dataloader(args):
     test_dataset_file = "{0}/test_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
-    validation_loader = torch.utils.data.DataLoader(
-             data_io.ConcatDataset("test",args.nlevs, test_dataset_file, args.locations['normaliser_loc'], xvars=args.xvars,
-             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm),
-             batch_size=args.batch_size, shuffle=False)
+    test_dataset = data_io.ConcatDataset("test",args.nlevs, test_dataset_file, args.locations['normaliser_loc'], args.batch_size, xvars=args.xvars,
+             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm)
+    indices = list(range(test_dataset.__len__()))
+    test_sampler = torch.utils.data.SubsetRandomSampler(indices)
+    validation_loader = torch.utils.data.DataLoader(test_dataset, batch_sampler=None, batch_size=None, sampler=test_sampler, shuffle=False)
     return validation_loader
 
 
@@ -145,7 +148,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
             if batch_idx % args.log_interval == 0:
                 x,y, y2=batch
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.2e}'.format(epoch, 
-                batch_idx * len(x), len(train_ldr.dataset),100. * batch_idx / len(train_ldr),
+                batch_idx * len(x), len(train_ldr.dataset)*args.batch_size,100. * batch_idx / len(train_ldr),
                 loss.item() / len(x)))
         average_loss = train_loss / len(train_ldr.dataset)
         print('====> Epoch: {} Average loss: {:.2e}'.format(epoch, average_loss))

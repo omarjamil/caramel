@@ -68,6 +68,8 @@ def set_model(model_file, args):
     print("Model's state_dict:")
     for param_tensor in mlp.state_dict():
         print(param_tensor, "\t", mlp.state_dict()[param_tensor].size())
+    print("Running mean", mlp.state_dict()['bn_in.running_mean'])
+    print("Running var", mlp.state_dict()['bn_in.running_var'])
     return mlp
 
 def scm(model, datasetfile, args):
@@ -92,6 +94,7 @@ def scm(model, datasetfile, args):
     # x_inv_split = nn_data.split_data(x_inv,xyz='x')
     x_inv_split = nn_data._inverse_transform_split(x_split,xmean,xstd,xyz='x')
     qtot_inv = x_inv_split['qtot']
+    qtot = x_split['qtot']
     qnext_ml = qnext.data.numpy().copy()
     tnext_ml = x_split['theta'].data.numpy()
     
@@ -141,6 +144,7 @@ def scm(model, datasetfile, args):
     # yp = torch.from_numpy(np.concatenate([qnext_ml, tnext_ml], axis=1))
     yp = torch.from_numpy(qnext_ml)
     yp_inverse = nn_data._inverse_transform(yp, ymean, ystd)
+    # yp_inverse = yp
     yp_inverse_split = nn_data.split_data(yp_inverse, xyz='y')
     qnext_ml_inv = yp_inverse_split['qtot_next']
     # tnext_ml_inv = yp_inverse_split['theta_next']
@@ -149,6 +153,7 @@ def scm(model, datasetfile, args):
             'qtot_next':qnext_inv.data.numpy(), 
             'qtot_next_ml':qnext_ml_inv.data.numpy(),
             'qtot':qtot_inv.data.numpy(),
+            # 'qtot':qtot.data.numpy(),
             # 'qtot_next':qnext.data.numpy(), 
             # 'qtot_next_ml':qnext_ml,
             # 'theta_next':tnext_inv.data.numpy(), 
@@ -163,7 +168,7 @@ def scm(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00500_btch_023001AQT_mae_023001AQT_normalise_bnsig_skip_chkepo_014.tar"
+    model_file = model_loc+"qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00106_btch_023001AQTS_mae_023001AQT_normalise_stkd_bnsigm_bnskip.tar"
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
     # normaliser_region = "023001AQT_normalise_60_glb"
     # normaliser_region = "023001AQT_standardise_mx"

@@ -75,9 +75,9 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 
 def set_model(args):
     # mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    # mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLPDrop(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    # mlp = model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    mlp = model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
     print("Number of traninable parameter: {0}".format(pytorch_total_params))
 

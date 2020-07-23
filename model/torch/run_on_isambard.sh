@@ -2,7 +2,7 @@
 
 # Start by copying relevant files over
 rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress caramel.py train.py model.py data_io.py mo-ojamil@login.isambard:/home/mo-ojamil/ML/CRM/code/torch
-rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress caramel_stacked.py train_stacked.py model.py data_io_stacked.py mo-ojamil@login.isambard:/home/mo-ojamil/ML/CRM/code/torch
+rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress caramel_stacked.py train_stacked.py model.py data_io_batched.py mo-ojamil@login.isambard:/home/mo-ojamil/ML/CRM/code/torch
 # rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress caramel_siren.py train_siren.py siren.py data_io.py mo-ojamil@login.isambard:/home/mo-ojamil/ML/CRM/code/torch
 # rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress caramel_pca.py train_pca.py model.py data_io.py mo-ojamil@login.isambard:/home/mo-ojamil/ML/CRM/code/torch
 # rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress caramel_resnet.py train_resnet.py model.py data_io.py mo-ojamil@login.isambard:/home/mo-ojamil/ML/CRM/code/torch

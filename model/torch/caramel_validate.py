@@ -492,7 +492,7 @@ def evaluate_tnext(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_name = "qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00500_btch_023001AQT_mae_023001AQT_normalise_bnsig_skip_chkepo_014.tar"
+    model_name = "qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00106_btch_023001AQTS_mae_023001AQT_normalise_stkd_bnsigm_bnskip.tar"
     model_file = model_loc+model_name
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
     normaliser_region = "023001AQT_normalise"
