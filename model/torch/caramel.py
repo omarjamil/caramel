@@ -28,33 +28,40 @@ def configure_optimizers(model):
     return optimizer, scheduler
 
 
-def training_step(batch, batch_idx, model, loss_function, optimizer, device, train_on_y2=False):
+def training_step(batch, batch_idx, model, loss_function, optimizer, device, input_indices=None):
     """
     """
     x, y, y2 = batch
-    x = x.to(device)
-    if train_on_y2:
-        y = y2.to(device)
+    if input_indices is not None:
+        y = (y - x[...,input_indices])*100.
+        x = x.to(device)
+        y = y.to(device)
     else:
+        x = x.to(device)
         y = y.to(device)
     output = model(x)
+    # print("Pred", output[0,0:5])
     loss = loss_function(output,y, reduction='mean')
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
     return loss
 
-def validation_step(batch, batch_idx, model, loss_function, device, train_on_y2=False):
+def validation_step(batch, batch_idx, model, loss_function, device, input_indices=None):
     """
     """
     x,y, y2 = batch
-    x = x.to(device)
-    if train_on_y2:
-        y = y2.to(device)
+    if input_indices is not None:
+        y = (y - x[...,input_indices])*100.
+        x = x.to(device)
+        y = y.to(device)
     else:
+        x = x.to(device)
         y = y.to(device)
     with torch.no_grad():
         output = model(x)
+        # print("True", y[0,0:5])
+        # print("Pred", output[0,0:5])
         loss = loss_function(output, y, reduction='mean')
     return loss
 
@@ -75,9 +82,10 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 
 def set_model(args):
     # mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    mlp = model.MLP_tanh(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLPDrop(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    mlp = model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    # mlp = model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
     print("Number of traninable parameter: {0}".format(pytorch_total_params))
 
@@ -132,6 +140,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
     train_ldr = train_dataloader(args)
     validation_loss = []
     test_ldr = test_dataloader(args)
+    input_indices = list(range(args.nlevs))
     
     for epoch in range(1, args.epochs + 1):
         ## Training
@@ -139,7 +148,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
         for batch_idx, batch in enumerate(train_ldr):
             # Sets the model into training mode
             model.train()
-            loss = training_step(batch, batch_idx, model, loss_function, optimizer, args.device, train_on_y2=args.train_on_y2)
+            loss = training_step(batch, batch_idx, model, loss_function, optimizer, args.device, input_indices=input_indices)
             train_loss += loss.item()
             if batch_idx % args.log_interval == 0:
                 x,y, y2=batch
@@ -154,7 +163,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
         test_loss = 0
         for batch_idx, batch in enumerate(test_ldr):
             model.eval()
-            loss = validation_step(batch, batch_idx, model, loss_function, args.device, train_on_y2=args.train_on_y2)
+            loss = validation_step(batch, batch_idx, model, loss_function, args.device, input_indices=input_indices)
             test_loss += loss.item()
         average_loss_val = test_loss / len(test_ldr.dataset)
         print('====> validation loss: {:.2e}'.format(average_loss_val))

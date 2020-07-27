@@ -21,6 +21,26 @@ class MLP(torch.nn.Module):
         x = self.sig(self.out(x))
         return x
 
+class MLP_tanh(torch.nn.Module):
+    def __init__(self, in_features, nb_classes, nb_hidden_layer, 
+        hidden_size, act=torch.nn.LeakyReLU):
+        super(MLP_tanh, self).__init__()
+        self.act = act()
+        self.n_hidden_layers = nb_hidden_layer
+        self.fc1 = torch.nn.Linear(in_features, hidden_size)
+        self.fcs = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
+        self.out = torch.nn.Linear(hidden_size, nb_classes)
+        self.tanh = torch.nn.Tanh()
+        
+    def forward(self, x):
+        x = self.act(self.fc1(x))
+        for l in self.fcs:
+            x = self.act(l(x))
+        # x = self.out(x)
+        x = self.tanh(self.out(x))
+        return x
+
 class MLPDrop(torch.nn.Module):
     def __init__(self, in_features, nb_classes, nb_hidden_layer, 
         hidden_size, act=torch.nn.ReLU):
@@ -41,6 +61,39 @@ class MLPDrop(torch.nn.Module):
         x = self.out(x)
         return x
 
+class MLPSkip_(torch.nn.Module):
+    def __init__(self, in_features, nb_classes, nb_hidden_layer, 
+        hidden_size, act=torch.nn.LeakyReLU):
+        super(MLPSkip_, self).__init__()
+        print("Model with skip connections")
+        self.act = act()
+        self.sigmoid = torch.nn.Sigmoid()
+        self.n_hidden_layers = nb_hidden_layer
+        self.fc1 = torch.nn.Linear(in_features, hidden_size)
+        self.fcs = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
+        self.skip = torch.nn.Linear(hidden_size,in_features)
+        self.out = torch.nn.Linear(in_features, nb_classes)
+        self.sig = torch.nn.Sigmoid()
+        self.bn = torch.nn.BatchNorm1d(hidden_size)
+        # self.bn_in = torch.nn.BatchNorm1d(in_features)
+
+        
+    def forward(self, x):
+        inputs = x
+        # x = self.act(self.bn(self.fc1(x)))
+        x = self.act(self.fc1(x))
+        for l in self.fcs:
+            x = self.act(l(x))
+        x = self.act(self.skip(x) + inputs)
+        # x = self.act(self.skip(x))
+        # x = self.act(self.skip(x))
+        # x = self.sigmoid(self.out(x))
+        # x = self.out(x)
+        x = self.sig(self.out(x))
+        # x = self.out(x +  inputs)
+        return x
+
 class MLPSkip(torch.nn.Module):
     def __init__(self, in_features, nb_classes, nb_hidden_layer, 
         hidden_size, act=torch.nn.LeakyReLU):
@@ -55,22 +108,54 @@ class MLPSkip(torch.nn.Module):
         self.skip = torch.nn.Linear(hidden_size,in_features)
         self.out = torch.nn.Linear(in_features, nb_classes)
         self.sig = torch.nn.Sigmoid()
-        self.bn = torch.nn.BatchNorm1d(hidden_size)
-        self.bn_in = torch.nn.BatchNorm1d(in_features)
+        # self.bn = torch.nn.BatchNorm1d(hidden_size)
+        # self.bn_in = torch.nn.BatchNorm1d(in_features)
 
         
     def forward(self, x):
         inputs = x
-        x = self.act(self.bn(self.fc1(x)))
+        # x = self.act(self.bn(self.fc1(x)))
+        x = self.act(self.fc1(x))
         for l in self.fcs:
             x = self.act(l(x))
-        x = self.act(self.skip(x) + self.bn_in(inputs))
+        # x = self.act(self.skip(x) + self.bn_in(inputs))
+        x = self.act(self.skip(x))
         # x = self.act(self.skip(x))
         # x = self.sigmoid(self.out(x))
         # x = self.out(x)
-        x = self.sig(self.out(x))
+        x = self.sig(self.out(x + inputs))
         # x = self.out(x +  inputs)
         return x
+
+class MLPSubSkip(torch.nn.Module):
+    def __init__(self, in_features, nb_classes, nb_hidden_layer, 
+        hidden_size, subskip_indx, act=torch.nn.LeakyReLU):
+        super(MLPSubSkip, self).__init__()
+        print("Model with sub skip connections")
+        self.act = act()
+        self.sigmoid = torch.nn.Sigmoid()
+        self.n_hidden_layers = nb_hidden_layer
+        self.fc1 = torch.nn.Linear(in_features, hidden_size)
+        self.fcs = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
+        self.skip = torch.nn.Linear(hidden_size,in_features)
+        self.out = torch.nn.Linear(in_features, nb_classes)
+        # self.sig = torch.nn.Sigmoid()
+        self.tanh = torch.nn.Tanh()
+        self.subskip_indx = subskip_indx
+        
+    def forward(self, x):
+        inputs = x[...,self.subskip_indx]
+        x = self.act(self.fc1(x))
+        for l in self.fcs:
+            x = self.act(l(x))
+        x = self.act(self.skip(x))
+        # x[...,self.subskip_indx] = x[...,self.subskip_indx] + inputs
+        # print("Model out:", self.tanh(self.out(x))[...,0:5])
+        # x = self.sig(self.out(x)) + inputs
+        x = self.tanh(self.out(x)) + inputs
+        return x
+
 
 class MLP_BN(torch.nn.Module):
     """

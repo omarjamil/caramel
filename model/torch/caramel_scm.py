@@ -57,7 +57,11 @@ def set_model(model_file, args):
     nb_hidden_layers = args.nb_hidden_layers
     hidden_size = args.hidden_size
     # mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
-    mlp = nn_model.MLPSkip(in_features, nb_classes, nb_hidden_layers, hidden_size)
+    mlp = nn_model.MLP_tanh(in_features, nb_classes, nb_hidden_layers, hidden_size)
+    # skipindx = list(range(args.nlevs))
+    # mlp = nn_model.MLPSubSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size, skipindx)
+    # mlp = nn_model.MLPSkip(in_features, nb_classes, nb_hidden_layers, hidden_size)
+    # mlp = nn_model.MLPSkip_(in_features, nb_classes, nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLPDrop(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # Load the save model 
@@ -68,8 +72,8 @@ def set_model(model_file, args):
     print("Model's state_dict:")
     for param_tensor in mlp.state_dict():
         print(param_tensor, "\t", mlp.state_dict()[param_tensor].size())
-    print("Running mean", mlp.state_dict()['bn_in.running_mean'])
-    print("Running var", mlp.state_dict()['bn_in.running_var'])
+    # print("Running mean", mlp.state_dict()['bn_in.running_mean'])
+    # print("Running var", mlp.state_dict()['bn_in.running_var'])
     return mlp
 
 def scm(model, datasetfile, args):
@@ -81,6 +85,7 @@ def scm(model, datasetfile, args):
                         yvars=args.yvars,
                         yvars2=args.yvars2,
                         add_adv=False)
+    recursion_indx = list(range(args.nlevs))
     x,y,y2,xmean,xstd,ymean,ystd,ymean2,ystd2 = nn_data.get_data()
     # model = set_model(args)
     x_split = nn_data.split_data(x,xyz='x')
@@ -90,59 +95,30 @@ def scm(model, datasetfile, args):
     qnext = yt_split['qtot_next']
     qnext_inv = yt_inverse_split['qtot_next']
 
-    # x_inv = nn_data._inverse_transform(x,xmean,xstd)
-    # x_inv_split = nn_data.split_data(x_inv,xyz='x')
     x_inv_split = nn_data._inverse_transform_split(x_split,xmean,xstd,xyz='x')
     qtot_inv = x_inv_split['qtot']
-    qtot = x_split['qtot']
-    qnext_ml = qnext.data.numpy().copy()
-    tnext_ml = x_split['theta'].data.numpy()
     
-    # q_in = x_split['qtot'][0]
-    q_in = qnext[0]
-    t_in = x_split['theta']
-    pressure = x_split['p'] 
-    rho = x_split['rho'] 
-    xwind = x_split['xwind'] 
-    ywind = x_split['ywind'] 
-    zwind = x_split['zwind']
-    swtoa = x_split['sw_toa']
-    shf = x_split['shf']
-    lhf = x_split['lhf']
+    output = []
+    output.append(qnext[0])
+    xcopy = x.clone()
 
-    # qadv, tadv, swtoa, shf, lhf = x_split['qadv'], x_split['theta_adv'], x_split['sw_toa'], x_split['shf'], x_split['lhf']
-    # swtoa, shf, lhf = x_split['sw_toa'], x_split['shf'], x_split['lhf']
-    
+    for t in range(1,len(x)-1):
+        # next tstep prediction
+        # xcopy[t,recursion_indx] = output[t-1]
+        # output.append(model(xcopy[t]))
+        # print("Predict", output[t][...,0:10] - output[t-1][...,0:10])
+        # print("True", qnext[t,0:10] - qnext[t-1,0:10])
+        
+        # Difference prediction
+        xcopy[t,recursion_indx] = output[t-1]
+        yt = model(xcopy[t])/100.
+        output.append(yt + output[t-1])
+        print("Predict", yt[...,0:10])
+        print("True", qnext[t,0:10] - qnext[t-1,0:10])
 
-    for t in range(len(x)-1):
-        # prediction
-        # print("t {0}".format(t))
-        # print("q_in, q_true: ", q_in.data.numpy()[0], x_split['qtot'].data.numpy()[t,0])
-        qnext_ml[t] = q_in.data.numpy()[:]
-        # print("ML", t, qnext_ml[t])
-        # print("True", t, qnext[t])
-        # tnext_ml[t] = t_in.data.numpy()[:]
-        # inputs = torch.cat([q_in,qadv[t],t_in[t],tadv[t],swtoa[t],shf[t],lhf[t]])
-        inputs = torch.cat([q_in,t_in[t],pressure[t],rho[t],xwind[t],ywind[t],zwind[t],shf[t],lhf[t],swtoa[t]])
-        # print(q_in.shape, t_in[t].shape, swtoa[t].shape, lhf[t].shape, lhf[t].shape)
-        # inputs = torch.cat([q_in,t_in[t],swtoa[t],shf[t],lhf[t]])
-        yp_ = model(inputs.unsqueeze(0))
-        yp_ = yp_.view(-1)
-        yp_split = nn_data.split_data(yp_,xyz='y')
-        # q_in = yp_split['qtot_next']
-        ####### Artificially remove negative values
-        ypdata = yp_split['qtot_next'].data.numpy().copy()
-        pdata = nn_data._inverse_transform(yp_split['qtot_next'], ymean, ystd).data.numpy()
-        # print(pdata[pdata < 0.])
-        # ypdata[pdata < 0.] = q_in.data.numpy()[pdata < 0.]
-        q_in = torch.from_numpy(ypdata)
-        ########      
-        # t_in = yp_split['theta_next']
-        # print("q_ml:", q_in.data.numpy()[0])
-    
-    # tnext_inv = yt_inverse_split['theta_next']
     # yp = torch.from_numpy(np.concatenate([qnext_ml, tnext_ml], axis=1))
-    yp = torch.from_numpy(qnext_ml)
+    yp = torch.stack(output)
+    # yp = torch.from_numpy(qnext_ml)
     yp_inverse = nn_data._inverse_transform(yp, ymean, ystd)
     # yp_inverse = yp
     yp_inverse_split = nn_data.split_data(yp_inverse, xyz='y')
@@ -168,8 +144,8 @@ def scm(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00106_btch_023001AQTS_mae_023001AQT_normalise_stkd_bnsigm_bnskip.tar"
-    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
+    model_file = model_loc+"qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00200_btch_023001AQTS_mae_023001AQT_normalise_stkd_tanh_chkepo_004.tar"
+    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_020.hdf5"
     # normaliser_region = "023001AQT_normalise_60_glb"
     # normaliser_region = "023001AQT_standardise_mx"
     normaliser_region = "023001AQT_normalise"

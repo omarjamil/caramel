@@ -28,34 +28,64 @@ def configure_optimizers(model):
     # loss_function = torch.nn.MSELoss()
     return optimizer, scheduler
 
+def recursive_training_step(batch, batch_idx, model, loss_function, optimizer, device, recur_input_indx):
+    """
+    recur_input_indx: which of the inputs are to replaced by model output from the previous step 
+    """
+    # print("In teacher force mode")
+    x, y, y2 = batch
+    x = x.to(device)
+    y = y.to(device)
+    output = []
+    output.append(model(x[0]))
+    for i in range(1,len(x)):
+        xmod = x.clone()
+        xmod[i,recur_input_indx] = output[i-1]
+        # print(xmod[i,:5], x[i,:5])
+        output.append(model(xmod[i]))
+    batched_output = torch.stack(output)
+    # print(batched_output.shape, y.shape)
+    loss = loss_function(batched_output, y, reduction='mean')
+    # print(loss.item())
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    return loss
 
-def training_step(batch, batch_idx, model, loss_function, optimizer, device, train_on_y2=False):
+def training_step(batch, batch_idx, model, loss_function, optimizer, device, input_indices=None):
     """
     """
     x, y, y2 = batch
-    x = x.to(device)
-    if train_on_y2:
-        y = y2.to(device)
+    if input_indices is not None:
+        y = (y[0] - x[0][...,input_indices])*100.
+        x = torch.cat(x,dim=1).to(device)
+        y = y.to(device)
     else:
+        x = torch.cat(x,dim=1).to(device)
         y = y.to(device)
     output = model(x)
+    # print("Pred", output[0,0:5])
     loss = loss_function(output,y, reduction='mean')
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
     return loss
 
-def validation_step(batch, batch_idx, model, loss_function, device, train_on_y2=False):
+def validation_step(batch, batch_idx, model, loss_function, device, input_indices=None):
     """
     """
     x,y, y2 = batch
-    x = x.to(device)
-    if train_on_y2:
-        y = y2.to(device)
+    if input_indices is not None:
+        y = (y - x[0][...,input_indices])*100.
+        x = torch.cat(x,dim=1).to(device)
+        y = y.to(device)
     else:
+        x = torch.cat(x,dim=1).to(device)
         y = y.to(device)
     with torch.no_grad():
         output = model(x)
+        # print("True", y[0,0:5])
+        # print("Pred", output[0,0:5])
         loss = loss_function(output, y, reduction='mean')
     return loss
 
@@ -75,8 +105,11 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 
 
 def set_model(args):
-    mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    # mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    mlp = model.MLP_tanh(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    # skipindx = list(range(args.nlevs))
+    # mlp = model.MLPSubSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size, skipindx)
     # mlp = model.MLPDrop(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
@@ -98,7 +131,7 @@ def set_model(args):
         mlp.load_state_dict(checkpoint['model_state_dict'])
         mlp.to(args.device)
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        loss = checkpoint['loss']
+        loss = checkpoint['training_loss']
         epoch = checkpoint['epoch']
         args.model_name = args.model_name.replace('.tar','_{0}.tar'.format("cont"))
     else:
@@ -132,18 +165,23 @@ def test_dataloader(args):
 def train_loop(model, loss_function, optimizer, scheduler, args):
     
     training_loss = []
-    train_ldr = train_dataloader(args)
     validation_loss = []
+    recur_input_indx = list(range(args.nlevs))
+    train_ldr = train_dataloader(args)
     test_ldr = test_dataloader(args)
-    
+    recursive_train_interval = 1.1
+    input_indices = list(range(args.nlevs))
     for epoch in range(1, args.epochs + 1):
         ## Training
         train_loss = 0
         for batch_idx, batch in enumerate(train_ldr):
             # Sets the model into training mode
-            # print(batch_idx)
             model.train()
-            loss = training_step(batch, batch_idx, model, loss_function, optimizer, args.device, train_on_y2=args.train_on_y2)
+            if batch_idx%1 == recursive_train_interval:
+                loss = recursive_training_step(batch, batch_idx, model, loss_function, optimizer, args.device, recur_input_indx)
+            else:
+                loss = training_step(batch, batch_idx, model, loss_function, optimizer, args.device, input_indices=input_indices)
+            
             train_loss += loss.item()
             if batch_idx % args.log_interval == 0:
                 x,y, y2=batch
@@ -158,9 +196,9 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
         test_loss = 0
         for batch_idx, batch in enumerate(test_ldr):
             model.eval()
-            loss = validation_step(batch, batch_idx, model, loss_function, args.device, train_on_y2=args.train_on_y2)
+            loss = validation_step(batch, batch_idx, model, loss_function, args.device, input_indices=input_indices)
             test_loss += loss.item()
-        average_loss_val = test_loss / len(test_ldr.dataset)
+        average_loss_val = test_loss / len(test_ldr.dataset) 
         print('====> validation loss: {:.2e}'.format(average_loss_val))
         validation_loss.append(average_loss_val)
         if epoch % 2 == 0:

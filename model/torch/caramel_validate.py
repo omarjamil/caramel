@@ -65,7 +65,9 @@ def set_model(model_file, args):
     nb_hidden_layers = args.nb_hidden_layers
     hidden_size = args.hidden_size
     # mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
-    mlp = nn_model.MLPSkip(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
+    skipindx = list(range(args.nlevs))
+    mlp = nn_model.MLPSubSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size, skipindx)
+    # mlp = nn_model.MLPSkip(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLPDrop(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
 
@@ -492,9 +494,9 @@ def evaluate_tnext(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_name = "qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00106_btch_023001AQTS_mae_023001AQT_normalise_stkd_bnsigm_bnskip.tar"
+    model_name = "qnext_006_lyr_388_in_055_out_0443_hdn_025_epch_00200_btch_023001AQTS_mae_023001AQT_normalise_stkd_tanh_subskip_chkepo_022.tar"
     model_file = model_loc+model_name
-    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
+    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_020.hdf5"
     normaliser_region = "023001AQT_normalise"
     # normaliser_region = "023001AQT_standardise_mx"
     # normaliser_region = "023001AQT_normalise_60_glb"

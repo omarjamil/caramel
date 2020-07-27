@@ -192,12 +192,12 @@ class ConcatDataset(torch.utils.data.Dataset):
                                 # "qtot_next_"+self.dat_type:[self.q_tot_train[:self.npoints, :self.nlevs]+self.q_tot_adv_train[:self.npoints, :self.nlevs]+self.qphys_train[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
                                 # "qtot_next_"+self.dat_type:[self.q_tot_train[:self.npoints, :self.nlevs]+self.q_tot_adv_train[:self.npoints, :self.nlevs]+self.qphys_train[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
                                 "qtot_next_"+self.dat_type:[(self.q_tot_train[self.v_slc1, self.v_slc2, self.v_slc3]+self.q_tot_diff_train[self.v_slc1, self.v_slc2, self.v_slc3]).reshape(var3shape), self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                # "qtot_diff_"+self.dat_type:[self.q_tot_diff_train[self.v_slc1, self.v_slc2, self.v_slc3].reshape(var3shape), self.nn_norm.q_mean, self.nn_norm.q_stdscale],
 
                                 # "qtot_next_"+self.dat_type:[self.q_tot_train[:self.npoints, :1]+self.q_tot_adv_train[:self.npoints, :1]+self.qphys_train[:self.npoints, :1], self.nn_norm.q_mean[0,:1], self.nn_norm.q_stdscale[0,:1]],
                                 # "theta_next_"+self.dat_type:[self.theta_train[:self.npoints, :self.nlevs]+self.theta_adv_train[:self.npoints, :self.nlevs]+self.theta_phys_train[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale]
                                 "theta_next_"+self.dat_type:[(self.theta_train[self.v_slc1, self.v_slc2, self.v_slc3]+self.theta_diff_train[self.v_slc1, self.v_slc2, self.v_slc3]).reshape(var3shape), self.nn_norm.t_mean, self.nn_norm.t_stdscale]
-
-
+                                # "theta_diff_"+self.dat_type:[self.theta_diff_train[self.v_slc1, self.v_slc2, self.v_slc3].reshape(var3shape), self.nn_norm.t_mean, self.nn_norm.t_stdscale]
                                 }
         start_idx = 0
         for x in self.xvars:
@@ -308,14 +308,29 @@ class ConcatDataset(torch.utils.data.Dataset):
         """
         # print("index {0}".format(i))
         x_var_data, y_var_data, y_var_data2 = self.__get_train_vars__(i)
+        x = []
+        y = []
+        y2 = []
         if self.dat_type == "train":
-            x = torch.cat([x_var_data[k+"_train"] for k in self.xvars], dim=1)
-            y = torch.cat([y_var_data[k+"_train"] for k in self.yvars], dim=1)
-            y2 = torch.cat([y_var_data2[k+"_train"] for k in self.yvars2], dim=1)
+            # x = torch.cat([x_var_data[k+"_train"] for k in self.xvars], dim=1)
+            # y = torch.cat([y_var_data[k+"_train"] for k in self.yvars], dim=1)
+            # y2 = torch.cat([y_var_data2[k+"_train"] for k in self.yvars2], dim=1)
+            for xv in self.xvars:
+                x.append(x_var_data[xv+"_train"])
+            for yv in self.yvars:
+                y.append(y_var_data[yv+"_train"])
+            for y2v in self.yvars2:
+                y2.append(y_var_data2[y2v+"_train"])
         elif self.dat_type == "test":
-            x = torch.cat([x_var_data[k+"_test"] for k in self.xvars], dim=1)
-            y = torch.cat([y_var_data[k+"_test"] for k in self.yvars], dim=1)
-            y2 = torch.cat([y_var_data2[k+"_test"] for k in self.yvars2], dim=1)
+            # x = torch.cat([x_var_data[k+"_test"] for k in self.xvars], dim=1)
+            # y = torch.cat([y_var_data[k+"_test"] for k in self.yvars], dim=1)
+            # y2 = torch.cat([y_var_data2[k+"_test"] for k in self.yvars2], dim=1)
+            for xv in self.xvars:
+                x.append(x_var_data[xv+"_test"])
+            for yv in self.yvars:
+                y.append(y_var_data[yv+"_test"])
+            for y2v in self.yvars2:
+                y2.append(y_var_data2[y2v+"_test"])
     
 
         return x,y,y2

@@ -131,9 +131,9 @@ def visualise_scm_predictions_qt(np_file, figname):
 def visualise_tseries(npfile,level, savename):
     # data = np.load(np_file)
     data = h5py.File(npfile, 'r')
-    q_ml = data['qtot_next_ml'][:]
-    q_ = data['qtot_next'][:]
-    qpersist = np.zeros(data['qtot'][:].shape)
+    q_ml = data['qtot_next_ml'][:300]
+    q_ = data['qtot_next'][:300]
+    qpersist = np.zeros(data['qtot'][:301].shape)
     qpersist[:] = data['qtot'][0]
 
     q_y_lim = (np.min(q_[:,level]), np.max(q_[:,level]))
@@ -404,12 +404,12 @@ def visualise_tseries_t_next(npfile,level):
 
 def visualise_tseries_q_next(npfile,level, savename):
     data = h5py.File(npfile, 'r')
-    qnext_ml = data['qtotn_predict'][:-1]
-    qnext = data['qtotn_test'][:]
+    qnext_ml = data['qtotn_predict'][:300]
+    qnext = data['qtotn_test'][:300]
     # qnext_ml_norm = data['qtotn_predict_norm'][:]
     # qnext_norm = data['qtotn_test_norm'][:]
     # qphys = data['qphys'][:]
-    qtot = data['qtot'][:-1]
+    qtot = data['qtot'][:300]
 
     fig, axs = plt.subplots(3,1,figsize=(14, 10),sharex=False)
     ax = axs[0]
@@ -807,7 +807,7 @@ def plot_scm_mae(np_file):
     plt.show()
 
 if __name__ == "__main__":
-    model_name="qnext_007_lyr_388_in_055_out_0443_hdn_025_epch_00106_btch_023001AQTS_mae_023001AQT_normalise_stkd_bnsigm_bnskip"
+    model_name="qnext_006_lyr_388_in_055_out_0443_hdn_025_epch_00200_btch_023001AQTS_mae_023001AQT_normalise_stkd_tanh_subskip_chkepo_022"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)
