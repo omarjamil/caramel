@@ -100,7 +100,7 @@ class Data_IO_validation(object):
     def __init__(self, region, nlevs, dataset_file, normaliser, 
                 xvars=['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf', 'p', 'rho', 'xwind', 'ywind', 'zwind'],
                 yvars=['qtot_next', 'theta_next'],
-                yvars2=['qphys', 'theta_phys'], add_adv=False):
+                yvars2=['qphys', 'theta_phys'], add_adv=False, no_norm=False):
         self.region = region
         self.nlevs = nlevs
         self.nn_norm = NormalizersData(normaliser)
@@ -129,6 +129,7 @@ class Data_IO_validation(object):
         self.ydata_idx2 = []
         self.add_adv = add_adv
         self.dat_type = "test"
+        self.no_norm = no_norm
 
         print("Reading dataset file: {0}".format(dataset_file))
         dataset=h5py.File(dataset_file,'r')
@@ -254,21 +255,30 @@ class Data_IO_validation(object):
 
         for x in self.xvars:
             i = x+"_test"
-            mean = self.xdata_and_norm[i][1].reshape(-1)[self.norm_slc]
-            std = self.xdata_and_norm[i][2].reshape(-1)[self.norm_slc]
-            x_var_data[i] = self._transform(torch.from_numpy(self.xdata_and_norm[i][0][:]), mean, std)
+            if self.no_norm:
+                x_var_data[i] = torch.from_numpy(self.xdata_and_norm[i][0][:])
+            else:
+                mean = self.xdata_and_norm[i][1].reshape(-1)[self.norm_slc]
+                std = self.xdata_and_norm[i][2].reshape(-1)[self.norm_slc]
+                x_var_data[i] = self._transform(torch.from_numpy(self.xdata_and_norm[i][0][:]), mean, std)
         
         for y in self.yvars:
             i = y+"_test"
-            mean = self.ydata_and_norm[i][1].reshape(-1)[self.norm_slc]
-            std = self.ydata_and_norm[i][2].reshape(-1)[self.norm_slc]
-            y_var_data[i] = self._transform(torch.from_numpy(self.ydata_and_norm[i][0][:]), mean, std)
+            if self.no_norm:
+                y_var_data[i] = torch.from_numpy(self.ydata_and_norm[i][0][:])
+            else:
+                mean = self.ydata_and_norm[i][1].reshape(-1)[self.norm_slc]
+                std = self.ydata_and_norm[i][2].reshape(-1)[self.norm_slc]
+                y_var_data[i] = self._transform(torch.from_numpy(self.ydata_and_norm[i][0][:]), mean, std)
         
         for y2 in self.yvars2:
             i = y2+"_test"
-            mean = self.ydata_and_norm[i][1].reshape(-1)[self.norm_slc]
-            std = self.ydata_and_norm[i][2].reshape(-1)[self.norm_slc]
-            y_var_data2[i] = self._transform(torch.from_numpy(self.ydata_and_norm[i][0][:]), mean, std)
+            if self.no_norm:
+                y_var_data2[i] = torch.from_numpy(self.ydata_and_norm[i][0][:])
+            else:
+                mean = self.ydata_and_norm[i][1].reshape(-1)[self.norm_slc]
+                std = self.ydata_and_norm[i][2].reshape(-1)[self.norm_slc]
+                y_var_data2[i] = self._transform(torch.from_numpy(self.ydata_and_norm[i][0][:]), mean, std)
 
         return x_var_data, y_var_data, y_var_data2
 

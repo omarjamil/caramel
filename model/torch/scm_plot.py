@@ -10,8 +10,8 @@ def visualise_scm_predictions_q(np_file, savename):
     # data = np.load(np_file)
     data = h5py.File(np_file, 'r')
     
-    q_ml = data['qtot_next_ml'][:,:].T
-    q_ = data['qtot_next'][:,:].T
+    q_ml = data['qtot_next_ml'][:300,:].T
+    q_ = data['qtot_next'][:300,:].T
     q_persistence = np.zeros(q_.T.shape)
     q_persistence[:] = q_.T[0,:]
     q_persistence = q_persistence.T
@@ -70,7 +70,7 @@ def visualise_scm_predictions_q(np_file, savename):
     figname = savename+"/"+savename+"_scm_qnext.png"
     print("Saving figure {0}".format(figname))
     plt.savefig(figname)
-    # plt.close(fig)
+    # plt.closse(fig)
     plt.show()
     data.close()
 
@@ -131,9 +131,9 @@ def visualise_scm_predictions_qt(np_file, figname):
 def visualise_tseries(npfile,level, savename):
     # data = np.load(np_file)
     data = h5py.File(npfile, 'r')
-    q_ml = data['qtot_next_ml'][:300]
-    q_ = data['qtot_next'][:300]
-    qpersist = np.zeros(data['qtot'][:301].shape)
+    q_ml = data['qtot_next_ml'][:1000]
+    q_ = data['qtot_next'][:1000]
+    qpersist = np.zeros(data['qtot'][:1000].shape)
     qpersist[:] = data['qtot'][0]
 
     q_y_lim = (np.min(q_[:,level]), np.max(q_[:,level]))
@@ -160,7 +160,7 @@ def visualise_tseries(npfile,level, savename):
 
     ax = axs[1]
     ax.plot(q_ml[:,level] - q_[:,level],'.-',label='q (ML) - q')
-    ax.plot(qpersist[:-1,level] - q_[:,level],'.-',label='q (P) - q')
+    ax.plot(qpersist[:,level] - q_[:,level],'.-',label='q (P) - q')
     ax.set_title('Level {0}'.format(level))
     ax.legend()
 
@@ -179,7 +179,8 @@ def visualise_tseries(npfile,level, savename):
     print("Saving {0}".format(figname))
     plt.savefig(figname)
     plt.close(fig)
-    data.close()
+    # data.close()
+
     # ax = axs[1,0]
     # ax.plot(qphys_ml[:,level],'.-', label='qphys (ML)')
     # ax.plot(qphys[:,level],'.-', label='qphys')
@@ -807,7 +808,7 @@ def plot_scm_mae(np_file):
     plt.show()
 
 if __name__ == "__main__":
-    model_name="qnext_006_lyr_388_in_055_out_0443_hdn_025_epch_00200_btch_023001AQTS_mae_023001AQT_normalise_stkd_tanh_subskip_chkepo_022"
+    model_name="qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00200_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)
@@ -816,13 +817,14 @@ if __name__ == "__main__":
     except OSError:
         pass
     np_file = "inference/"+model_name+"_scm.hdf5"
+    # np_file = model_name+"_scm.hdf5"
     np_file_2 = "inference/"+model_name+"_qnext.hdf5"
     # np_file_2 = model_name+"_qphys.hdf5"
     # average_tseries(np_file)
     figname = np_file.replace("hdf5","png")
     # visualise_all_levels_qT(np_file_2)
     # visualise_all_levels_qTnext(np_file_2)
-    visualise_all_levels_qnext(np_file_2, model_name)
+    # visualise_all_levels_qnext(np_file_2, model_name)
     visualise_scm_predictions_q(np_file, model_name)
     # visualise_scm_predictions_qt(np_file,figname)
     # plot_scm_mae(np_file)
@@ -833,7 +835,7 @@ if __name__ == "__main__":
         # visualise_tseries_tphys(np_file_2,level)
         # visualise_tseries_qT(np_file_2,level)
         # visualise_tseries_qT_add_adv(np_file_2, level)
-        visualise_tseries_q_next(np_file_2, level, model_name)
+        # visualise_tseries_q_next(np_file_2, level, model_name)
         # visualise_tseries_t_next(np_file_2, level)
         # compare_qphys_predictions(np_file, np_file_2, level)
         # plt.show()

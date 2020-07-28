@@ -159,65 +159,65 @@ def plot_distribution(dataset_file,nn_norm, data_frac, nlevs):
         theta_next = y[1]
         tdiff = theta_next - theta
         p = x[2][1:] - x[2][:-1]
-        rho = x[3]
+        rho = x[3][1:] - x[3][:-1]
         xwind = x[4][1:] - x[4][:-1]
-        ywind = x[5]
-        zwind = x[6]
-        sw = x[7]
-        shf = x[8]
-        lhf = x[9]
+        ywind = x[5][1:] - x[5][:-1]
+        zwind = x[6][1:] - x[6][:-1]
+        sw = x[7][1:] - x[7][:-1]
+        shf = x[8][1:] - x[8][:-1]
+        lhf = x[9][1:] - x[9][:-1]
 
         for lev in range(3):
         # lev = 0
-            fig, axs = plt.subplots(2,2,figsize=(14,10), sharex=False)
-            ax = axs[0,0]
-            ax.hist(qtot[:,lev], 100, label='qtot')
-            ax.legend()
+            # fig, axs = plt.subplots(2,2,figsize=(14,10), sharex=False)
+            # ax = axs[0,0]
+            # ax.hist(qtot[:,lev], 100, label='qtot')
+            # ax.legend()
 
-            ax = axs[0,1]
-            ax.hist(qdiff[:,lev]*1000., 100, label='qdiff')
-            ax.legend()
+            # ax = axs[0,1]
+            # ax.hist(qdiff[:,lev]*1000., 100, label='qdiff')
+            # ax.legend()
 
-            ax = axs[1,0]
-            ax.hist(theta[:,lev], 100, label='theta')
-            ax.legend()
+            # ax = axs[1,0]
+            # ax.hist(theta[:,lev], 100, label='theta')
+            # ax.legend()
 
-            ax = axs[1,1]
-            ax.hist(tdiff[:,lev], 100, label='theta diff')
-            ax.legend()
+            # ax = axs[1,1]
+            # ax.hist(tdiff[:,lev], 100, label='theta diff')
+            # ax.legend()
 
-            fig, axs1 = plt.subplots(2,2,figsize=(14,10), sharex=False)
-            ax = axs1[0,0]
-            ax.hist(p[:,lev], 100, label='p')
-            ax.legend()
+            # fig, axs1 = plt.subplots(2,2,figsize=(14,10), sharex=False)
+            # ax = axs1[0,0]
+            # ax.hist(p[:,lev]/10., 100, label='p')
+            # ax.legend()
 
-            ax = axs1[0,1]
-            ax.hist(rho[:,lev], 100, label='rho')
-            ax.legend()
+            # ax = axs1[0,1]
+            # ax.hist(rho[:,lev]/1.e10, 100, label='rho')
+            # ax.legend()
 
-            ax = axs1[1,0]
-            ax.hist(xwind[:,lev], 100, label='xwind')
-            ax.legend()
+            # ax = axs1[1,0]
+            # ax.hist(xwind[:,lev], 100, label='xwind')
+            # ax.legend()
 
-            ax = axs1[1,1]
-            ax.hist(ywind[:,lev], 100, label='ywind')
-            ax.legend()
+            # ax = axs1[1,1]
+            # ax.hist(ywind[:,lev], 100, label='ywind')
+            # ax.legend()
 
             fig, axs2 = plt.subplots(2,2,figsize=(14,10), sharex=False)
             ax = axs2[0,0]
-            ax.hist(zwind[:,lev], 100, label='zwind')
+            ax.hist(zwind[:,lev]*10., 100, label='zwind')
             ax.legend()
 
             ax = axs2[0,1]
-            ax.hist(sw[:], 100, label='sw')
+            ax.hist(sw[:,0]/100., 100, label='sw')
             ax.legend()
 
             ax = axs2[1,0]
-            ax.hist(shf[:], 100, label='shf')
+            ax.hist(shf[:,0], 100, label='shf')
             ax.legend()
 
             ax = axs2[1,1]
-            ax.hist(lhf[:], 100, label='lhf')
+            ax.hist(lhf[:,0]/10., 100, label='lhf')
             ax.legend()
 
             plt.show()
