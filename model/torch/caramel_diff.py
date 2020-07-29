@@ -28,33 +28,54 @@ def configure_optimizers(model):
     # loss_function = torch.nn.MSELoss()
     return optimizer, scheduler
 
-def training_step(batch, batch_idx, model, loss_function, optimizer, device, input_indices=None):
+def training_step(batch, batch_, batch_idx, model, loss_function, optimizer, device, input_indices=None):
     """
     """
-    x, y  = batch
-    x = torch.cat(x,dim=1).to(device)
-    y = torch.cat(y,dim=1).to(device)
-    output = model(x)
+    x,y,y2 = batch
+    qin = x[0][list(range(1,len(x[0])-1,2)),:]
+    qout = x[0][list(range(2,len(x[0]),2)),:]
+    x_, y_  = batch_
+    x_ = torch.cat(x_,dim=1).to(device)
+    y_ = torch.cat(y_,dim=1).to(device)
+    # print(len(qin), len(qout), len(y_))
+    output = model(x_)
+    qpredict = qin+(output/1000.) 
+    # print(qout - qpredict)
+
     # print("In", x[0])
     # print("True", y[0])
     # print("Pred", output[0])
-    loss = loss_function(output,y, reduction='mean')
+    diff_loss = loss_function(output,y_, reduction='mean')
+    qloss = loss_function(1000.*qpredict,1000.*qout, reduction='mean')
     optimizer.zero_grad()
+    if np.any(qpredict.data.numpy() < 0.):
+        print("-",end=' ')
+        # print(diff_loss.item(), qloss.item())
+        loss = diff_loss + 1000.*qloss
+    else:
+        loss = diff_loss + qloss
+
     loss.backward()
     optimizer.step()
     return loss
 
-def validation_step(batch, batch_idx, model, loss_function, device, input_indices=None):
+def validation_step(batch, batch_, batch_idx, model, loss_function, device, input_indices=None):
     """
     """
-    x,y = batch
-    x = torch.cat(x,dim=1).to(device)
-    y = torch.cat(y,dim=1).to(device)
+    x,y,y2 = batch
+    qin = x[0][list(range(1,len(x[0])-1,2)),:]
+    qout = x[0][list(range(2,len(x[0]),2)),:]
+    x_,y_ = batch_
+    x_ = torch.cat(x_,dim=1).to(device)
+    y_ = torch.cat(y_,dim=1).to(device)
     with torch.no_grad():
-        output = model(x)
+        output = model(x_)
+        qpredict = qin+(output/1000.) 
         # print("True", y[0,0:5])
         # print("Pred", output[0,0:5])
-        loss = loss_function(output, y, reduction='mean')
+        diff_loss = loss_function(output,y_, reduction='mean')
+        qloss = loss_function(1000.*qpredict,1000.*qout, reduction='mean')
+        loss = diff_loss + qloss
     return loss
 
 
@@ -158,7 +179,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
             batch_ = create_diff_inout_vars(batch, args.xvar_multiplier)
             model.train()
             
-            loss = training_step(batch_, batch_idx, model, loss_function, optimizer, args.device, input_indices=input_indices)
+            loss = training_step(batch, batch_, batch_idx, model, loss_function, optimizer, args.device, input_indices=input_indices)
             
             train_loss += loss.item()
             if batch_idx % args.log_interval == 0:
@@ -175,7 +196,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
         for batch_idx, batch in enumerate(test_ldr):
             batch_ = create_diff_inout_vars(batch, args.xvar_multiplier)
             model.eval()
-            loss = validation_step(batch_, batch_idx, model, loss_function, args.device, input_indices=input_indices)
+            loss = validation_step(batch, batch_, batch_idx, model, loss_function, args.device, input_indices=input_indices)
             test_loss += loss.item()
         average_loss_val = test_loss / len(test_ldr.dataset) 
         print('====> validation loss: {:.2e}'.format(average_loss_val))
