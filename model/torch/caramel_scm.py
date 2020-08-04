@@ -187,10 +187,11 @@ def scm_diff(model, datasetfile, args):
         yp_ = model(xcopy[t-1])
         # yp = model(torch.rand(xcopy[t-1].shape)/100.)
         qnew = output[t-1] + yp_/1000.
-        negative_values = np.where(qnew < 0.)
-        if np.any(negative_values):
-            qnew[negative_values] = output[t-1][negative_values]
-            yp_[negative_values] = diff_output[t-1][negative_values]
+        negative_values = torch.where(qnew<0.)
+        # print(negative_values[0])
+        if len(negative_values[0]) > 0:
+            qnew[negative_values] = 1.e-6 #output[t-1][negative_values]
+            # yp_[negative_values] = diff_output[t-1][negative_values]
         output.append(qnew)
         diff_output.append(yp_)
         xcopy[t,:args.nlevs] = yp_
@@ -226,7 +227,7 @@ def scm_diff(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00200_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh.tar"
+    model_file = model_loc+"qdiff_006_lyr_388_in_055_out_0443_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh.tar"
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_020.hdf5"
     # normaliser_region = "023001AQT_normalise_60_glb"
     # normaliser_region = "023001AQT_standardise_mx"

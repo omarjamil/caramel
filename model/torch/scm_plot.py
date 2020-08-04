@@ -8,6 +8,8 @@ import os
 
 def visualise_scm_predictions_q(np_file, savename):
     # data = np.load(np_file)
+    plt.style.use('ggplot')
+
     data = h5py.File(np_file, 'r')
     
     q_ml = data['qtot_next_ml'][:300,:].T
@@ -69,6 +71,110 @@ def visualise_scm_predictions_q(np_file, savename):
 
     figname = savename+"/"+savename+"_scm_qnext.png"
     print("Saving figure {0}".format(figname))
+    plt.savefig(figname)
+    # plt.closse(fig)
+    plt.show()
+    data.close()
+
+def scm_mape(np_file, savename):
+    # data = np.load(np_file)
+    data = h5py.File(np_file, 'r')
+    
+    q_ml = data['qtot_next_ml'][:400,:]
+    q_ = data['qtot_next'][:400,:]
+    q_persistence = np.zeros(q_.shape)
+    q_persistence[:] = q_[0,:]
+    q_persistence = q_persistence
+
+    ml_mape = np.zeros(q_.shape[1])
+    persistence_mape = np.zeros(q_.shape[1])
+    for l in range(len(ml_mape)):
+        ml_mape[l] = np.sum((q_[:,l] - q_ml[:,l])/q_[:,l])/q_.shape[0]
+        persistence_mape[l] = np.sum((q_[:,l] - q_persistence[:,l])/q_[:,l])/q_.shape[0]
+
+    fig, axs = plt.subplots(1,1,figsize=(14, 10))
+    ax = axs
+    ax.plot(ml_mape[:]*100., label='ML')
+    ax.plot(persistence_mape[:]*100., label='Persitence')
+    ax.set_title('MAPE')
+    ax.legend()
+
+    figname = savename+"/"+savename+"_mape.png"
+    print("Saving figure {0}".format(figname))
+    # plt.savefig(figname)
+    # plt.closse(fig)
+    plt.show()
+    data.close()
+
+def scm_column_error(np_file, savename, error_type="mse"):
+    # data = np.load(np_file)
+    data = h5py.File(np_file, 'r')
+    
+    q_ml = data['qtot_next_ml'][:1000,:]
+    q_ = data['qtot_next'][:1000,:]
+    q_persistence = np.zeros(q_.shape)
+    q_persistence[:] = q_[0,:]
+    q_persistence = q_persistence
+
+    ml_error = np.zeros(q_.shape[0])
+    persistence_error = np.zeros(q_.shape[0])
+    for l in range(len(ml_error)):
+        if error_type == "mape":
+            ml_error[l] = np.sum((q_[l,:] - q_ml[l,:])/q_[l,:])/q_.shape[1]
+            persistence_error[l] = np.sum((q_[l,:] - q_persistence[l,:])/q_[l,:])/q_.shape[1]
+        if error_type == "mse":
+            ml_error[l] = np.sum(np.square(q_[l,:] - q_ml[l,:]))/q_.shape[1]
+            persistence_error[l] = np.sum(np.square(q_[l,:] - q_persistence[l,:]))/q_.shape[1]
+
+    plt.style.use('ggplot')
+    fig, axs = plt.subplots(1,1,figsize=(14, 10))
+    ax = axs
+    ax.plot(ml_error[:], label='ML')
+    ax.plot(persistence_error[:], label='Persitence')
+    ax.set_title('MSE over levels')
+    ax.legend()
+
+    figname = savename+"/"+savename+"_column_{0}.png".format(error_type)
+    print("Saving figure {0}".format(figname))
+    plt.savefig(figname)
+    # plt.closse(fig)
+    plt.show()
+    data.close()
+
+def scm_column_error_multi(np_files, error_type="mse"):
+    # data = np.load(np_file)
+    plt.style.use('ggplot')
+
+    fig, axs = plt.subplots(1,1,figsize=(14, 10))
+    ax = axs
+
+    for i,f in enumerate(np_files):
+        data = h5py.File('inference/'+f, 'r')
+        
+        q_ml = data['qtot_next_ml'][:1000,:]
+        q_ = data['qtot_next'][:1000,:]
+        q_persistence = np.zeros(q_.shape)
+        q_persistence[:] = q_[0,:]
+        q_persistence = q_persistence
+
+        ml_error = np.zeros(q_.shape[0])
+        persistence_error = np.zeros(q_.shape[0])
+        for l in range(len(ml_error)):
+            if error_type == "mape":
+                ml_error[l] = np.sum((q_[l,:] - q_ml[l,:])/q_[l,:])/q_.shape[1]
+                persistence_error[l] = np.sum((q_[l,:] - q_persistence[l,:])/q_[l,:])/q_.shape[1]
+            if error_type == "mse":
+                ml_error[l] = np.sum(np.square(q_[l,:] - q_ml[l,:]))/q_.shape[1]
+                persistence_error[l] = np.sum(np.square(q_[l,:] - q_persistence[l,:]))/q_.shape[1]
+
+       
+        ax.plot(ml_error[:], label='ML {0}'.format(f))
+    ax.plot(persistence_error[:], label='Persitence')
+    ax.legend()
+    ax.set_title('MSE over levels')
+
+    figname = "qdiff_models_mse_comp.png"
+    # print("Saving figure {0}".format(figname))
     plt.savefig(figname)
     # plt.closse(fig)
     plt.show()
@@ -808,7 +914,7 @@ def plot_scm_mae(np_file):
     plt.show()
 
 if __name__ == "__main__":
-    model_name="qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00200_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh"
+    model_name="qdiff_006_lyr_388_in_055_out_0443_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)
@@ -826,6 +932,8 @@ if __name__ == "__main__":
     # visualise_all_levels_qTnext(np_file_2)
     # visualise_all_levels_qnext(np_file_2, model_name)
     visualise_scm_predictions_q(np_file, model_name)
+    # scm_mape(np_file, model_name)
+    scm_column_error(np_file, model_name, error_type="mse")
     # visualise_scm_predictions_qt(np_file,figname)
     # plot_scm_mae(np_file)
     for l in range(0,55,1):
@@ -839,3 +947,10 @@ if __name__ == "__main__":
         # visualise_tseries_t_next(np_file_2, level)
         # compare_qphys_predictions(np_file, np_file_2, level)
         # plt.show()
+
+    np_files = ["qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00050_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
+    "qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00100_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
+    "qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
+    "qdiff_006_lyr_388_in_055_out_0443_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
+    "qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00200_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5"]
+    # scm_column_error_multi(np_files, error_type="mse")
