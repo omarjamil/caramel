@@ -17,8 +17,8 @@ class MLP(torch.nn.Module):
         x = self.act(self.fc1(x))
         for l in self.fcs:
             x = self.act(l(x))
-        # x = self.out(x)
-        x = self.sig(self.out(x))
+        x = self.out(x)
+        # x = self.sig(self.out(x))
         return x
 
 class MLP_tanh(torch.nn.Module):

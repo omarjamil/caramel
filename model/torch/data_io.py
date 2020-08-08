@@ -168,6 +168,8 @@ class Data_IO_validation(object):
                                 }
         self.ydata_and_norm = {
                                 'qphys_test':[self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.qphys_mean, self.nn_norm.qphys_stdscale],
+                                'qtot_test':[self.q_tot_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                'theta_test':[self.theta_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale],
                                 # 'qphys_test':[self.qphys_test[:self.npoints, :3], self.nn_norm.qphys_mean[norm_slc3], self.nn_norm.qphys_stdscale[norm_slc3]],
                                 'theta_phys_test':[self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.tphys_mean, self.nn_norm.tphys_stdscale],
                                 # 'qtot_next_test':[self.q_tot_test[:self.npoints, :self.nlevs]+self.q_tot_adv_test[:self.npoints, :self.nlevs]+self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],

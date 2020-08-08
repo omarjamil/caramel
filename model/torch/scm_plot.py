@@ -76,6 +76,70 @@ def visualise_scm_predictions_q(np_file, savename):
     plt.show()
     data.close()
 
+def visualise_scm_predictions_t(np_file, savename):
+    # data = np.load(np_file)
+    plt.style.use('ggplot')
+
+    data = h5py.File(np_file, 'r')
+    
+    t_ml = data['theta_next_ml'][:300,:].T
+    t_ = data['theta_next'][:300,:].T
+    t_persistence = np.zeros(t_.T.shape)
+    t_persistence[:] = t_.T[0,:]
+    t_persistence = t_persistence.T
+    
+    fig, axs = plt.subplots(6,1,figsize=(14, 10), sharex=True, sharey=True)
+    ax = axs[0]
+    c = ax.pcolor(t_ml[:,:])
+    ax.set_title('theta (ML)')
+    fig.colorbar(c,ax=ax)
+
+    ax = axs[1]
+    # c = ax.pcolor(q_[:,:], vmin=vmin, vmax=vmax)
+    c = ax.pcolor(t_[:,:])
+    ax.set_title('theta ')
+    fig.colorbar(c,ax=ax)
+
+    ax = axs[2]
+    # c = ax.pcolor(q_[:,:], vmin=vmin, vmax=vmax)
+    c = ax.pcolor(t_persistence)
+    ax.set_title('t pers')
+    fig.colorbar(c,ax=ax)
+
+    diff = t_ml - t_
+    ax = axs[3]
+    vmin,vmax=np.min(diff),np.max(diff)
+    c = ax.pcolor(diff[:,:], vmin=vmin, vmax=vmax)
+    # c = ax.pcolor(diff[:,:])
+    #c = ax.pcolor(qphys_test_norm[:,0:4000])
+    ax.set_title('Predict - Test')
+    fig.colorbar(c,ax=ax)
+
+    diff = t_persistence - t_
+    ax = axs[4]
+    vmin,vmax=np.min(diff),np.max(diff)
+    c = ax.pcolor(diff[:,:], vmin=vmin, vmax=vmax)
+    # c = ax.pcolor(diff[:,:])
+    #c = ax.pcolor(qphys_test_norm[:,0:4000])
+    ax.set_title('Persistence - Test')
+    fig.colorbar(c,ax=ax)
+
+    diff = t_persistence - t_ml
+    ax = axs[5]
+    vmin,vmax=np.min(diff),np.max(diff)
+    c = ax.pcolor(diff[:,:], vmin=vmin, vmax=vmax)
+    # c = ax.pcolor(diff[:,:])
+    #c = ax.pcolor(qphys_test_norm[:,0:4000])
+    ax.set_title('Persistence - ML')
+    fig.colorbar(c,ax=ax)
+
+    figname = savename+"/"+savename+"_scm_theta.png"
+    print("Saving figure {0}".format(figname))
+    plt.savefig(figname)
+    # plt.closse(fig)
+    plt.show()
+    data.close()
+
 def scm_mape(np_file, savename):
     # data = np.load(np_file)
     data = h5py.File(np_file, 'r')
@@ -140,6 +204,42 @@ def scm_column_error(np_file, savename, error_type="mse"):
     # plt.closse(fig)
     plt.show()
     data.close()
+
+def scm_column_error_t(np_file, savename, error_type="mse"):
+    # data = np.load(np_file)
+    data = h5py.File(np_file, 'r')
+    
+    t_ml = data['theta_next_ml'][:1000,:]
+    t_ = data['theta_next'][:1000,:]
+    t_persistence = np.zeros(t_.shape)
+    t_persistence[:] = t_[0,:]
+    t_persistence = t_persistence
+
+    ml_error = np.zeros(t_.shape[0])
+    persistence_error = np.zeros(t_.shape[0])
+    for l in range(len(ml_error)):
+        if error_type == "mape":
+            ml_error[l] = np.sum((t_[l,:] - t_ml[l,:])/t_[l,:])/t_.shape[1]
+            persistence_error[l] = np.sum((t_[l,:] - t_persistence[l,:])/t_[l,:])/t_.shape[1]
+        if error_type == "mse":
+            ml_error[l] = np.sum(np.square(t_[l,:] - t_ml[l,:]))/t_.shape[1]
+            persistence_error[l] = np.sum(np.square(t_[l,:] - t_persistence[l,:]))/t_.shape[1]
+
+    plt.style.use('ggplot')
+    fig, axs = plt.subplots(1,1,figsize=(14, 10))
+    ax = axs
+    ax.plot(ml_error[:], label='ML')
+    ax.plot(persistence_error[:], label='Persitence')
+    ax.set_title('MSE over levels')
+    ax.legend()
+
+    figname = savename+"/"+savename+"_column_{0}.png".format(error_type)
+    print("Saving figure {0}".format(figname))
+    plt.savefig(figname)
+    # plt.closse(fig)
+    plt.show()
+    data.close()
+
 
 def scm_column_error_multi(np_files, error_type="mse"):
     # data = np.load(np_file)
@@ -243,16 +343,6 @@ def visualise_tseries(npfile,level, savename):
     qpersist[:] = data['qtot'][0]
 
     q_y_lim = (np.min(q_[:,level]), np.max(q_[:,level]))
-    # qphys_ml = data['qphys_ml'][:]
-    # qphys = data['qphys'][:]
-    # q_sane = data['q_sane'][:]
-    # t_ml = data['theta_next_ml'][:]
-    # t_ = data['theta_next'][:]
-    # t_y_lim = (np.min(t_[:,level]),np.max(t_[:,level]))
-    # tphys_ml = data['tphys_ml'][:]
-    # tphys = data['tphys'][:]
-    # t_sane = data['t_sane'][:]
-    
 
     fig, axs = plt.subplots(3,1,figsize=(14, 10),sharex=False)
     ax = axs[0]
@@ -285,35 +375,48 @@ def visualise_tseries(npfile,level, savename):
     print("Saving {0}".format(figname))
     plt.savefig(figname)
     plt.close(fig)
-    # data.close()
 
-    # ax = axs[1,0]
-    # ax.plot(qphys_ml[:,level],'.-', label='qphys (ML)')
-    # ax.plot(qphys[:,level],'.-', label='qphys')
-    # ax.legend()
+def visualise_tseries_t(npfile,level, savename):
+    # data = np.load(np_file)
+    data = h5py.File(npfile, 'r')
+    t_ml = data['theta_next_ml'][:1000]
+    t_ = data['theta_next'][:1000]
+    tpersist = np.zeros(data['theta'][:1000].shape)
+    tpersist[:] = data['theta'][0]
 
-    # ax = axs[2,0]
-    # ax.plot(qphys_ml[:,level] - qphys[:,level],'.-', label='qphys (ML) - qphys')
-    # ax.legend()
 
-    # ax = axs[1]
-    # ax.plot(t_ml[:,level],'.-',label='T (ML)')
-    # ax.plot(t_[:,level],'.-',label='T')
-    # ax.plot(t_sane[:,level],'.-',label='T (sane)')
-    # ax.set_title('Level {0}'.format(level))
-    # ax.set_ylim(t_y_lim[0],t_y_lim[1])
-    # ax.legend()
-    
-    # ax = axs[1,1]
-    # ax.plot(tphys_ml[:,level],'.-', label='Tphys (ML)')
-    # ax.plot(tphys[:,level],'.-', label='Tphys')
-    # ax.legend()
+    fig, axs = plt.subplots(3,1,figsize=(14, 10),sharex=False)
+    ax = axs[0]
+    ax.plot(t_ml[:,level],'.-',label='theta (ML)')
+    ax.plot(t_[:,level],'.-',label='theta')
+    ax.plot(tpersist[:,level],'.-',label='theta p')
+    # ax.plot(q_sane[:,level],'.-',label='q (sane)')
+    ax.set_title('Level {0}'.format(level))
+    # ax.set_ylim(q_y_lim[0],q_y_lim[1])
+    ax.legend()
 
-    # ax = axs[2,1]
-    # ax.plot(tphys_ml[:,level] - tphys[:,level],'.-', label='Tphys (ML) - Tphys')
-    # ax.legend()
-    # plt.show()
-    
+    ax = axs[1]
+    ax.plot(t_ml[:,level] - t_[:,level],'.-',label='ML - truth')
+    ax.plot(tpersist[:,level] - t_[:,level],'.-',label='Pers - truth')
+    ax.set_title('Level {0}'.format(level))
+    ax.legend()
+
+    ax = axs[2]
+    ax.scatter(t_[:,level], t_ml[:,level])
+    ax.plot(t_[:,level],t_[:,level],'k-')
+    xmin, xmax = np.min(t_[:,level]), np.max(t_[:,level])
+    ymin, ymax = np.min(t_ml[:,level]), np.max(t_ml[:,level])
+    ax.set_xlim([xmin, xmax])
+    ax.set_ylim([ymin, ymax])
+    ax.set_xlabel('UM')
+    ax.set_ylabel('ML')
+    ax.set_title('Level {0}'.format(level))
+
+    figname = savename+"/"+savename+"_tnext_scm_lev_{0}.png".format(str(level).zfill(3))
+    print("Saving {0}".format(figname))
+    plt.savefig(figname)
+    plt.close(fig)
+
 def visualise_tseries_q(np_file,level):
     data = np.load(np_file)
     q_ml = data['q_ml']
@@ -914,7 +1017,7 @@ def plot_scm_mae(np_file):
     plt.show()
 
 if __name__ == "__main__":
-    model_name="qdiff_006_lyr_388_in_055_out_0443_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh"
+    model_name="tdiff_006_lyr_333_in_055_out_0388_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     model_loss(model_file)
@@ -931,14 +1034,17 @@ if __name__ == "__main__":
     # visualise_all_levels_qT(np_file_2)
     # visualise_all_levels_qTnext(np_file_2)
     # visualise_all_levels_qnext(np_file_2, model_name)
-    visualise_scm_predictions_q(np_file, model_name)
+    # visualise_scm_predictions_q(np_file, model_name)
+    visualise_scm_predictions_t(np_file, model_name)
     # scm_mape(np_file, model_name)
-    scm_column_error(np_file, model_name, error_type="mse")
+    # scm_column_error(np_file, model_name, error_type="mse")
+    scm_column_error_t(np_file, model_name, error_type="mse")
     # visualise_scm_predictions_qt(np_file,figname)
     # plot_scm_mae(np_file)
     for l in range(0,55,1):
         level=l
-        visualise_tseries(np_file, level, model_name)
+        # visualise_tseries(np_file, level, model_name)
+        visualise_tseries_t(np_file, level, model_name)
         # visualise_tseries_qphys(np_file_2,level)
         # visualise_tseries_tphys(np_file_2,level)
         # visualise_tseries_qT(np_file_2,level)

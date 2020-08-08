@@ -191,6 +191,8 @@ class ConcatDataset(torch.utils.data.Dataset):
                                 "theta_phys_"+self.dat_type:[self.theta_phys_train[self.v_slc1, self.v_slc2, self.v_slc3].reshape(var3shape), self.nn_norm.tphys_mean, self.nn_norm.tphys_stdscale],
                                 # "qtot_next_"+self.dat_type:[self.q_tot_train[:self.npoints, :self.nlevs]+self.q_tot_adv_train[:self.npoints, :self.nlevs]+self.qphys_train[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
                                 # "qtot_next_"+self.dat_type:[self.q_tot_train[:self.npoints, :self.nlevs]+self.q_tot_adv_train[:self.npoints, :self.nlevs]+self.qphys_train[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                "qtot_"+self.dat_type:[self.q_tot_train[self.v_slc1, self.v_slc2, self.v_slc3].reshape(var3shape), self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                "theta_"+self.dat_type:[self.theta_train[self.v_slc1, self.v_slc2, self.v_slc3].reshape(var3shape), self.nn_norm.t_mean, self.nn_norm.t_stdscale],
                                 "qtot_next_"+self.dat_type:[(self.q_tot_train[self.v_slc1, self.v_slc2, self.v_slc3]+self.q_tot_diff_train[self.v_slc1, self.v_slc2, self.v_slc3]).reshape(var3shape), self.nn_norm.q_mean, self.nn_norm.q_stdscale],
                                 # "qtot_diff_"+self.dat_type:[self.q_tot_diff_train[self.v_slc1, self.v_slc2, self.v_slc3].reshape(var3shape), self.nn_norm.q_mean, self.nn_norm.q_stdscale],
 

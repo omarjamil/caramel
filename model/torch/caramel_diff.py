@@ -32,26 +32,28 @@ def training_step(batch, batch_, batch_idx, model, loss_function, optimizer, dev
     """
     """
     x,y,y2 = batch
-    qin = (x[0][list(range(1,len(x[0])-1,2)),:]).to(device)
-    qout = (x[0][list(range(2,len(x[0]),2)),:]).to(device)
+    # qin = (x[0][list(range(1,len(x[0])-1,2)),:]).to(device)
+    # qout = (x[0][list(range(2,len(x[0]),2)),:]).to(device)
     x_, y_  = batch_
     x_ = torch.cat(x_,dim=1).to(device)
     y_ = torch.cat(y_,dim=1).to(device)
     # print(len(qin), len(qout), len(y_))
     output = model(x_)
+    # print("ML", output)
+    # print("truth", y_)
     # print(y_.shape)
     # print(y_.shape[1]//2)
-    qpredict = qin+(output[:,:(y_.shape[1]//2)]/1000.) 
+    # qpredict = qin+(output[:,:(y_.shape[1]//2)]/1000.) 
     # print(qout - qpredict)
-
-    # print("In", x[0])
-    # print("True", y[0])
-    # print("Pred", output[0])
+    # print(x_.shape, y_.shape, output.shape)
+    # print("In", x_[0,55:110])
+    # print("True", y_[0,:])
+    # print("Pred", output[0,:])
     diff_loss = loss_function(output,y_, reduction='mean')
     # qloss = loss_function(1000.*qpredict,1000.*qout, reduction='mean')
     optimizer.zero_grad()
-    if torch.lt(qpredict,0.).any():
-        print("-",end=' ')
+    # if torch.lt(qpredict,0.).any():
+        # print("-",end=' ')
         # print(diff_loss.item(), qloss.item())
         # loss = diff_loss + 1000.*qloss
     # else:
@@ -154,19 +156,31 @@ def test_dataloader(args):
     return validation_loader
 
 
-def create_diff_inout_vars(batch, xvar_multiplier):
+def create_diff_inout_vars(batch, xvar_multiplier, yvar_multiplier):
     x,y,y2 = batch
     xlist = []
-    difflist = []
+    xdifflist = []
     for v,m in zip(x, xvar_multiplier):
         vdiff = (v[1:] - v[:-1])*m
-        difflist.append(vdiff)
+        xdifflist.append(vdiff)
+    
+    ylist = []
+    ydifflist = []
+    for v,m in zip(y,yvar_multiplier):
+        vdiff = (v[1:] - v[:-1])*m
+        ydifflist.append(vdiff)
 
-    for v in difflist:
-        xlist.append(v[list(range(0,len(v)-1,2))])
+    for v in xdifflist:
+        # xlist.append(v[list(range(0,len(v)-1,2))])
+        xlist.append(v[list(range(0,len(v)-1,1))])
+
+    for v in ydifflist:
+        ylist.append(v[list(range(0,len(v)-1,1))])
+
 
     # ylist = [difflist[0][list(range(1,len(difflist[0]),2))]]
-    ylist = [difflist[0][list(range(1,len(difflist[0]),2))], difflist[1][list(range(1,len(difflist[1]),2))]]
+    # ylist = [difflist[1][list(range(1,len(difflist[1]),2))]]
+    # ylist = [difflist[0][list(range(1,len(difflist[0]),2))], difflist[1][list(range(1,len(difflist[1]),2))]]
     return (xlist, ylist)
 
 def train_loop(model, loss_function, optimizer, scheduler, args):
@@ -181,7 +195,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
         train_loss = 0
         for batch_idx, batch in enumerate(train_ldr):
             # Sets the model into training mode
-            batch_ = create_diff_inout_vars(batch, args.xvar_multiplier)
+            batch_ = create_diff_inout_vars(batch, args.xvar_multiplier, args.yvar_multiplier)
             model.train()
             
             loss = training_step(batch, batch_, batch_idx, model, loss_function, optimizer, args.device, input_indices=input_indices)
@@ -199,7 +213,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
         ## Testing
         test_loss = 0
         for batch_idx, batch in enumerate(test_ldr):
-            batch_ = create_diff_inout_vars(batch, args.xvar_multiplier)
+            batch_ = create_diff_inout_vars(batch, args.xvar_multiplier, args.yvar_multiplier)
             model.eval()
             loss = validation_step(batch, batch_, batch_idx, model, loss_function, args.device, input_indices=input_indices)
             test_loss += loss.item()
