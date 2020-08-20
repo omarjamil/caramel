@@ -1039,8 +1039,8 @@ if __name__ == "__main__":
     visualise_scm_predictions_q(np_file, model_name)
     visualise_scm_predictions_t(np_file, model_name)
     # scm_mape(np_file, model_name)
-    # scm_column_error(np_file, model_name, error_type="mse")
-    # scm_column_error_t(np_file, model_name, error_type="mse")
+    scm_column_error(np_file, model_name, error_type="mse")
+    scm_column_error_t(np_file, model_name, error_type="mse")
     # visualise_scm_predictions_qt(np_file,figname)
     # plot_scm_mae(np_file)
     for l in range(0,55,1):
