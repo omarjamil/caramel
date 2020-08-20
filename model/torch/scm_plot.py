@@ -12,8 +12,8 @@ def visualise_scm_predictions_q(np_file, savename):
 
     data = h5py.File(np_file, 'r')
     
-    q_ml = data['qtot_next_ml'][:300,:].T
-    q_ = data['qtot_next'][:300,:].T
+    q_ml = data['qtot_next_ml'][:250,:].T
+    q_ = data['qtot_next'][:250,:].T
     q_persistence = np.zeros(q_.T.shape)
     q_persistence[:] = q_.T[0,:]
     q_persistence = q_persistence.T
@@ -82,8 +82,8 @@ def visualise_scm_predictions_t(np_file, savename):
 
     data = h5py.File(np_file, 'r')
     
-    t_ml = data['theta_next_ml'][:300,:].T
-    t_ = data['theta_next'][:300,:].T
+    t_ml = data['theta_next_ml'][:2000,:].T
+    t_ = data['theta_next'][:2000,:].T
     t_persistence = np.zeros(t_.T.shape)
     t_persistence[:] = t_.T[0,:]
     t_persistence = t_persistence.T
@@ -174,8 +174,8 @@ def scm_column_error(np_file, savename, error_type="mse"):
     # data = np.load(np_file)
     data = h5py.File(np_file, 'r')
     
-    q_ml = data['qtot_next_ml'][:1000,:]
-    q_ = data['qtot_next'][:1000,:]
+    q_ml = data['qtot_next_ml'][:,:]
+    q_ = data['qtot_next'][:-1,:]
     q_persistence = np.zeros(q_.shape)
     q_persistence[:] = q_[0,:]
     q_persistence = q_persistence
@@ -198,7 +198,7 @@ def scm_column_error(np_file, savename, error_type="mse"):
     ax.set_title('MSE over levels')
     ax.legend()
 
-    figname = savename+"/"+savename+"_column_{0}.png".format(error_type)
+    figname = savename+"/"+savename+"_column_{0}_q.png".format(error_type)
     print("Saving figure {0}".format(figname))
     plt.savefig(figname)
     # plt.closse(fig)
@@ -209,8 +209,8 @@ def scm_column_error_t(np_file, savename, error_type="mse"):
     # data = np.load(np_file)
     data = h5py.File(np_file, 'r')
     
-    t_ml = data['theta_next_ml'][:1000,:]
-    t_ = data['theta_next'][:1000,:]
+    t_ml = data['theta_next_ml'][:,:]
+    t_ = data['theta_next'][:-1,:]
     t_persistence = np.zeros(t_.shape)
     t_persistence[:] = t_[0,:]
     t_persistence = t_persistence
@@ -233,7 +233,7 @@ def scm_column_error_t(np_file, savename, error_type="mse"):
     ax.set_title('MSE over levels')
     ax.legend()
 
-    figname = savename+"/"+savename+"_column_{0}.png".format(error_type)
+    figname = savename+"/"+savename+"_column_{0}_theta.png".format(error_type)
     print("Saving figure {0}".format(figname))
     plt.savefig(figname)
     # plt.closse(fig)
@@ -337,9 +337,9 @@ def visualise_scm_predictions_qt(np_file, figname):
 def visualise_tseries(npfile,level, savename):
     # data = np.load(np_file)
     data = h5py.File(npfile, 'r')
-    q_ml = data['qtot_next_ml'][:1000]
-    q_ = data['qtot_next'][:1000]
-    qpersist = np.zeros(data['qtot'][:1000].shape)
+    q_ml = data['qtot_next_ml'][:2000]
+    q_ = data['qtot_next'][:2000]
+    qpersist = np.zeros(data['qtot'][:2000].shape)
     qpersist[:] = data['qtot'][0]
 
     q_y_lim = (np.min(q_[:,level]), np.max(q_[:,level]))
@@ -379,9 +379,9 @@ def visualise_tseries(npfile,level, savename):
 def visualise_tseries_t(npfile,level, savename):
     # data = np.load(np_file)
     data = h5py.File(npfile, 'r')
-    t_ml = data['theta_next_ml'][:1000]
-    t_ = data['theta_next'][:1000]
-    tpersist = np.zeros(data['theta'][:1000].shape)
+    t_ml = data['theta_next_ml'][:2000]
+    t_ = data['theta_next'][:2000]
+    tpersist = np.zeros(data['theta'][:2000].shape)
     tpersist[:] = data['theta'][0]
 
 
@@ -1020,12 +1020,14 @@ if __name__ == "__main__":
     model_name="tdiff_006_lyr_333_in_055_out_0388_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
-    model_loss(model_file)
+    # model_loss(model_file)
+    model_name = "qdiff_diag_006_lyr_333_in_055_out_0388_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm_2m"
     try:
         os.makedirs(model_name)
     except OSError:
         pass
-    np_file = "inference/"+model_name+"_scm.hdf5"
+    # np_file = "inference/"+model_name+"_scm.hdf5"
+    np_file = "inference/"+model_name+".hdf5"
     # np_file = model_name+"_scm.hdf5"
     np_file_2 = "inference/"+model_name+"_qnext.hdf5"
     # np_file_2 = model_name+"_qphys.hdf5"
@@ -1034,16 +1036,16 @@ if __name__ == "__main__":
     # visualise_all_levels_qT(np_file_2)
     # visualise_all_levels_qTnext(np_file_2)
     # visualise_all_levels_qnext(np_file_2, model_name)
-    # visualise_scm_predictions_q(np_file, model_name)
+    visualise_scm_predictions_q(np_file, model_name)
     visualise_scm_predictions_t(np_file, model_name)
     # scm_mape(np_file, model_name)
     # scm_column_error(np_file, model_name, error_type="mse")
-    scm_column_error_t(np_file, model_name, error_type="mse")
+    # scm_column_error_t(np_file, model_name, error_type="mse")
     # visualise_scm_predictions_qt(np_file,figname)
     # plot_scm_mae(np_file)
     for l in range(0,55,1):
         level=l
-        # visualise_tseries(np_file, level, model_name)
+        visualise_tseries(np_file, level, model_name)
         visualise_tseries_t(np_file, level, model_name)
         # visualise_tseries_qphys(np_file_2,level)
         # visualise_tseries_tphys(np_file_2,level)

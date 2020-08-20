@@ -175,7 +175,7 @@ def create_diff_inout_vars(batch, xvar_multiplier, yvar_multiplier):
         xlist.append(v[list(range(0,len(v)-1,1))])
 
     for v in ydifflist:
-        ylist.append(v[list(range(0,len(v)-1,1))])
+        ylist.append(v[list(range(1,len(v),1))])
 
 
     # ylist = [difflist[0][list(range(1,len(difflist[0]),2))]]
@@ -228,7 +228,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
                 'training_loss':training_loss,
                 'validation_loss':validation_loss,
                 'arguments':args},
-                args.locations['model_loc']+'/'+checkpoint_name)
+                args.locations['chkpnt_loc']+'/'+checkpoint_name)
             # checkpoint_save(epoch, model, optimizer, training_loss, validation_loss, args.model_name, args.locations, args)            
      # Save the final model
     torch.save({'epoch':epoch,

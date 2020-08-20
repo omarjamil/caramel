@@ -75,25 +75,25 @@ def set_args():
     # args.xvars = ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
     # args.xvars = ['qadv', 'theta_adv', 'sw_toa', 'shf', 'lhf']
     # args.xvars = ['qtot', 'theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    # args.xvar_multiplier = [1000., 10., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
+    # args.xvar_multiplier = [10000., 10., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
     # args.xvars = ['qtot', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
     # args.xvar_multiplier = [1000., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
-    # args.xvars = ['theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    # args.xvar_multiplier = [10., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
+    args.xvars = ['theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
+    args.xvar_multiplier = [10., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
     # args.xvars = ['qtot', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
+    # args.xvar_multiplier = [10000., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
+    # args.xvars = ['p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
     # args.xvar_multiplier = [1000., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
-    args.xvars = ['p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    args.xvar_multiplier = [1000., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
     # args.xvars = ['qtot', 'theta', 'sw_toa', 'shf', 'lhf']
     # args.yvars = ['qtot_next', 'theta_next']
     # args.yvars = ['qtot_next', 'theta_next']
     # args.yvars = ['theta_next']
-    # args.yvars = ['qtot']
-    # args.yvar_multiplier = [1000.]
+    args.yvars = ['qtot']
+    args.yvar_multiplier = [10000.]
     # args.yvars = ['theta']
     # args.yvar_multiplier = [10.]
-    args.yvars = ['qtot','theta']
-    args.yvar_multiplier = [1000.,1.]
+    # args.yvars = ['qtot','theta']
+    # args.yvar_multiplier = [1000.,1.]
     # args.yvars2 = ['qphys', 'theta_phys']
     args.yvars2 = ['qphys']
     # args.yvars2 = ['theta_phys']
@@ -114,7 +114,7 @@ def set_args():
 
     # args.hidden_size = 512 
     args.hidden_size = int(1.0 * args.in_features + args.nb_classes)
-    args.model_name = "noqtin_qtdiffout_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_stkd_tanh.tar".format(str(args.nb_hidden_layers).zfill(3),
+    args.model_name = "qdiff_diag_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_stkd_tanh.tar".format(str(args.nb_hidden_layers).zfill(3),
                                                                                         str(args.in_features).zfill(3),
                                                                                         str(args.nb_classes).zfill(3),
                                                                                         str(args.hidden_size).zfill(4),
@@ -128,13 +128,13 @@ def set_args():
     # Get the data
     if args.isambard:
         args.locations={ "train_test_datadir":"/home/mo-ojamil/ML/CRM/data",
-                "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/chkpts",
+                "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/torch/chkpoints",
                 "hist_loc":"/home/mo-ojamil/ML/CRM/data/models",
                 "model_loc":"/home/mo-ojamil/ML/CRM/data/models/torch",
                 "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(args.normaliser)}
     else:
         args.locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
-                "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
+                "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/torch/chkpoints",
                 "hist_loc":"/project/spice/radiation/ML/CRM/data/models/history",
                 "model_loc":"/project/spice/radiation/ML/CRM/data/models/torch",
                 "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser)}

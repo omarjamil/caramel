@@ -177,7 +177,7 @@ def plot_distribution(dataset_file,nn_norm, data_frac, nlevs):
             ax.legend()
 
             ax = axs[0,1]
-            ax.hist(qdiff[:,lev]*1000., 100, label='qdiff')
+            ax.hist(qdiff[:,lev]*10000., 100, label='qdiff')
             ax.legend()
 
             ax = axs[1,0]
@@ -185,7 +185,7 @@ def plot_distribution(dataset_file,nn_norm, data_frac, nlevs):
             ax.legend()
 
             ax = axs[1,1]
-            ax.hist(tdiff[:,lev], 100, label='theta diff')
+            ax.hist(tdiff[:,lev]*10., 100, label='theta diff')
             ax.legend()
 
             fig, axs1 = plt.subplots(2,2,figsize=(14,10), sharex=False)
