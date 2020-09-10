@@ -100,7 +100,7 @@ class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, dat_type, nlevs, dataset_file, normaliser, batch_size, samples_frac=1.,data_frac=1., 
                 xvars=["qtot", "qadv", "theta", "theta_adv", "sw_toa", "shf", "lhf", "p", "rho", "xwind", "ywind", "zwind"],
                 yvars=["qtot_next", "theta_next"],
-                yvars2=["qphys", "theta_phys"], no_norm=False):
+                xvars2=["qadv", "theta_adv"], no_norm=False):
         super().__init__()
         self.dat_type = dat_type
         self.dataset_file = dataset_file
@@ -112,16 +112,16 @@ class ConcatDataset(torch.utils.data.Dataset):
         self.ydat = []
         self.ymean = []
         self.ystd = []
-        self.ydat2 = []
-        self.ymean2 = []
-        self.ystd2 = []
+        self.xdat2 = []
+        self.xmean2 = []
+        self.xstd2 = []
         self.xvars = xvars
         self.yvars = yvars
-        self.yvars2 = yvars2
+        self.xvars2 = xvars2
 
         self.xdata_idx = []
         self.ydata_idx = []
-        self.ydata_idx2 = []
+        self.xdata_idx2 = []
         self.no_norm = no_norm
         self.batch_size = batch_size
 
@@ -226,21 +226,21 @@ class ConcatDataset(torch.utils.data.Dataset):
             start_idx = end_idx
 
         start_idx = 0
-        for y2 in self.yvars2:
-            k = y2+"_"+self.dat_type
-            self.ydat2.append(self.ydata_and_norm[k][0])
-            mean = self.ydata_and_norm[k][1].reshape(-1)[self.norm_slc]
-            std = self.ydata_and_norm[k][2].reshape(-1)[self.norm_slc]
-            self.ymean2.append(mean)
-            self.ystd2.append(std)
-            end_idx = start_idx + len(self.ydata_and_norm[k][1])
-            self.ydata_idx2.append((start_idx,end_idx))
+        for x2 in self.xvars2:
+            k = x2+"_"+self.dat_type
+            self.xdat2.append(self.xdata_and_norm[k][0])
+            mean = self.xdata_and_norm[k][1].reshape(-1)[self.norm_slc]
+            std = self.xdata_and_norm[k][2].reshape(-1)[self.norm_slc]
+            self.xmean2.append(mean)
+            self.xstd2.append(std)
+            end_idx = start_idx + len(self.xdata_and_norm[k][1])
+            self.xdata_idx2.append((start_idx,end_idx))
             start_idx = end_idx
       
         self.ymean = torch.cat(self.ymean)
         self.ystd = torch.cat(self.ystd)
-        self.ymean2 = torch.cat(self.ymean2)
-        self.ystd2 = torch.cat(self.ystd2)
+        self.xmean2 = torch.cat(self.xmean2)
+        self.xstd2 = torch.cat(self.xstd2)
         self.xmean = torch.cat(self.xmean)
         self.xstd = torch.cat(self.xstd)
 
@@ -264,7 +264,7 @@ class ConcatDataset(torch.utils.data.Dataset):
         # isamples, ipoints = self.index_map[indx]
         x_var_data = {}
         y_var_data = {}
-        y_var_data2 = {}
+        x_var_data2 = {}
 
         for x in self.xvars:
             if self.dat_type == "train":
@@ -290,29 +290,29 @@ class ConcatDataset(torch.utils.data.Dataset):
                 std = self.ydata_and_norm[i][2].reshape(-1)[self.norm_slc]
                 y_var_data[i] = self.__transform(torch.from_numpy(self.ydata_and_norm[i][0][indx, :,:]), mean, std)
 
-        for y2 in self.yvars2:
+        for x2 in self.xvars2:
             if self.dat_type == "train":
-                i = y2+"_train"
+                i = x2+"_train"
             elif self.dat_type == "test":
-                i = y2+"_test"
+                i = x2+"_test"
             if self.no_norm:
-                y_var_data2[i] = torch.from_numpy(self.ydata_and_norm[i][0][indx,:,:])
+                x_var_data2[i] = torch.from_numpy(self.xdata_and_norm[i][0][indx,:,:])
             else:
-                mean = self.ydata_and_norm[i][1].reshape(-1)[self.norm_slc]
-                std = self.ydata_and_norm[i][2].reshape(-1)[self.norm_slc]
-                y_var_data2[i] = self.__transform(torch.from_numpy(self.ydata_and_norm[i][0][indx,:,:]), mean, std)
+                mean = self.xdata_and_norm[i][1].reshape(-1)[self.norm_slc]
+                std = self.xdata_and_norm[i][2].reshape(-1)[self.norm_slc]
+                x_var_data2[i] = self.__transform(torch.from_numpy(self.xdata_and_norm[i][0][indx,:,:]), mean, std)
 
-        return x_var_data, y_var_data, y_var_data2
+        return x_var_data, y_var_data, x_var_data2
         
     def __getitem__(self, i):
         """
         batch iterable
         """
         # print("index {0}".format(i))
-        x_var_data, y_var_data, y_var_data2 = self.__get_train_vars__(i)
+        x_var_data, y_var_data, x_var_data2 = self.__get_train_vars__(i)
         x = []
         y = []
-        y2 = []
+        x2 = []
         if self.dat_type == "train":
             # x = torch.cat([x_var_data[k+"_train"] for k in self.xvars], dim=1)
             # y = torch.cat([y_var_data[k+"_train"] for k in self.yvars], dim=1)
@@ -321,8 +321,8 @@ class ConcatDataset(torch.utils.data.Dataset):
                 x.append(x_var_data[xv+"_train"])
             for yv in self.yvars:
                 y.append(y_var_data[yv+"_train"])
-            for y2v in self.yvars2:
-                y2.append(y_var_data2[y2v+"_train"])
+            for x2v in self.xvars2:
+                x2.append(x_var_data2[x2v+"_train"])
         elif self.dat_type == "test":
             # x = torch.cat([x_var_data[k+"_test"] for k in self.xvars], dim=1)
             # y = torch.cat([y_var_data[k+"_test"] for k in self.yvars], dim=1)
@@ -331,11 +331,11 @@ class ConcatDataset(torch.utils.data.Dataset):
                 x.append(x_var_data[xv+"_test"])
             for yv in self.yvars:
                 y.append(y_var_data[yv+"_test"])
-            for y2v in self.yvars2:
-                y2.append(y_var_data2[y2v+"_test"])
+            for x2v in self.xvars2:
+                x2.append(x_var_data2[x2v+"_test"])
     
 
-        return x,y,y2
+        return x,y,x2
 
     def __len__(self):
         return self.total_points
@@ -346,8 +346,8 @@ class ConcatDataset(torch.utils.data.Dataset):
         Split x,y data into constituents
         """
         split_data = {}
-        data_idx = {"x":self.xdata_idx,"y":self.ydata_idx,"y2":self.ydata_idx2}
-        xyvars = {"x":self.xvars,"y":self.yvars,"y2":self.yvars2}
+        data_idx = {"x":self.xdata_idx,"y":self.ydata_idx,"x2":self.xdata_idx2}
+        xyvars = {"x":self.xvars,"y":self.yvars,"x2":self.xvars2}
         for i,x in enumerate(xyvars[xyz]):
             l,h = data_idx[xyz][i]
             split_data[x] = indata[...,l:h]

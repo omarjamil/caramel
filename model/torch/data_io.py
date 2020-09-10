@@ -322,6 +322,223 @@ class Data_IO_validation(object):
 
         return (x,y,y2, self.xmean, self.xstd, self.ymean, self.ystd, self.ymean2, self.ystd2)
 
+class Data_IO_validation_x2(object):
+    def __init__(self, region, nlevs, dataset_file, normaliser, 
+                xvars=['qtot', 'theta', 'sw_toa', 'shf', 'lhf', 'p', 'rho', 'xwind', 'ywind', 'zwind'],
+                yvars=['qtot_next', 'theta_next'],
+                xvars2=['qadv', 'theta_adv'], no_norm=False):
+        self.region = region
+        self.nlevs = nlevs
+        self.nn_norm = NormalizersData(normaliser)
+        self.xdat = []
+        self.xmean = []
+        self.xstd = []
+        self.ydat = []
+        self.ymean = []
+        self.ystd = []
+        self.xdat2 = []
+        self.xmean2 = []
+        self.xstd2 = []
+        self.xvars = xvars
+        self.yvars = yvars
+        self.xvars2 = xvars2
+        # self.xvars = ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
+        # self.yvars = ['qphys', 'theta_phys']
+        # self.xvars = ['qtot', 'theta', 'sw_toa', 'shf', 'lhf']
+        # self.yvars = ['qtot_next', 'theta_next']
+        # self.yvars = ['qtot_next']
+        # self.yvars2 = ['qphys', 'theta_phys']
+        # self.yvars2 = ['qphys']
+
+        self.xdata_idx = []
+        self.ydata_idx = []
+        self.xdata_idx2 = []
+        self.dat_type = "test"
+        self.no_norm = no_norm
+
+        print("Reading dataset file: {0}".format(dataset_file))
+        dataset=h5py.File(dataset_file,'r')
+        self.q_tot_test = dataset["q_tot_test"]
+        self.q_tot_diff_test = dataset["q_tot_diff_test"]
+        self.q_tot_adv_test = dataset["q_adv_test"]
+        self.theta_test = dataset["air_potential_temperature_test"]
+        self.theta_diff_test = dataset["air_potential_temperature_diff_test"]
+        self.theta_adv_test = dataset["t_adv_test"]
+        self.sw_toa_test = dataset["toa_incoming_shortwave_flux_test"]
+        self.shf_test = dataset["surface_upward_sensible_heat_flux_test"]
+        self.lhf_test = dataset["surface_upward_latent_heat_flux_test"]
+        self.theta_phys_test = dataset["t_phys_test"]
+        self.qphys_test = dataset["q_phys_test"]
+        self.p_test = dataset['air_pressure_test']
+        self.rho_test = dataset['m01s00i253_test']
+        self.xwind_test = dataset['x_wind_test']
+        self.ywind_test = dataset['y_wind_test']
+        self.zwind_test = dataset['upward_air_velocity_test']
+
+        self.npoints = int(self.q_tot_test.shape[0])
+        self.norm_slc = slice(self.nlevs)
+        self.xdata_and_norm = {
+                                'qtot_test':[self.q_tot_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                'qadv_test':[self.q_tot_adv_test[:self.npoints, :self.nlevs], self.nn_norm.qadv_mean, self.nn_norm.qadv_stdscale],
+                                'theta_test':[self.theta_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale],
+                                'theta_adv_test':[self.theta_adv_test[:self.npoints, :self.nlevs], self.nn_norm.tadv_mean, self.nn_norm.tadv_stdscale],
+                                'sw_toa_test':[self.sw_toa_test[:self.npoints], self.nn_norm.sw_toa_mean, self.nn_norm.sw_toa_stdscale],
+                                'shf_test':[self.shf_test[:self.npoints], self.nn_norm.upshf_mean, self.nn_norm.upshf_stdscale],
+                                'lhf_test':[self.lhf_test[:self.npoints], self.nn_norm.uplhf_mean, self.nn_norm.uplhf_stdscale],
+                                'p_test':[self.p_test[:self.npoints, :self.nlevs], self.nn_norm.pressure_mean, self.nn_norm.pressure_stdscale],
+                                'rho_test':[self.rho_test[:self.npoints, :self.nlevs], self.nn_norm.rho_mean, self.nn_norm.rho_stdscale],
+                                'xwind_test':[self.xwind_test[:self.npoints, :self.nlevs], self.nn_norm.xwind_mean, self.nn_norm.xwind_stdscale],
+                                'ywind_test':[self.ywind_test[:self.npoints, :self.nlevs], self.nn_norm.ywind_mean, self.nn_norm.ywind_stdscale],
+                                'zwind_test':[self.zwind_test[:self.npoints, :self.nlevs], self.nn_norm.zwind_mean, self.nn_norm.zwind_stdscale],
+                                }
+        self.ydata_and_norm = {
+                                'qphys_test':[self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.qphys_mean, self.nn_norm.qphys_stdscale],
+                                'qtot_test':[self.q_tot_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                'theta_test':[self.theta_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale],
+                                # 'qphys_test':[self.qphys_test[:self.npoints, :3], self.nn_norm.qphys_mean[norm_slc3], self.nn_norm.qphys_stdscale[norm_slc3]],
+                                'theta_phys_test':[self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.tphys_mean, self.nn_norm.tphys_stdscale],
+                                # 'qtot_next_test':[self.q_tot_test[:self.npoints, :self.nlevs]+self.q_tot_adv_test[:self.npoints, :self.nlevs]+self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                'qtot_next_test':[self.q_tot_test[:self.npoints-1, :self.nlevs]+self.q_tot_diff_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                # 'qtot_next_test':[self.q_tot_test[:self.npoints, :1]+self.q_tot_adv_test[:self.npoints, :1]+self.qphys_test[:self.npoints, :1], self.nn_norm.q_mean[norm_slc1], self.nn_norm.q_stdscale[norm_slc1]],
+                                # 'theta_next_test':[self.theta_test[:self.npoints, :self.nlevs]+self.theta_adv_test[:self.npoints, :self.nlevs]+self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale]
+                                'theta_next_test':[self.theta_test[:self.npoints-1, :self.nlevs]+self.theta_diff_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale]
+                                }
+        start_idx = 0
+        for x in self.xvars:
+            i = x+"_"+self.dat_type
+            self.xdat.append(self.xdata_and_norm[i][0])
+            mean = self.xdata_and_norm[i][1].reshape(-1)[self.norm_slc]
+            std = self.xdata_and_norm[i][2].reshape(-1)[self.norm_slc]
+            self.xmean.append(mean)
+            self.xstd.append(std)
+            end_idx = start_idx + self.xdata_and_norm[i][0].shape[1] #len(self.xdata_and_norm[i][1])
+            self.xdata_idx.append((start_idx,end_idx))
+            start_idx = end_idx
+
+        start_idx = 0
+        for y in self.yvars:
+            j = y+"_"+self.dat_type
+            self.ydat.append(self.ydata_and_norm[j][0])
+            mean = self.ydata_and_norm[j][1].reshape(-1)[self.norm_slc]
+            std = self.ydata_and_norm[j][2].reshape(-1)[self.norm_slc]
+            self.ymean.append(mean)
+            self.ystd.append(std)
+            end_idx = start_idx + self.ydata_and_norm[j][0].shape[1]
+            self.ydata_idx.append((start_idx,end_idx))
+            start_idx = end_idx
+
+        start_idx = 0
+        for x2 in self.xvars2:
+            k = x2+"_"+self.dat_type
+            self.xdat2.append(self.xdata_and_norm[k][0])
+            mean = self.xdata_and_norm[k][1].reshape(-1)[self.norm_slc]
+            std = self.xdata_and_norm[k][2].reshape(-1)[self.norm_slc]
+            self.xmean2.append(mean)
+            self.xstd2.append(std)
+            end_idx = start_idx + self.xdata_and_norm[k][0].shape[1]
+            self.xdata_idx2.append((start_idx,end_idx))
+            start_idx = end_idx
+
+        self.xmean = torch.cat(self.xmean)
+        self.ymean = torch.cat(self.ymean)
+        self.xmean2 = torch.cat(self.xmean2)
+        self.xstd = torch.cat(self.xstd)
+        self.ystd = torch.cat(self.ystd)
+        self.xstd2 = torch.cat(self.xstd2)
+        
+    
+    def split_data(self, indata, xyz='x'):
+        """
+        Split x,y data into constituents
+        """
+        split_data = {}
+        data_idx = {'x':self.xdata_idx,'y':self.ydata_idx,'x2':self.xdata_idx2}
+        xyvars = {'x':self.xvars,'y':self.yvars,'x2':self.xvars2}
+        for i,x in enumerate(xyvars[xyz]):
+            l,h = data_idx[xyz][i]
+            split_data[x] = indata[...,l:h]
+        return split_data
+
+    # def split_xdata(self, indata):
+    #     split_data = {}
+    #     for i,x in enumerate(self.xvars):
+    #         l,h = self.xdata_idx[i]
+    #         split_data[x] = indata[...,l:h]
+    #     return split_data
+
+    # def split_ydata(self, indata):
+    #     split_data = {}
+    #     for i,y in enumerate(self.yvars):
+    #         split_data[y] = indata[...,self.ydata_idx[i][0]:self.ydata_idx[i][1]]
+    #     return split_data
+
+    def __get_test_vars__(self):
+        """
+        Return normalised variables
+        """
+        x_var_data = {}
+        y_var_data = {}
+        x_var_data2 = {}
+
+        for x in self.xvars:
+            i = x+"_test"
+            if self.no_norm:
+                x_var_data[i] = torch.from_numpy(self.xdata_and_norm[i][0][:])
+            else:
+                mean = self.xdata_and_norm[i][1].reshape(-1)[self.norm_slc]
+                std = self.xdata_and_norm[i][2].reshape(-1)[self.norm_slc]
+                x_var_data[i] = self._transform(torch.from_numpy(self.xdata_and_norm[i][0][:]), mean, std)
+        
+        for y in self.yvars:
+            i = y+"_test"
+            if self.no_norm:
+                y_var_data[i] = torch.from_numpy(self.ydata_and_norm[i][0][:])
+            else:
+                mean = self.ydata_and_norm[i][1].reshape(-1)[self.norm_slc]
+                std = self.ydata_and_norm[i][2].reshape(-1)[self.norm_slc]
+                y_var_data[i] = self._transform(torch.from_numpy(self.ydata_and_norm[i][0][:]), mean, std)
+        
+        for x2 in self.xvars2:
+            i = x2+"_test"
+            if self.no_norm:
+                x_var_data2[i] = torch.from_numpy(self.xdata_and_norm[i][0][:])
+            else:
+                mean = self.xdata_and_norm[i][1].reshape(-1)[self.norm_slc]
+                std = self.xdata_and_norm[i][2].reshape(-1)[self.norm_slc]
+                x_var_data2[i] = self._transform(torch.from_numpy(self.xdata_and_norm[i][0][:]), mean, std)
+
+        return x_var_data, y_var_data, x_var_data2
+
+    def _transform(self, var, mean, std):
+        """
+        Normalise/standardisation   
+        """
+        return var.sub(mean).div(std)
+
+    def _inverse_transform(self, var, mean, std):
+        """
+        Inverse the normalisation/standardisation
+        """
+        return var.mul(std).add(mean)
+
+    def _inverse_transform_split(self, var, mean, std, xyz='x'):
+        """
+        Inverse the normalisation/standardisation on split data
+        """
+        inv_transformed_data = {}
+        mean_split = self.split_data(mean, xyz=xyz)
+        std_split = self.split_data(std, xyz=xyz)
+        for v in var:
+            inv_transformed_data[v] = var[v].mul(std_split[v]).add(mean_split[v])
+        return inv_transformed_data
+
+    def get_data(self):
+        x_var_data, y_var_data, x_var_data2 = self.__get_test_vars__()
+        x = torch.cat([x_var_data[k+'_test'] for k in self.xvars], dim=1)
+        y = torch.cat([y_var_data[k+'_test'] for k in self.yvars], dim=1)
+        x2 = torch.cat([x_var_data2[k+'_test'] for k in self.xvars2], dim=1)
+        return (x,y,x2, self.xmean, self.xstd, self.ymean, self.ystd, self.xmean2, self.xstd2)
+
         # x = torch.cat([torch.from_numpy(d) for d in self.xdat], dim=1)
         # y = torch.cat([torch.from_numpy(d) for d in self.ydat], dim=1)
         # x_ = self._transform(x, self.xmean, self.xstd)

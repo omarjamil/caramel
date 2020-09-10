@@ -39,7 +39,70 @@ class MLP_tanh(torch.nn.Module):
             x = self.act(l(x))
         # x = self.out(x)
         x = self.tanh(self.out(x))
+        # x = self.out(x)
         return x
+
+class MLP_BN_tanh(torch.nn.Module):
+    def __init__(self, in_features, nb_classes, nb_hidden_layer, 
+        hidden_size, act=torch.nn.LeakyReLU):
+        super(MLP_BN_tanh, self).__init__()
+        self.act = act()
+        self.n_hidden_layers = nb_hidden_layer
+        self.fc1 = torch.nn.Linear(in_features, hidden_size)
+        self.fcs = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
+        self.out = torch.nn.Linear(hidden_size, nb_classes)
+        self.tanh = torch.nn.Tanh()
+        self.bn1 = torch.nn.BatchNorm1d(in_features)
+        
+    def forward(self, x):
+        x = self.act(self.fc1(self.bn1(x)))
+        for l in self.fcs:
+            x = self.act(l(x))
+        # x = self.out(x)
+        x = self.tanh(self.out(x))
+        # x = self.out(x)
+        return x
+
+class MLP_multiout_tanh(torch.nn.Module):
+    def __init__(self, in_features, nb_classes, nb_hidden_layer, 
+        hidden_size, act=torch.nn.LeakyReLU):
+        super(MLP_multiout_tanh, self).__init__()
+        self.act = act()
+        self.n_hidden_layers = nb_hidden_layer
+        self.fc1 = torch.nn.Linear(in_features, hidden_size)
+        self.fcs1 = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        self.fcs1.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers-1)] )
+        self.fcs2 = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        self.fcs2.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
+        self.fcs3 = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        self.fcs3.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers+1)] )
+        # self.fcs4 = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        # self.fcs4.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers+2)] )
+        self.out = torch.nn.Linear(hidden_size, nb_classes)
+        self.tanh = torch.nn.Tanh()
+        
+    def forward(self, x):
+        x1 = self.act(self.fc1(x))
+        x2 = self.act(self.fc1(x))
+        x3 = self.act(self.fc1(x))
+        # x4 = self.act(self.fc1(x))
+        # for l1,l2,l3,l4 in zip(self.fcs1,self.fcs2,self.fcs3,self.fcs4):
+        for l1,l2,l3 in zip(self.fcs1,self.fcs2,self.fcs3):
+            x1 = self.act(l1(x1))
+            x2 = self.act(l2(x2))
+            x3 = self.act(l3(x3))
+            # x4 = self.act(l4(x4))
+        # x = self.out(x)
+        # xout_1 = self.tanh(self.out(x1))
+        # xout_2 = self.tanh(self.out(x2))
+        # xout_3 = self.tanh(self.out(x3))
+        xout_1 = self.out(x1)
+        xout_2 = self.out(x2)
+        xout_3 = self.out(x3)
+        # xout_4 = self.tanh(self.out(x4))
+        # return xout_1,xout_2,xout_3,xout_4
+        return xout_1,xout_2,xout_3
 
 class MLPDrop(torch.nn.Module):
     def __init__(self, in_features, nb_classes, nb_hidden_layer, 
@@ -671,22 +734,53 @@ class AE(torch.nn.Module):
         super(AE, self).__init__()
         print("Model AE")
         self.act = act()
+        self.tanh = torch.nn.Tanh()
+        # self.fc1 = torch.nn.Linear(in_features, 50)
+        # self.fc2 = torch.nn.Linear(50, 30)
+        # self.fc3 = torch.nn.Linear(30, 10)
+        # self.fc31 = torch.nn.Linear(10, 5)
+        # self.fc32 = torch.nn.Linear(5, 10)
+        # self.fc4 = torch.nn.Linear(10, 30)
+        # self.fc5 = torch.nn.Linear(30, 50)
+        # self.fc6 = torch.nn.Linear(50, in_features)
+
         self.fc1 = torch.nn.Linear(in_features, 50)
-        self.fc2 = torch.nn.Linear(50, 50)
-        self.fc31 = torch.nn.Linear(50, 50)
-        # self.fc32 = torch.nn.Linear(10, 3)
-        self.fc4 = torch.nn.Linear(50, 50)
-        self.fc5 = torch.nn.Linear(50, 50)
+        # self.fc11 = torch.nn.Linear(50, 50)
+        self.fc2 = torch.nn.Linear(50, 45)
+        # self.fc21 = torch.nn.Linear(45, 45)
+        self.fc3 = torch.nn.Linear(45, 40)
+        self.fc31 = torch.nn.Linear(40, 40)
+        self.fc32 = torch.nn.Linear(40, 40)
+        self.fc4 = torch.nn.Linear(40, 45)
+        # self.fc41 = torch.nn.Linear(45, 45)
+        self.fc5 = torch.nn.Linear(45, 50)
+        # self.fc51 = torch.nn.Linear(50, 50)
         self.fc6 = torch.nn.Linear(50, in_features)
 
-    def forward(self,x):
+    def ecnoder(self,x):
         x = self.act(self.fc1(x))
+        # x = self.act(self.fc11(x))
         x = self.act(self.fc2(x))
+        # x = self.act(self.fc21(x))
+        x = self.act(self.fc3(x))
         x = self.act(self.fc31(x))
+        return x
+
+    def decoder(self,x):
+        x = self.act(self.fc32(x))
         x = self.act(self.fc4(x))
+        # x = self.act(self.fc41(x))
         x = self.act(self.fc5(x))
+        # x = self.act(self.fc51(x))
+        # x = self.tanh(self.fc6(x))
         x = self.fc6(x)
         return x
+
+    def forward(self,x):
+        encoded = self.ecnoder(x)
+        decoded = self.decoder(encoded)
+       
+        return encoded, decoded
 
 #########################
 ########   VAE    #######

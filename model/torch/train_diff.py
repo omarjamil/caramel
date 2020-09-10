@@ -1,5 +1,6 @@
 import argparse
 import torch
+# import caramel_diff_multiout as caramel
 import caramel_diff as caramel
 
 parser = argparse.ArgumentParser(description='Train Q')
@@ -77,11 +78,19 @@ def set_args():
     # args.xvars = ['qtot', 'theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
     # args.xvar_multiplier = [10000., 10., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
     # args.xvars = ['qtot', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    # args.xvar_multiplier = [1000., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
-    args.xvars = ['theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    args.xvar_multiplier = [10., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
+    # args.xvar_multiplier = [1000., 0.01, 1.e-11, 0.1, 0.1, 10., 0.1, 0.01, 0.001]
+    # args.xvars2 = ['qadv']
+    # args.xvar_multiplier = [1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000.]
+    # args.xvars2 = ['theta_adv']
+    args.xvars2 = ['qadv']
+    # args.xvars2 = ['qadv','theta_adv']
+    # args.xvars = ['theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
+    # args.xvar_multiplier = [100., 0.1, 1.e-10, 1., 1., 1000., 1., 0.1, 0.01]
     # args.xvars = ['qtot', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    # args.xvar_multiplier = [10000., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
+    args.xvars = ['qtot', 'theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
+    # args.xvar_multiplier = [10000., 0.1, 1.e-10, 1., 1., 1000., 1., 0.1, 0.01]
+    args.xvar_multiplier = [1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000.]
+    # args.xvar_multiplier = [1., 1., 1., 1., 1., 1., 1., 1., 1.]
     # args.xvars = ['p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
     # args.xvar_multiplier = [1000., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
     # args.xvars = ['qtot', 'theta', 'sw_toa', 'shf', 'lhf']
@@ -89,32 +98,33 @@ def set_args():
     # args.yvars = ['qtot_next', 'theta_next']
     # args.yvars = ['theta_next']
     args.yvars = ['qtot']
-    args.yvar_multiplier = [10000.]
+    # args.yvar_multiplier = [1000.]
+    # args.yvar_multiplier = [100.]
     # args.yvars = ['theta']
-    # args.yvar_multiplier = [10.]
+    args.yvar_multiplier = [100.]
+    # args.yvar_multiplier = [1.]
+    # args.yvar_multiplier = [10000.]
     # args.yvars = ['qtot','theta']
     # args.yvar_multiplier = [1000.,1.]
-    # args.yvars2 = ['qphys', 'theta_phys']
-    args.yvars2 = ['qphys']
-    # args.yvars2 = ['theta_phys']
-    args.train_on_y2 = False
-    args.no_norm = True
+    args.no_norm = False
     args.lev_norm = True
     args.region=args.data_region
-    args.in_features = (args.nlevs*(len(args.xvars)-3)+3)
-    # args.in_features = (args.nlevs*2)
-    if not args.train_on_y2:
-        args.nb_classes = (args.nlevs*(len(args.yvars)))
-        # args.nb_classes = 1 #(args.nlevs*(len(args.yvars)))
-        print("Inputs: {0} Ouputs: {1}".format(args.xvars, args.yvars))
+    args.train_on_x2 = False
+    args.no_xdiff = False
+
+    if args.train_on_x2:
+        args.in_features = (args.nlevs*((len(args.xvars)-3)+len(args.xvars2))+3)
     else:
-        args.nb_classes = (args.nlevs*(len(args.yvars2)))
-        # args.nb_classes = 1 #(args.nlevs*(len(args.yvars2)))
-        print("Inputs: {0} Ouputs: {1}".format(args.xvars, args.yvars2))
+        args.in_features = (args.nlevs*(len(args.xvars)-3)+3)
+
+    # args.in_features = (args.nlevs*2)
+    args.nb_classes = (args.nlevs*(len(args.yvars)))
+    # args.nb_classes = 1 #(args.nlevs*(len(args.yvars2)))
+    print("Inputs: {0} {1} Ouputs: {2}".format(args.xvars, args.xvars2, args.yvars))
 
     # args.hidden_size = 512 
     args.hidden_size = int(1.0 * args.in_features + args.nb_classes)
-    args.model_name = "qdiff_diag_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_stkd_tanh.tar".format(str(args.nb_hidden_layers).zfill(3),
+    args.model_name = "qdiff_diag_normed_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_sum_{8}_stkd_stoch_tanh.tar".format(str(args.nb_hidden_layers).zfill(3),
                                                                                         str(args.in_features).zfill(3),
                                                                                         str(args.nb_classes).zfill(3),
                                                                                         str(args.hidden_size).zfill(4),

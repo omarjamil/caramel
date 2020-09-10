@@ -12,10 +12,10 @@ def visualise_scm_predictions_q(np_file, savename):
 
     data = h5py.File(np_file, 'r')
     
-    q_ml = data['qtot_next_ml'][:250,:].T
-    q_ = data['qtot_next'][:250,:].T
+    q_ml = data['qtot_next_ml'][:300,:].T
+    q_ = data['qtot_next'][:300,:].T
     q_persistence = np.zeros(q_.T.shape)
-    q_persistence[:] = q_.T[0,:]
+    q_persistence[:] = data['qtot_next'][0,:]
     q_persistence = q_persistence.T
     q_ml = np.ma.masked_where(q_ml <= 0.0, q_ml)
     q_ = np.ma.masked_where(q_ == 0.0, q_)
@@ -23,7 +23,7 @@ def visualise_scm_predictions_q(np_file, savename):
     
     fig, axs = plt.subplots(6,1,figsize=(14, 10), sharex=True, sharey=True)
     ax = axs[0]
-    vmin,vmax=np.min(q_),np.max(q_)
+    vmin,vmax=np.min(q_ml),np.max(q_ml)
     # print(vmin,vmax)
     # c = ax.pcolor(q_ml[:,:], vmin=vmin, vmax=vmax)
     c = ax.pcolor(q_ml[:,:])
@@ -37,7 +37,7 @@ def visualise_scm_predictions_q(np_file, savename):
     fig.colorbar(c,ax=ax)
 
     ax = axs[2]
-    # c = ax.pcolor(q_[:,:], vmin=vmin, vmax=vmax)
+    # c = ax.pcolor(q_persistence[:,:], vmin=vmin, vmax=vmax)
     c = ax.pcolor(q_persistence)
     ax.set_title('q pers')
     fig.colorbar(c,ax=ax)
@@ -67,6 +67,7 @@ def visualise_scm_predictions_q(np_file, savename):
     # c = ax.pcolor(diff[:,:])
     #c = ax.pcolor(qphys_test_norm[:,0:4000])
     ax.set_title('Persistence - ML')
+    ax.set_xlabel('Timesteps (10min)')
     fig.colorbar(c,ax=ax)
 
     figname = savename+"/"+savename+"_scm_qnext.png"
@@ -82,8 +83,8 @@ def visualise_scm_predictions_t(np_file, savename):
 
     data = h5py.File(np_file, 'r')
     
-    t_ml = data['theta_next_ml'][:2000,:].T
-    t_ = data['theta_next'][:2000,:].T
+    t_ml = data['theta_next_ml'][:300,:].T
+    t_ = data['theta_next'][:300,:].T
     t_persistence = np.zeros(t_.T.shape)
     t_persistence[:] = t_.T[0,:]
     t_persistence = t_persistence.T
@@ -131,6 +132,7 @@ def visualise_scm_predictions_t(np_file, savename):
     # c = ax.pcolor(diff[:,:])
     #c = ax.pcolor(qphys_test_norm[:,0:4000])
     ax.set_title('Persistence - ML')
+    ax.set_xlabel('Timesteps (10min)')
     fig.colorbar(c,ax=ax)
 
     figname = savename+"/"+savename+"_scm_theta.png"
@@ -174,28 +176,36 @@ def scm_column_error(np_file, savename, error_type="mse"):
     # data = np.load(np_file)
     data = h5py.File(np_file, 'r')
     
-    q_ml = data['qtot_next_ml'][:,:]
-    q_ = data['qtot_next'][:-1,:]
+    q_ml = data['qtot_next_ml'][:2000,:]
+    q_ = data['qtot_next'][:2000,:]
     q_persistence = np.zeros(q_.shape)
     q_persistence[:] = q_[0,:]
-    q_persistence = q_persistence
-
+    # q_persistence = q_persistence
+    r2 = sklearn.metrics.r2_score(q_[:500,:30],q_ml[:500,:30])
+    print("R2 Q {0}".format(r2))
     ml_error = np.zeros(q_.shape[0])
     persistence_error = np.zeros(q_.shape[0])
     for l in range(len(ml_error)):
         if error_type == "mape":
-            ml_error[l] = np.sum((q_[l,:] - q_ml[l,:])/q_[l,:])/q_.shape[1]
-            persistence_error[l] = np.sum((q_[l,:] - q_persistence[l,:])/q_[l,:])/q_.shape[1]
+            ml_error[l] = np.sum(np.abs((q_[l,:] - q_ml[l,:])/q_[l,:]))/q_.shape[1]
+            persistence_error[l] = np.sum(np.abs((q_[l,:] - q_persistence[l,:])/q_[l,:]))/q_.shape[1]
         if error_type == "mse":
             ml_error[l] = np.sum(np.square(q_[l,:] - q_ml[l,:]))/q_.shape[1]
             persistence_error[l] = np.sum(np.square(q_[l,:] - q_persistence[l,:]))/q_.shape[1]
+        if error_type == "mae":
+            ml_error[l] = np.sum(q_[l,:] - q_ml[l,:])/q_.shape[1]
+            persistence_error[l] = np.sum(q_[l,:] - q_persistence[l,:])/q_.shape[1]
+        if error_type == "rmse":
+            ml_error[l] = np.sqrt(np.sum(np.square(q_[l,:] - q_ml[l,:]))/q_.shape[1])
+            persistence_error[l] = np.sqrt(np.sum(np.square(q_[l,:] - q_persistence[l,:]))/q_.shape[1])
 
     plt.style.use('ggplot')
     fig, axs = plt.subplots(1,1,figsize=(14, 10))
     ax = axs
     ax.plot(ml_error[:], label='ML')
     ax.plot(persistence_error[:], label='Persitence')
-    ax.set_title('MSE over levels')
+    ax.set_title('{0}'.format(error_type))
+    ax.set_xlabel('Timesteps (10min)')
     ax.legend()
 
     figname = savename+"/"+savename+"_column_{0}_q.png".format(error_type)
@@ -209,28 +219,37 @@ def scm_column_error_t(np_file, savename, error_type="mse"):
     # data = np.load(np_file)
     data = h5py.File(np_file, 'r')
     
-    t_ml = data['theta_next_ml'][:,:]
-    t_ = data['theta_next'][:-1,:]
+    t_ml = data['theta_next_ml'][:2000,:]
+    t_ = data['theta_next'][:2000,:]
     t_persistence = np.zeros(t_.shape)
     t_persistence[:] = t_[0,:]
     t_persistence = t_persistence
+    r2 = sklearn.metrics.r2_score(t_[:500,:],t_ml[:500,:])
+    print("R2 Theta {0}".format(r2))
 
     ml_error = np.zeros(t_.shape[0])
     persistence_error = np.zeros(t_.shape[0])
     for l in range(len(ml_error)):
         if error_type == "mape":
-            ml_error[l] = np.sum((t_[l,:] - t_ml[l,:])/t_[l,:])/t_.shape[1]
-            persistence_error[l] = np.sum((t_[l,:] - t_persistence[l,:])/t_[l,:])/t_.shape[1]
+            ml_error[l] = np.sum(np.abs((t_[l,:] - t_ml[l,:])/t_[l,:]))/t_.shape[1]
+            persistence_error[l] = np.sum(np.abs((t_[l,:] - t_persistence[l,:])/t_[l,:]))/t_.shape[1]
         if error_type == "mse":
             ml_error[l] = np.sum(np.square(t_[l,:] - t_ml[l,:]))/t_.shape[1]
             persistence_error[l] = np.sum(np.square(t_[l,:] - t_persistence[l,:]))/t_.shape[1]
+        if error_type == "mae":
+            ml_error[l] = np.sum(t_[l,:] - t_ml[l,:])/t_.shape[1]
+            persistence_error[l] = np.sum(t_[l,:] - t_persistence[l,:])/t_.shape[1]
+        if error_type == "rmse":
+            ml_error[l] = np.sqrt(np.sum(np.square(t_[l,:] - t_ml[l,:]))/t_.shape[1])
+            persistence_error[l] = np.sqrt(np.sum(np.square(t_[l,:] - t_persistence[l,:]))/t_.shape[1])
 
     plt.style.use('ggplot')
     fig, axs = plt.subplots(1,1,figsize=(14, 10))
     ax = axs
     ax.plot(ml_error[:], label='ML')
     ax.plot(persistence_error[:], label='Persitence')
-    ax.set_title('MSE over levels')
+    ax.set_title('{0}'.format(error_type))
+    ax.set_xlabel('Timesteps (10min)')
     ax.legend()
 
     figname = savename+"/"+savename+"_column_{0}_theta.png".format(error_type)
@@ -1016,12 +1035,49 @@ def plot_scm_mae(np_file):
     ax.legend()
     plt.show()
 
+def plot_outdistn(datasetfile, savename):
+    dataset = h5py.File(datasetfile,'r')
+    qtot = dataset['qtot_next'][:300]
+    qtot_ml = dataset['qtot_next_ml'][:300]
+    theta = dataset['theta_next'][:300]
+    theta_ml = dataset['theta_next_ml'][:300]
+
+    # qtot = qtot[1:] - qtot[:-1]
+    # qtot_ml = qtot_ml[1:] - qtot_ml[:-1]
+    # theta = theta[1:] - theta[:-1]
+    # theta_ml = theta_ml[1:] - theta_ml[:-1]
+    for lev in range(55):
+        fig, axs = plt.subplots(2,2,figsize=(14,10), sharex=False)
+        plt.title('Level {}'.format(lev))
+        
+        ax = axs[0,0]
+        ret = ax.hist(qtot[:,lev], 50, label='qtot')
+        ax.legend()
+
+        ax = axs[1,0]
+        ax.hist(qtot_ml[:,lev], bins=ret[1], label='qtot ML')
+        ax.legend()
+
+        ax = axs[0,1]
+        ret = ax.hist(theta[:,lev], 50, label='theta')
+        ax.legend()
+
+        ax = axs[1,1]
+        ax.hist(theta_ml[:,lev], bins=ret[1], label='theta ML')
+        ax.legend() 
+
+        figname = savename+"/"+savename+"_outdistn_lev{0}.png".format(lev)
+        print("Saving figure {0}".format(figname))
+        plt.savefig(figname)
+        plt.show()
+
+
 if __name__ == "__main__":
     model_name="tdiff_006_lyr_333_in_055_out_0388_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     # model_loss(model_file)
-    model_name = "qdiff_diag_006_lyr_333_in_055_out_0388_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm_2m"
+    model_name = "tdiff_diag_normed_006_lyr_333_in_055_out_0388_hdn_050_epch_00150_btch_023001AQTS_mse_sum_023001AQT_normalise_stkd_stoch_tanh_scm_2m"
     try:
         os.makedirs(model_name)
     except OSError:
@@ -1036,11 +1092,12 @@ if __name__ == "__main__":
     # visualise_all_levels_qT(np_file_2)
     # visualise_all_levels_qTnext(np_file_2)
     # visualise_all_levels_qnext(np_file_2, model_name)
+    # plot_outdistn(np_file, model_name)
     visualise_scm_predictions_q(np_file, model_name)
     visualise_scm_predictions_t(np_file, model_name)
     # scm_mape(np_file, model_name)
-    scm_column_error(np_file, model_name, error_type="mse")
-    scm_column_error_t(np_file, model_name, error_type="mse")
+    scm_column_error(np_file, model_name, error_type="rmse")
+    scm_column_error_t(np_file, model_name, error_type="rmse")
     # visualise_scm_predictions_qt(np_file,figname)
     # plot_scm_mae(np_file)
     for l in range(0,55,1):
