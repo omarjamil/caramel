@@ -21,9 +21,28 @@ class MLP(torch.nn.Module):
         # x = self.sig(self.out(x))
         return x
 
+class MLP_RELU(torch.nn.Module):
+    def __init__(self, in_features, nb_classes, nb_hidden_layer, 
+        hidden_size, act=torch.nn.ReLU):
+        super(MLP_RELU, self).__init__()
+        self.act = act()
+        self.n_hidden_layers = nb_hidden_layer
+        self.fc1 = torch.nn.Linear(in_features, hidden_size)
+        self.fcs = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
+        self.out = torch.nn.Linear(hidden_size, nb_classes)
+        
+    def forward(self, x):
+        x = self.act(self.fc1(x))
+        for l in self.fcs:
+            x = self.act(l(x))
+        x = self.act(self.out(x))
+        # x = self.sig(self.out(x))
+        return x
+
 class MLP_tanh(torch.nn.Module):
     def __init__(self, in_features, nb_classes, nb_hidden_layer, 
-        hidden_size, act=torch.nn.LeakyReLU):
+        hidden_size, act=torch.nn.LeakyReLU, scale=1.):
         super(MLP_tanh, self).__init__()
         self.act = act()
         self.n_hidden_layers = nb_hidden_layer
@@ -32,13 +51,35 @@ class MLP_tanh(torch.nn.Module):
         self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
         self.out = torch.nn.Linear(hidden_size, nb_classes)
         self.tanh = torch.nn.Tanh()
+        self.scale = scale
+    def forward(self, x):
+        x = self.act(self.fc1(x))
+        for l in self.fcs:
+            x = self.act(l(x))
+        # x = self.out(x)
+        # x = self.tanh(self.out(x))
+        x = self.scale*self.tanh(self.out(x))
+        # x = self.out(x)
+        return x
+
+class MLP_sig(torch.nn.Module):
+    def __init__(self, in_features, nb_classes, nb_hidden_layer, 
+        hidden_size, act=torch.nn.LeakyReLU):
+        super(MLP_sig, self).__init__()
+        self.act = act()
+        self.n_hidden_layers = nb_hidden_layer
+        self.fc1 = torch.nn.Linear(in_features, hidden_size)
+        self.fcs = torch.nn.ModuleList([torch.nn.Linear(hidden_size, hidden_size)])
+        self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
+        self.out = torch.nn.Linear(hidden_size, nb_classes)
+        self.sig = torch.nn.Sigmoid()
         
     def forward(self, x):
         x = self.act(self.fc1(x))
         for l in self.fcs:
             x = self.act(l(x))
         # x = self.out(x)
-        x = self.tanh(self.out(x))
+        x = self.sig(self.out(x))
         # x = self.out(x)
         return x
 
@@ -157,6 +198,54 @@ class MLPSkip_(torch.nn.Module):
         # x = self.out(x +  inputs)
         return x
 
+class ResidualBlockMLP(torch.nn.Module):
+    """
+    Simple residual block for hidden layers
+    """
+    def __init__(self, in_size, out_size, act=torch.nn.LeakyReLU):
+        super(ResidualBlockMLP, self).__init__()
+        self.act = act()
+        self.fc1 = torch.nn.Linear(in_size, out_size)
+        self.fc2 = torch.nn.Linear(in_size, out_size)
+
+    def forward(self,x):
+        residual = x 
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.fc2(x)
+        x = self.act(x)
+        x += residual
+        out = self.act(x)
+        return out
+
+class ResMLP(torch.nn.Module):
+    """
+    MLP ResNet
+    """
+    def __init__(self,in_features, nb_classes, nb_hidden_layer, hidden_size):
+        super(ResMLP, self).__init__()
+        print("MLP ResNet")
+        self.act = torch.nn.LeakyReLU()
+        self.resblock = ResidualBlockMLP
+        self.fc1 = torch.nn.Linear(in_features, hidden_size)
+        self.res_layer = self.make_layers(self.resblock, hidden_size, nb_hidden_layer)
+        self.out = torch.nn.Linear(hidden_size,nb_classes)
+        self.tanh = torch.nn.Tanh()
+
+    def make_layers(self, block, size, nblocks):
+        layers = []
+        layers.append(block(size,size))
+        for _ in range(1,nblocks):
+            layers.append(block(size,size))
+        return torch.nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.res_layer(x)
+        out = self.tanh(self.out(x))
+        return out
+
 class MLPSkip(torch.nn.Module):
     def __init__(self, in_features, nb_classes, nb_hidden_layer, 
         hidden_size, act=torch.nn.LeakyReLU):
@@ -170,7 +259,8 @@ class MLPSkip(torch.nn.Module):
         self.fcs.extend([torch.nn.Linear(hidden_size, hidden_size) for i in range(1,self.n_hidden_layers)] )
         self.skip = torch.nn.Linear(hidden_size,in_features)
         self.out = torch.nn.Linear(in_features, nb_classes)
-        self.sig = torch.nn.Sigmoid()
+        # self.sig = torch.nn.Sigmoid()
+        self.tanh = torch.nn.Tanh()
         # self.bn = torch.nn.BatchNorm1d(hidden_size)
         # self.bn_in = torch.nn.BatchNorm1d(in_features)
 
@@ -186,7 +276,8 @@ class MLPSkip(torch.nn.Module):
         # x = self.act(self.skip(x))
         # x = self.sigmoid(self.out(x))
         # x = self.out(x)
-        x = self.sig(self.out(x + inputs))
+        # x = self.sig(self.out(x + inputs))
+        x = self.tanh(self.out(x + inputs))
         # x = self.out(x +  inputs)
         return x
 
@@ -730,11 +821,12 @@ class ConvNet(torch.nn.Module):
 #########################
 ########   AE    #######
 class AE(torch.nn.Module):
-    def __init__(self, in_features, act=torch.nn.ReLU):
+    def __init__(self, in_features, latent_size, act=torch.nn.ReLU):
         super(AE, self).__init__()
         print("Model AE")
         self.act = act()
         self.tanh = torch.nn.Tanh()
+        self.latent_size = latent_size
         # self.fc1 = torch.nn.Linear(in_features, 50)
         # self.fc2 = torch.nn.Linear(50, 30)
         # self.fc3 = torch.nn.Linear(30, 10)
@@ -744,20 +836,34 @@ class AE(torch.nn.Module):
         # self.fc5 = torch.nn.Linear(30, 50)
         # self.fc6 = torch.nn.Linear(50, in_features)
 
-        self.fc1 = torch.nn.Linear(in_features, 50)
-        # self.fc11 = torch.nn.Linear(50, 50)
-        self.fc2 = torch.nn.Linear(50, 45)
-        # self.fc21 = torch.nn.Linear(45, 45)
-        self.fc3 = torch.nn.Linear(45, 40)
-        self.fc31 = torch.nn.Linear(40, 40)
-        self.fc32 = torch.nn.Linear(40, 40)
-        self.fc4 = torch.nn.Linear(40, 45)
-        # self.fc41 = torch.nn.Linear(45, 45)
-        self.fc5 = torch.nn.Linear(45, 50)
-        # self.fc51 = torch.nn.Linear(50, 50)
-        self.fc6 = torch.nn.Linear(50, in_features)
+        # self.fc1 = torch.nn.Linear(in_features, 50)
+        # self.fc2 = torch.nn.Linear(50, 45)
+        # self.fc3 = torch.nn.Linear(45, 40)
+        # self.fc31 = torch.nn.Linear(40, 40)
+        # self.fc32 = torch.nn.Linear(40, 40)
+        # self.fc4 = torch.nn.Linear(40, 45)
+        # self.fc5 = torch.nn.Linear(45, 50)
+        # self.fc6 = torch.nn.Linear(50, in_features)
 
-    def ecnoder(self,x):
+        # self.fc1 = torch.nn.Linear(in_features, in_features)
+        # self.fc2 = torch.nn.Linear(in_features, in_features)
+        # self.fc3 = torch.nn.Linear(in_features, in_features+5)
+        # self.fc31 = torch.nn.Linear(in_features+5, in_features+5)
+        # self.fc32 = torch.nn.Linear(in_features+5, in_features+5)
+        # self.fc4 = torch.nn.Linear(in_features+5, in_features)
+        # self.fc5 = torch.nn.Linear(in_features, in_features)
+        # self.fc6 = torch.nn.Linear(in_features, in_features)
+
+        self.fc1 = torch.nn.Linear(in_features, in_features)
+        self.fc2 = torch.nn.Linear(in_features, in_features)
+        self.fc3 = torch.nn.Linear(in_features, in_features-5)
+        self.fc31 = torch.nn.Linear(in_features-5, self.latent_size)
+        self.fc32 = torch.nn.Linear(self.latent_size, in_features-5)
+        self.fc4 = torch.nn.Linear(in_features-5, in_features)
+        self.fc5 = torch.nn.Linear(in_features, in_features)
+        self.fc6 = torch.nn.Linear(in_features, in_features)
+
+    def encoder(self,x):
         x = self.act(self.fc1(x))
         # x = self.act(self.fc11(x))
         x = self.act(self.fc2(x))
@@ -777,7 +883,7 @@ class AE(torch.nn.Module):
         return x
 
     def forward(self,x):
-        encoded = self.ecnoder(x)
+        encoded = self.encoder(x)
         decoded = self.decoder(encoded)
        
         return encoded, decoded

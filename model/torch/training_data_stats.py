@@ -138,14 +138,15 @@ def plot_distribution(dataset_file,nn_norm, data_frac, nlevs):
     # args.normaliser = "023001AQT_normalise"
     # args.normaliser = "023001AQT_standardise_mx"
     # args.normaliser = "023001AQT_standardise"
-    args.normaliser = "023001AQT_normalise"
+    # args.normaliser = "023001AQT_normalise"
+    args.normaliser = "023001AQS_normalise"
     # args.normaliser = "023001AQT_normalise_60_glb"
     args.locations = {"train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
                     "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser)}
-    args.region = "023001AQTS"
+    args.region = "023001AQS"
     args.data_fraction = 1.
     args.samples_fraction = 100
-    args.batch_size = 150
+    args.batch_size = 200
     args.nlevs = 60
     args.no_norm = False
     train_ldr = train_dataloader_batched(args)
@@ -155,10 +156,10 @@ def plot_distribution(dataset_file,nn_norm, data_frac, nlevs):
         # x = [i*10. for i in x]
         qtot = x[0]
         qtot_next = y[0]
-        qdiff = qtot_next - qtot
+        qdiff = qtot[1:] - qtot[:-1]
         theta = x[1]
         theta_next = y[1]
-        tdiff = theta_next - theta
+        tdiff = theta[1:] - theta[:-1]
         p = x[2][1:] - x[2][:-1]
         rho = x[3][1:] - x[3][:-1]
         xwind = x[4][1:] - x[4][:-1]
@@ -175,81 +176,81 @@ def plot_distribution(dataset_file,nn_norm, data_frac, nlevs):
 
         for lev in range(0,55,1):
         # lev = 0
-            fig, axs = plt.subplots(2,4,figsize=(14,10), sharex=False)
+            fig, axs = plt.subplots(2,2,figsize=(14,10), sharex=False)
             plt.title('Level {}'.format(lev))
             ax = axs[0,0]
-            # ax.hist(qtot[:,lev], 100, label='qtot')
-            ax.plot(qtot[:,lev], '-o', label='qtot')
+            ax.hist(qtot[:,lev], 100, label='qtot')
+            # ax.plot(qtot[:,lev], '-o', label='qtot')
             ax.legend()
 
             ax = axs[0,1]
-            # ax.hist(qdiff[:,lev]*10000, 100, label='qdiff')
-            ax.plot(qdiff[:,lev]*100., '-o',label='qdiff')
+            ax.hist(qdiff[:,lev], 100, label='qdiff')
+            # ax.plot(qdiff[:,lev]*100., '-o',label='qdiff')
             ax.legend()
 
             ax = axs[1,0]
-            # ax.hist(theta[:,lev], 100, label='theta')
-            ax.plot(theta[:,lev], '-o', label='theta')
+            ax.hist(theta[:,lev], 100, label='theta')
+            # ax.plot(theta[:,lev], '-o', label='theta')
             ax.legend()
 
             ax = axs[1,1]
-            # ax.hist(tdiff[:,lev]*100., 100, label='theta diff')
-            ax.plot(tdiff[:,lev]*100.,'-o', label='theta diff')
+            ax.hist(tdiff[:,lev], 100, label='theta diff')
+            # ax.plot(tdiff[:,lev]*100.,'-o', label='theta diff')
             ax.legend() 
 
-            ax = axs[0,2]
-            # ax.hist(tdiff[:,lev]*100., 100, label='theta diff')
-            ax.plot(qadv[:,lev],'-o', label='qadv')
-            ax.legend() 
+            # ax = axs[0,2]
+            # # ax.hist(tdiff[:,lev]*100., 100, label='theta diff')
+            # ax.plot(qadv[:,lev],'-o', label='qadv')
+            # ax.legend() 
 
-            ax = axs[1,2]
-            # ax.hist(tdiff[:,lev]*100., 100, label='theta diff')
-            ax.plot(qadv_diff[:,lev]*100.,'-o', label='qadv diff')
-            ax.legend() 
+            # ax = axs[1,2]
+            # # ax.hist(tdiff[:,lev]*100., 100, label='theta diff')
+            # ax.plot(qadv_diff[:,lev]*100.,'-o', label='qadv diff')
+            # ax.legend() 
 
-            ax = axs[0,3]
-            # ax.hist(tdiff[:,lev]*100., 100, label='theta diff')
-            ax.plot(tadv[:,lev],'-o', label='tadv')
-            ax.legend() 
+            # ax = axs[0,3]
+            # # ax.hist(tdiff[:,lev]*100., 100, label='theta diff')
+            # ax.plot(tadv[:,lev],'-o', label='tadv')
+            # ax.legend() 
 
-            ax = axs[1,3]
-            # ax.hist(tdiff[:,lev]*100., 100, label='theta diff')
-            ax.plot(tadv_diff[:,lev]*100.,'-o', label='tadv diff')
-            ax.legend() 
+            # ax = axs[1,3]
+            # # ax.hist(tdiff[:,lev]*100., 100, label='theta diff')
+            # ax.plot(tadv_diff[:,lev]*100.,'-o', label='tadv diff')
+            # ax.legend() 
 
 
             # fig, axs1 = plt.subplots(2,2,figsize=(14,10), sharex=False)
             # ax = axs1[0,0]
-            # ax.hist(p[:,lev], 100, label='p')
+            # ax.hist(p[:,lev]*100., 100, label='p')
             # ax.legend()
 
             # ax = axs1[0,1]
-            # ax.hist(rho[:,lev], 100, label='rho')
+            # ax.hist(rho[:,lev]*100., 100, label='rho')
             # ax.legend()
 
             # ax = axs1[1,0]
-            # ax.hist(xwind[:,lev], 100, label='xwind')
+            # ax.hist(xwind[:,lev]*100., 100, label='xwind')
             # ax.legend()
 
             # ax = axs1[1,1]
-            # ax.hist(ywind[:,lev], 100, label='ywind')
+            # ax.hist(ywind[:,lev]*100., 100, label='ywind')
             # ax.legend()
 
             # fig, axs2 = plt.subplots(2,2,figsize=(14,10), sharex=False)
             # ax = axs2[0,0]
-            # ax.hist(zwind[:,lev], 100, label='zwind')
+            # ax.hist(zwind[:,lev]*100., 100, label='zwind')
             # ax.legend()
 
             # ax = axs2[0,1]
-            # ax.hist(sw[:,0], 100, label='sw')
+            # ax.hist(sw[:,0]*100., 100, label='sw')
             # ax.legend()
 
             # ax = axs2[1,0]
-            # ax.hist(shf[:,0], 100, label='shf')
+            # ax.hist(shf[:,0]*100., 100, label='shf')
             # ax.legend()
 
             # ax = axs2[1,1]
-            # ax.hist(lhf[:,0], 100, label='lhf')
+            # ax.hist(lhf[:,0]*100., 100, label='lhf')
             # ax.legend()
 
             plt.show()
@@ -367,13 +368,14 @@ def PCA_projections(dataset_file,nn_norm, data_frac, nlevs):
 
 if __name__ == "__main__":
     # training_data_file = "/project/spice/radiation/ML/CRM/data/models/datain/train_data_023001AQ3HT.hdf5"
-    training_data_file = "/project/spice/radiation/ML/CRM/data/models/datain/train_data_023001AQT.hdf5"
+    # training_data_file = "/project/spice/radiation/ML/CRM/data/models/datain/train_data_023001AQT.hdf5"
+    training_data_file = "/project/spice/radiation/ML/CRM/data/models/datain/train_data_023001AQS.hdf5"
     # normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/021501AQ3H_normalise/"
     # normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/023001AQ_standardise_mx/"
-    normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/023001AQT_normalise/"
+    normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/023001AQS_normalise/"
     # normaliser = "/project/spice/radiation/ML/CRM/data/models/normaliser/023001AQT_normalise_60_glb/"
     data_norm = data_io.NormalizersData(normaliser)
-    data_frac = 0.01
+    data_frac = 0.1
     nlevs = 70
     # plot_variables(training_data_file,data_norm, data_frac, nlevs)
     plot_distribution(training_data_file,data_norm, data_frac, nlevs)

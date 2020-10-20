@@ -375,8 +375,8 @@ if __name__ == "__main__":
     argument = sys.argv[1]
     region = sys.argv[2]
     stash = sys.argv[3]
-    suite_id="u-bs572_20170116-30_conc"
-    # suite_id ="u-bs572_20170101-15_conc"
+    # suite_id="u-bs572_20170116-30_conc"
+    suite_id ="u-bs572_20170101-15_conc"
     # suite_id="u-bs572_20170101-15_pp"
     # suite_id = "u-bs572_20170116-30_pp"
 
@@ -390,13 +390,13 @@ if __name__ == "__main__":
     elif argument == '2':
         fname="{0}-{1}-{2}-{3}-pp-".format(suite_id,region,argument,stash)
         tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock',delete=False)
-        ret = main_combine_files(region, stashes, suite_id, days_range=range(16,31), month=1)
+        ret = main_combine_files(region, stashes, suite_id, days_range=range(15,16), month=1)
         if ret == 0:
             os.remove(tmpf.name)
     elif argument == '3':
         fname="{0}-{1}-{2}-{3}-pp-".format(suite_id,region,argument,stash, month=1)
         tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock',delete=False)
-        ret = main_combine_day_tseries(region, stashes, suite_id, days_range=range(16,31), month=1)
+        ret = main_combine_day_tseries(region, stashes, suite_id, days_range=range(2,16), month=1)
         if ret == 0:
             os.remove(tmpf.name)
     elif argument == '3a':
@@ -408,14 +408,14 @@ if __name__ == "__main__":
     elif argument == '4a':
         # qtot stash 99821 - new stash 99822
         # t stash 00004 - new stash 99905
-        in_stash = 4
-        out_stash = 99905
-        # in_stash = 99821
-        # out_stash = 99822
+        # in_stash = 4
+        # out_stash = 99905
+        in_stash = 99821
+        out_stash = 99822
         # in_prefix = "3h_161718192021222324252627282930"
         # in_prefix = "3h_0203040506070809101112131415"
-        # in_prefix = "0203040506070809101112131415"
-        in_prefix = "161718192021222324252627282930"
+        in_prefix = "0203040506070809101112131415"
+        # in_prefix = "161718192021222324252627282930"
         create_delta(region, in_stash, out_stash, suite_id, in_prefix=in_prefix)
     elif argument == '5':
         calc_tendencies(region, suite_id, in_prefix="3h_0203040506070809101112131415")

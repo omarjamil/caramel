@@ -23,8 +23,8 @@ nn_data_stashes = {
     253:"m01s00i253",
     408:"air_pressure",
     150:"upward_air_velocity",
-    99822:"q_tot_diff",
-    99905:"air_potential_temperature_diff"
+    # 99822:"q_tot_diff",
+    # 99905:"air_potential_temperature_diff"
 }
 
 multi_stashes = {
@@ -279,7 +279,7 @@ def nn_dataset_per_subdomain(region:str, in_prefix="031525", suite_id="u-br800",
                 hfile.create_dataset(test_name,data=test_data)
                 i+=1
 
-def nn_dataset_per_subdomain_raw(region:str, in_prefix="031525", suite_id="u-br800", truncate: bool=True):
+def nn_dataset_per_subdomain_raw(region:str, in_prefix="031525", suite_id="u-br800", truncate: bool=True, diff_vars: bool=False):
     """
     Create dataset for the neural network training and testing
     """   
@@ -316,14 +316,17 @@ def nn_dataset_per_subdomain_raw(region:str, in_prefix="031525", suite_id="u-br8
             
             if s in [99181, 99182]:
                 print("Multiplying advected quantity {0} with 600.".format(nn_data_stashes[s]))
-                var *= 10800 #3600.
+                var *= 600.
+            if diff_vars:
+                diff = (var[1:] - var[:-1])
+                var = diff
             data_labels.append(varname)
             raw_data.append(var)
         
         data_std_split = raw_data
         train_test_datadir = "{0}/models/datain/".format(crm_data)
         
-        fname = 'validation_data_{0}_{1}.hdf5'.format(region, str(subdomain).zfill(3))
+        fname = 'validation_data_{0}D_{1}.hdf5'.format(region, str(subdomain).zfill(3))
         # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
         with h5py.File(train_test_datadir+fname, 'w') as hfile:
             i = 0
@@ -402,4 +405,4 @@ if __name__ == "__main__":
     # nn_dataset(region, in_prefix="030405", suite_id="u-br800", truncate=False, global_profile=True)
     # nn_dataset_per_subdomain(region, in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", truncate=False, global_profile=True)
     # nn_dataset_per_subdomain_raw(region, in_prefix="3h_0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False)
-    nn_dataset_per_subdomain_raw(region, in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False)
+    nn_dataset_per_subdomain_raw(region, in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False, diff_vars=True)

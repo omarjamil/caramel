@@ -15,8 +15,9 @@ from cjm_functions import extract_fields_for_advective_tendencies
 from cjm_functions import generate_filename_in
 from cjm_functions import retrieve_a_file
 
-roseid='u-bs573'
-roseid='u-bs572_20170116-30_pp'
+# roseid='u-bs573'
+# roseid='u-bs572_20170101-15_pp'
+# roseid='u-bs572_20170116-30_pp'
 def daterange(start_date, end_date):
     for n in range(int ((end_date - start_date).days)):
         yield start_date + timedelta(n)   
@@ -59,7 +60,7 @@ def process_files(regions: list, start_date: date, end_date: date, list_analysis
 #   d) 3d field of increments to c).
 
 
-def single_level(start_day: int, start_month: int, region: str):
+def single_level(start_day: int, start_month: int, region: str, roseid: str):
     # roseid='u-bj775'
     # roseid='u-br800'
        
@@ -99,7 +100,7 @@ def single_level(start_day: int, start_month: int, region: str):
     process_files(regions, start_date, end_date, list_analysis_time, name_str, list_stream,  list_stash_sec, list_stash_code, roseid, ndims)
     return 0
 
-def multi_level(start_day: int, start_month: int, region: str):
+def multi_level(start_day: int, start_month: int, region: str, roseid:str):
     # roseid='u-bj775'
     # roseid='u-br800'
     #roseid='u-bj967'
@@ -134,7 +135,10 @@ def multi_level(start_day: int, start_month: int, region: str):
     # list_stash_sec = [0, 16, 0, 0, 0, 0, 0]
     # list_stash_code = [4, 4, 10, 254, 12, 272, 273]
     # list_stream = ['c', 'd', 'c', 'c', 'c', 'c', 'c']
-
+    #  qv, qcl, qcf, rain, graupel
+    # list_stashe_sec = [0,0,0,0,0]
+    # list_stashe_code = [10,254,12,272,273]
+    # list_stash_stream = ['c', 'c', 'c', 'c', 'c']
     # winds (u,v,w) density
     list_stash_sec = [0,0,0,0,0]
     list_stash_code = [2,3,150,253,408]
@@ -216,6 +220,7 @@ if __name__ == "__main__":
     parser.add_argument('--start-month', type=int, default=1, metavar='N',
                     help='date start month')
     parser.add_argument('--region', type=str, help='region to process e.g. 50S69W')
+    parser.add_argument('--rose-id', type=str, help='directory containining files')
     args = parser.parse_args()
     
     single = args.single
@@ -224,17 +229,18 @@ if __name__ == "__main__":
     start_day = args.start_day
     start_month = args.start_month
     region = args.region
+    roseid = args.rose_id
 
     if single:
         fname="{0}_{1}_{2}_slams_".format(roseid,region,start_month)
         tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock')
-        ret = single_level(start_day, start_month, region)
+        ret = single_level(start_day, start_month, region, roseid)
         if ret == 0:
             tmpf.close()
     elif multi:
         fname="{0}_{1}_{2}_mlams_".format(roseid,region,start_month)
         tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock')
-        ret = multi_level(start_day, start_month, region)
+        ret = multi_level(start_day, start_month, region, roseid)
         if ret == 0:
             tmpf.close()
     elif advect:

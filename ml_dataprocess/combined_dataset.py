@@ -20,15 +20,15 @@ nn_data_stashes = {
     1207:"toa_incoming_shortwave_flux",
     3217:"surface_upward_sensible_heat_flux",
     3234:"surface_upward_latent_heat_flux",
-    99904:"t_phys",
-    99983:"q_phys",
+    # 99904:"t_phys",
+    # 99983:"q_phys",
     3:"y_wind",
     2:"x_wind",
     253:"m01s00i253",
     408:"air_pressure",
     150:"upward_air_velocity",
-    99822:"q_tot_diff",
-    99905:"air_potential_temperature_diff"
+    # 99822:"q_tot_diff",
+    # 99905:"air_potential_temperature_diff"
 }
 
 # nn_data_stashes = {
@@ -108,10 +108,10 @@ surface_stashes = {
 
 # Ocean only from u-bs572 and u-bs573 set aside for validation '0N100W'
 # leave out 0N0E as that does not get read into iris properly
-# regions=['0N130W','0N15W','0N160E','0N160W','0N30W','0N50E','0N70E','0N88E','10N100W','10N120W','10N140W','10N145E','10N160E','10N170W','10N30W','10N50W','10N60E','10N88E','10S120W','10S140W','10S15W','10S170E','10S170W','10S30W','10S5E','10S60E','10S88E','10S90W','20N135E','20N145W','20N170E','20N170W','20N30W','20N55W','20N65E','20S0E','20S100W','20S105E','20S130W','20S160W','20S30W','20S55E','20S80E','21N115W','29N65W','30N130W','30N145E','30N150W','30N170E','30N170W','30N25W','30N45W','30S100W','30S10E','30S130W','30S15W','30S160W','30S40W','30S60E','30S88E','40N140W','40N150E','40N160W','40N170E','40N25W','40N45W','40N65W','40S0E','40S100E','40S100W','40S130W','40S160W','40S50E','40S50W','50N140W','50N149E','50N160W','50N170E','50N25W','50N45W','50S150E','50S150W','50S30E','50S30W','50S88E','50S90W','60N15W','60N35W','60S0E','60S140E','60S140W','60S70E','60S70W','70N0E','70S160W','70S40W','80N150W']
+regions=['0N130W','0N15W','0N160E','0N160W','0N30W','0N50E','0N70E','0N88E','10N100W','10N120W','10N140W','10N145E','10N160E','10N170W','10N30W','10N50W','10N60E','10N88E','10S120W','10S140W','10S15W','10S170E','10S170W','10S30W','10S5E','10S60E','10S88E','10S90W','20N135E','20N145W','20N170E','20N170W','20N30W','20N55W','20N65E','20S0E','20S100W','20S105E','20S130W','20S160W','20S30W','20S55E','20S80E','21N115W','29N65W','30N130W','30N145E','30N150W','30N170E','30N170W','30N25W','30N45W','30S100W','30S10E','30S130W','30S15W','30S160W','30S40W','30S60E','30S88E','40N140W','40N150E','40N160W','40N170E','40N25W','40N45W','40N65W','40S0E','40S100E','40S100W','40S130W','40S160W','40S50E','40S50W','50N140W','50N149E','50N160W','50N170E','50N25W','50N45W','50S150E','50S150W','50S30E','50S30W','50S88E','50S90W','60N15W','60N35W','60S0E','60S140E','60S140W','60S70E','60S70W','70N0E','70S160W','70S40W','80N150W']
 
 # Tropical regions
-regions=['0N130W','0N15W','0N160E','0N160W','0N30W','0N50E','0N70E','0N88E','10N100W','10N120W','10N140W','10N145E','10N160E','10N170W','10N30W','10N50W','10N60E','10N88E','10S120W','10S140W','10S15W','10S170E','10S170W','10S30W','10S5E','10S60E','10S88E','10S90W','20N135E','20N145W','20N170E','20N170W','20N30W','20N55W','20N65E','20S0E','20S100W','20S105E','20S130W','20S160W','20S30W','20S55E','20S80E','21N115W']
+# regions=['0N130W','0N15W','0N160E','0N160W','0N30W','0N50E','0N70E','0N88E','10N100W','10N120W','10N140W','10N145E','10N160E','10N170W','10N30W','10N50W','10N60E','10N88E','10S120W','10S140W','10S15W','10S170E','10S170W','10S30W','10S5E','10S60E','10S88E','10S90W','20N135E','20N145W','20N170E','20N170W','20N30W','20N55W','20N65E','20S0E','20S100W','20S105E','20S130W','20S160W','20S30W','20S55E','20S80E','21N115W']
 
 crm_data = "/project/spice/radiation/ML/CRM/data"
 suite_id = "u-bs572_conc"
@@ -726,7 +726,7 @@ def save_standardisemx_data_vars(dataset: np.array([]), region: str, save_fname:
         for k, v in params.items():  
             hfile.create_dataset(k,data=v)
 
-def nn_dataset_stacked_raw(region:str, in_prefix="031525", suite_id="u-br800"):
+def nn_dataset_stacked_raw(region:str, in_prefix="031525", suite_id="u-br800", diff_vars=False):
     """
     Create CNN dataset. This save raw data as well as normalised
     """   
@@ -768,6 +768,9 @@ def nn_dataset_stacked_raw(region:str, in_prefix="031525", suite_id="u-br800"):
                 # var *= 10800.
                 var *= 600.
             raw_var = var
+            if diff_vars:
+                diff = (raw_var[:,1:,:] - raw_var[:,:-1,:])
+                raw_var = diff
             print("Variable {0} {1}".format(nn_var_names[s], raw_var.shape))
             if nn_var_names[s] not in raw_data_dict.keys():
                 raw_data_dict[nn_var_names[s]] = raw_var
@@ -781,7 +784,7 @@ def nn_dataset_stacked_raw(region:str, in_prefix="031525", suite_id="u-br800"):
     train_test_datadir = "{0}/models/datain/".format(crm_data)
 
     raw_data_split = train_test_split(*raw_data, shuffle=True, random_state=18, test_size=0.1)
-    fname = 'train_test_data_{0}_stacked_raw.hdf5'.format(region)
+    fname = 'train_test_data_{0}_stacked_raw_diff.hdf5'.format(region)
     # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
     with h5py.File(train_test_datadir+fname, 'w') as hfile:
         i = 0
@@ -821,6 +824,7 @@ def save_standardise_data_vars(dataset: np.array([]), region: str, save_fname: s
             q1 = np.quantile(dataset, 0.10, axis=0)
             scale = q2 - q1
         else:
+           
             mean = np.array([np.mean(dataset, axis=0)])
             std = np.array([np.std(dataset, axis=0)])
             scale = std
@@ -839,7 +843,7 @@ def save_standardise_data_vars(dataset: np.array([]), region: str, save_fname: s
         for k, v in params.items():  
             hfile.create_dataset(k,data=v)
 
-def save_normalise_data_vars(dataset: np.array([]), region: str, save_fname: str="std_fit.hdf5", levs: bool=True, final_lev=60):
+def save_normalise_data_vars(dataset: np.array([]), region: str, save_fname: str="std_fit.hdf5", levs: bool=True, final_lev=70):
     """
     Manually standardise data based instead of using sklearn standarad scaler
     robust: Use median and quantiles for scaling
@@ -851,10 +855,17 @@ def save_normalise_data_vars(dataset: np.array([]), region: str, save_fname: str
     except OSError:
         pass
     # per level normalisation
-    dataset = dataset[:,:final_lev]
+    # dataset = dataset[...,:final_lev]
     if levs:
-        mean = np.array([np.min(dataset, axis=0)])
-        scale = np.array([np.max(dataset, axis=0) - np.min(dataset, axis=0)])
+        if dataset.ndim > 2:
+            print(dataset.shape)
+            amin = np.array([np.amin(dataset,axis=(0,1),keepdims=False)])
+            amax = np.array([np.amax(dataset,axis=(0,1),keepdims=False)])
+            mean = amin
+            scale = amax - amin
+        else:
+            mean = np.array([np.min(dataset, axis=0)])
+            scale = np.array([np.max(dataset, axis=0) - np.min(dataset, axis=0)])
     else:
         mean = np.ones((1,dataset.shape[1])) * np.array([np.min(dataset)])
         scale = np.ones((1,dataset.shape[1])) * (np.array([np.max(dataset) - np.min(dataset)]))
@@ -897,8 +908,8 @@ def nn_normalisation_vars(region:str, in_file):
     1207:"toa_incoming_shortwave_flux",
     3217:"surface_upward_sensible_heat_flux",
     3234:"surface_upward_latent_heat_flux",
-    99904:"t_phys",
-    99983:"q_phys",
+    # 99904:"t_phys",
+    # 99983:"q_phys",
     3:"y_wind",
     2:"x_wind",
     253:"m01s00i253",
@@ -913,32 +924,39 @@ def nn_normalisation_vars(region:str, in_file):
         print("Processing {0}".format(s))
         var = dataf[data_stashes[s]+"_train"][:]
         std_fname=data_stashes[s]+".hdf5"
-        save_standardise_data_vars(var, region, save_fname=std_fname, levs=True)
+        # save_standardise_data_vars(var, region, save_fname=std_fname, levs=True)
         # save_standardisemx_data_vars(var, region, save_fname=std_fname, levs=True)
-        # save_normalise_data_vars(var, region, save_fname=std_fname, levs=False)
+        save_normalise_data_vars(var, region, save_fname=std_fname, levs=True)
 
 if __name__ == "__main__":
     # Run the following in order 
     # u-bs572 has January runs so 021501AQ
     # u-bs573 has July runs so 0201507AQ
-    # in_prefix = "161718192021222324252627282930"
-    # suite_id = "u-bs572_20170116-30_conc"
-    # new_region = "163001AQTS"
-    in_prefix = "0203040506070809101112131415"
-    suite_id = "u-bs572_20170101-15_conc"
-    new_region = "021501AQTS"
+    in_prefix = "161718192021222324252627282930"
+    suite_id = "u-bs572_20170116-30_conc"
+    new_region = "163001AQS"
+    # in_prefix = "0203040506070809101112131415"
+    # suite_id = "u-bs572_20170101-15_conc"
+    # new_region = "021501AQS"
     # combine_multi_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
     # combine_surface_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
     # combine_subdomains(new_region, in_prefix=in_prefix, suite_id=suite_id)
     # nn_dataset_raw(new_region, in_prefix=in_prefix, suite_id=suite_id, truncate=False)
-    # nn_dataset_stacked_raw(new_region, in_prefix=in_prefix, suite_id=suite_id)
+    # nn_dataset_stacked_raw(new_region, in_prefix=in_prefix, suite_id=suite_id, diff_vars=True)
     # nn_dataset_std(new_region, in_prefix=in_prefix, suite_id=suite_id, truncate=False)
     # nn_normalisation_vars(new_region, in_prefix=in_prefix, suite_id=suite_id)
-    new_region = "023001AQT"
-    in_file = "train_data_023001AQT.hdf5"
+    
+    new_region = "023001AQSD"
+    in_file = "train_data_023001AQS_diff.hdf5"
     nn_normalisation_vars(new_region, in_file)
 
     # Stack subdomains data
+    # in_prefix = "161718192021222324252627282930"
+    # suite_id = "u-bs572_20170116-30_conc"
+    # new_region = "163001AQS"
+    # in_prefix = "0203040506070809101112131415"
+    # suite_id = "u-bs572_20170101-15_conc"
+    # new_region = "021501AQS"
     # stack_multi_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
     # stack_surface_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
     

@@ -12,8 +12,8 @@ def visualise_scm_predictions_q(np_file, savename):
 
     data = h5py.File(np_file, 'r')
     
-    q_ml = data['qtot_next_ml'][:300,:].T
-    q_ = data['qtot_next'][:300,:].T
+    q_ml = data['qtot_next_ml'][:2000,:].T
+    q_ = data['qtot_next'][:2000,:].T
     q_persistence = np.zeros(q_.T.shape)
     q_persistence[:] = data['qtot_next'][0,:]
     q_persistence = q_persistence.T
@@ -83,8 +83,8 @@ def visualise_scm_predictions_t(np_file, savename):
 
     data = h5py.File(np_file, 'r')
     
-    t_ml = data['theta_next_ml'][:300,:].T
-    t_ = data['theta_next'][:300,:].T
+    t_ml = data['theta_next_ml'][:2000,:].T
+    t_ = data['theta_next'][:2000,:].T
     t_persistence = np.zeros(t_.T.shape)
     t_persistence[:] = t_.T[0,:]
     t_persistence = t_persistence.T
@@ -181,7 +181,7 @@ def scm_column_error(np_file, savename, error_type="mse"):
     q_persistence = np.zeros(q_.shape)
     q_persistence[:] = q_[0,:]
     # q_persistence = q_persistence
-    r2 = sklearn.metrics.r2_score(q_[:500,:30],q_ml[:500,:30])
+    r2 = sklearn.metrics.r2_score(q_[:150,:],q_ml[:150,:])
     print("R2 Q {0}".format(r2))
     ml_error = np.zeros(q_.shape[0])
     persistence_error = np.zeros(q_.shape[0])
@@ -224,7 +224,7 @@ def scm_column_error_t(np_file, savename, error_type="mse"):
     t_persistence = np.zeros(t_.shape)
     t_persistence[:] = t_[0,:]
     t_persistence = t_persistence
-    r2 = sklearn.metrics.r2_score(t_[:500,:],t_ml[:500,:])
+    r2 = sklearn.metrics.r2_score(t_[:150,:],t_ml[:150,:])
     print("R2 Theta {0}".format(r2))
 
     ml_error = np.zeros(t_.shape[0])
@@ -299,6 +299,80 @@ def scm_column_error_multi(np_files, error_type="mse"):
     plt.show()
     data.close()
 
+def scm_domain_error_q(model_name, error_type="mse"):
+    """
+    Average error across 64 subdomains
+    """
+    # data = np.load(np_file)
+    plt.style.use('ggplot')
+
+    fig, axs = plt.subplots(2,1,figsize=(14, 10))
+    # ax = axs
+    q_persistence_e = []
+    q_ml_e = []
+    t_persistence_e = []
+    t_ml_e = []
+    for i in range(64):
+        filename = '{0}_{1}.hdf5'.format(model_name, str(i).zfill(3))
+        data = h5py.File('inference_{0}/'.format(model_name)+filename, 'r')
+        print("Reading {0}".format(filename))
+        q_ml = data['qtot_next_ml'][:2000,:]
+        q_ = data['qtot_next'][:2000,:]
+        q_persistence = np.zeros(q_.shape)
+        q_persistence[:] = q_[0,:]
+        q_persistence = q_persistence
+        t_ml = data['theta_next_ml'][:2000,:]
+        t_ = data['theta_next'][:2000,:]
+        t_persistence = np.zeros(t_.shape)
+        t_persistence[:] = t_[0,:]
+        t_persistence = t_persistence
+
+        q_ml_error = np.zeros(q_.shape[0])
+        t_ml_error = np.zeros(q_.shape[0])
+        q_persistence_error = np.zeros(q_.shape[0])
+        t_persistence_error = np.zeros(q_.shape[0])
+        for l in range(len(q_ml_error)):
+            if error_type == "mape":
+                q_ml_error[l] = np.sum((q_[l,:] - q_ml[l,:])/q_[l,:])/q_.shape[1]
+                q_persistence_error[l] = np.sum((q_[l,:] - q_persistence[l,:])/q_[l,:])/q_.shape[1]
+            if error_type == "mse":
+                q_ml_error[l] = np.sum(np.square(q_[l,:] - q_ml[l,:]))/q_.shape[1]
+                q_persistence_error[l] = np.sum(np.square(q_[l,:] - q_persistence[l,:]))/q_.shape[1]
+            if error_type == "rmse":
+                q_ml_error[l] = np.sqrt(np.sum(np.square(q_[l,:] - q_ml[l,:]))/q_.shape[1])
+                q_persistence_error[l] = np.sqrt(np.sum(np.square(q_[l,:] - q_persistence[l,:]))/q_.shape[1])
+                t_ml_error[l] = np.sqrt(np.sum(np.square(t_[l,:] - t_ml[l,:]))/t_.shape[1])
+                t_persistence_error[l] = np.sqrt(np.sum(np.square(t_[l,:] - t_persistence[l,:]))/t_.shape[1])
+        q_persistence_e.append(q_persistence_error)
+        t_persistence_e.append(t_persistence_error)
+        q_ml_e.append(q_ml_error)
+        t_ml_e.append(t_ml_error)
+    
+    q_ml_e = np.array(q_ml_e)
+    q_ml_e = np.array(q_ml_e)
+    q_persistence_e = np.array(q_persistence_e)
+    q_persistence_e = np.array(q_persistence_e)
+    q_ml_avg_e = np.mean(q_ml_e,axis=0)
+    t_ml_avg_e = np.mean(t_ml_e,axis=0)
+    q_persistence_avg_e = np.mean(q_persistence_e,axis=0)
+    t_persistence_avg_e = np.mean(t_persistence_e,axis=0)
+
+
+    axs[0].plot(q_ml_avg_e[:], label='q ML')
+    axs[1].plot(t_ml_avg_e[:], label='t ML')
+    axs[0].plot(q_persistence_avg_e[:], label='q Persitence')
+    axs[1].plot(t_persistence_avg_e[:], label='t Persitence')
+    axs[0].legend()
+    axs[1].legend()
+    axs[0].set_title('Average RMSE')
+
+    figname = "{0}_avg_rmse.png".format(model_name)
+    # print("Saving figure {0}".format(figname))
+    plt.savefig(figname)
+    # plt.closse(fig)
+    plt.show()
+    data.close()
+
 def visualise_scm_predictions_qt(np_file, figname):
     # data = np.load(np_file)
     data = h5py.File(np_file, 'r')
@@ -357,7 +431,10 @@ def visualise_tseries(npfile,level, savename):
     # data = np.load(np_file)
     data = h5py.File(npfile, 'r')
     q_ml = data['qtot_next_ml'][:2000]
+    # q_ml = data['qtot_ml'][:2000]
     q_ = data['qtot_next'][:2000]
+    # q_ = data['qtot'][:2000]
+
     qpersist = np.zeros(data['qtot'][:2000].shape)
     qpersist[:] = data['qtot'][0]
 
@@ -392,6 +469,7 @@ def visualise_tseries(npfile,level, savename):
 
     figname = savename+"/"+savename+"_qnext_scm_lev_{0}.png".format(str(level).zfill(3))
     print("Saving {0}".format(figname))
+    # plt.show()
     plt.savefig(figname)
     plt.close(fig)
 
@@ -1073,11 +1151,11 @@ def plot_outdistn(datasetfile, savename):
 
 
 if __name__ == "__main__":
-    model_name="tdiff_006_lyr_333_in_055_out_0388_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh"
+    model_name="qdiff_aeovr_stoch_normed_006_lyr_055_in_055_out_0110_hdn_050_epch_00150_btch_023001AQS_mse_023001AQS_normalise_stkd_qnext"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     # model_loss(model_file)
-    model_name = "tdiff_diag_normed_006_lyr_333_in_055_out_0388_hdn_050_epch_00150_btch_023001AQTS_mse_sum_023001AQT_normalise_stkd_stoch_tanh_scm_2m"
+    model_name = "qdiff_diag_normed_f0100_006_lyr_333_in_045_out_0378_hdn_050_epch_00150_btch_023001AQS_mse_sum_023001AQS_normalise_stkd_tstoch1sig_lr1e4_enc_scm_2m_063"
     try:
         os.makedirs(model_name)
     except OSError:
@@ -1113,9 +1191,11 @@ if __name__ == "__main__":
         # compare_qphys_predictions(np_file, np_file_2, level)
         # plt.show()
 
-    np_files = ["qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00050_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
-    "qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00100_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
-    "qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
-    "qdiff_006_lyr_388_in_055_out_0443_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
-    "qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00200_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5"]
+    # np_files = ["qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00050_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
+    # "qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00100_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
+    # "qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
+    # "qdiff_006_lyr_388_in_055_out_0443_hdn_050_epch_00150_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5",
+    # "qdiff_006_lyr_388_in_055_out_0443_hdn_025_epch_00200_btch_023001AQTS_mse_023001AQT_normalise_stkd_tanh_scm.hdf5"]
     # scm_column_error_multi(np_files, error_type="mse")
+
+    # scm_domain_error_q(model_name, error_type="rmse")

@@ -52,11 +52,12 @@ def set_model(model_file, args):
     # in_features = (args.nlevs*(len(args.xvars)-3)+3)
     in_features = (args.nlevs*(len(args.xvars)))
     print(in_features)
-    if not args.train_on_y2:
-        nb_classes = (args.nlevs*(len(args.yvars)))
-        # nb_classes = 1 #(args.nlevs*(len(args.yvars)))
-    else:
-        nb_classes = (args.nlevs*(len(args.yvars2)))
+    # if not args.train_on_y2:
+    #     nb_classes = (args.nlevs*(len(args.yvars)))
+    #     # nb_classes = 1 #(args.nlevs*(len(args.yvars)))
+    # else:
+    #     nb_classes = (args.nlevs*(len(args.yvars2)))
+    nb_classes = (args.nlevs*(len(args.yvars)))
     # in_features, nb_classes=(args.nlevs*4+3),(args.nlevs*2)
     # hidden_size = 512
     hidden_size = int(1. * in_features + nb_classes)
@@ -356,17 +357,20 @@ def evaluate_qt_next(model, datasetfile, args):
             hfile.create_dataset(k,data=v)
 
 def evaluate_qnext(model, datasetfile, args):
-    nn_data = data_io.Data_IO_validation(args.region, args.nlevs, datasetfile, args.locations['normaliser_loc'], 
+    nn_data = data_io.Data_IO_validation(args.region, args.nlevs, datasetfile, args.locations['normaliser_loc'],
                         xvars=args.xvars,
                         yvars=args.yvars,
-                        yvars2=args.yvars2,
-                        add_adv=False)
+                        # yvars2=args.yvars2,
+                        add_adv=False,
+                        no_norm=False,
+                        fmin=0,
+                        fmax=100)
     
     x,y,y2,xmean,xstd,ymean,ystd,ymean2,ystd2 = nn_data.get_data()
     y = x.data.clone()
     # model = set_model(args)
     # yp, mu, logvar = model(x)
-    yp = model(x)
+    yp_encoded,yp = model(x)
     # print(mu[0,:],logvar[0,:])
     xinv = nn_data._inverse_transform(x,xmean,xstd)
     xinv_split = nn_data.split_data(xinv,xyz='x')
@@ -407,12 +411,12 @@ def evaluate_qnext(model, datasetfile, args):
 
     hfilename = args.model_name.replace('.tar','_qnext.hdf5')
 
-    output={'qtotn_predict':qtotn_predict_denorm.data.numpy(),
-            'qtotn_test':qtotn_test_denorm.data.numpy(), 
+    output={'qtot_next_ml':qtotn_predict_denorm.data.numpy(),
+            'qtot_next':qtotn_test_denorm.data.numpy(), 
             # 'thetan_predict':thetan_predict_denorm.data.numpy(),
             # 'thetan_test':thetan_test_denorm.data.numpy(),
-            'qtotn_predict_norm':qtotn_predict_norm.data.numpy(),
-            'qtotn_test_norm':qtotn_test_norm.data.numpy(), 
+            # 'qtotn_predict_norm':qtotn_predict_norm.data.numpy(),
+            # 'qtotn_test_norm':qtotn_test_norm.data.numpy(), 
             # 'thetan_predict_norm':thetan_predict_norm.data.numpy(),
             # 'thetan_test_norm':thetan_test_norm.data.numpy(),
             # 'qphys_ml':qphys_ml.data.numpy(), 
@@ -494,10 +498,10 @@ def evaluate_tnext(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qnext_006_lyr_070_in_070_out_0140_hdn_010_epch_00500_btch_023001AQT_mae_023001AQ_standardise_mx_ae.tar"
-    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_015.hdf5"
-    normaliser_region = "023001AQ_standardise_mx"
-    # normaliser_region = "023001AQ_normalise"
+    model_file = model_loc+"qdiff_aeovr_stoch_normed_006_lyr_055_in_055_out_0110_hdn_050_epch_00150_btch_023001AQS_mse_023001AQS_normalise_stkd.tar"
+    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_063.hdf5"
+    # normaliser_region = "023001AQ_standardise_mx"
+    normaliser_region = "023001AQS_normalise"
     data_region = "0N100W"
     args = set_args(model_file, normaliser_region, data_region)
     model = set_model(model_file, args)

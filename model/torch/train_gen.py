@@ -1,7 +1,6 @@
 import argparse
 import torch
-# import caramel_diff_multiout as caramel
-import caramel_diff as caramel
+import caramel_gen as caramel
 
 parser = argparse.ArgumentParser(description='Train Q')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
@@ -56,7 +55,7 @@ def set_args():
         args.with_cuda = False
         args.chkpt_interval = 10
         args.isambard = False
-        args.warm_start = None
+        args.warm_start = False
         args.identifier = '021501AQ1H'
         args.data_region = '021501AQ1H'
         args.normaliser = '021501AQ1H_standardise_mx'
@@ -73,83 +72,39 @@ def set_args():
 
     # Define the Model
     # n_inputs,n_outputs=140,70
-    # args.xvars = ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
-    # args.xvars = ['qadv', 'theta_adv', 'sw_toa', 'shf', 'lhf']
-    # args.xvars = ['qtot', 'theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    # args.xvar_multiplier = [10000., 10., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
-    # args.xvars = ['qtot', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    # args.xvar_multiplier = [1000., 0.01, 1.e-11, 0.1, 0.1, 10., 0.1, 0.01, 0.001]
-    # args.xvars2 = ['qadv']
-    # args.xvar_multiplier = [1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000.]
-    # args.xvars2 = ['theta_adv']
-    args.xvars2 = ['qadv']
-    # args.xvars2 = ['qadv','theta_adv']
-    args.xvars = ['theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    # args.xvars = ['qtot','theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    # args.xvar_multiplier = [100., 0.1, 1.e-10, 1., 1., 1000., 1., 0.1, 0.01]
-    # args.xvars = ['qtot', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    # args.xvars = ['qtot', 'theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    # args.xvar_multiplier = [10000., 0.1, 1.e-10, 1., 1., 1000., 1., 0.1, 0.01]
-    # args.xvar_multiplier = [1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000.]
-    args.xvar_multiplier = [1., 1., 1., 1., 1., 1., 1., 1., 1.]
-    # args.xvar_multiplier = [1.,1., 1., 1., 1., 1., 1., 1., 1., 1.]
-    # args.xvars = ['p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
-    # args.xvar_multiplier = [1000., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
-    # args.xvars = ['qtot', 'theta', 'sw_toa', 'shf', 'lhf']
     # args.yvars = ['qtot_next', 'theta_next']
-    # args.yvars = ['qtot_next', 'theta_next']
-    # args.yvars = ['theta_next']
-    args.yvars = ['qtot']
-    # args.yvar_multiplier = [1000.]
-    # args.yvar_multiplier = [100.]
-    # args.yvars = ['theta']
-    # args.yvar_multiplier = [100.]
-    args.yvar_multiplier = [1.]
-    # args.yvar_multiplier = [10000.]
-    # args.yvars = ['qtot','theta']
-    # args.yvar_multiplier = [1000.,1.]
-    args.no_norm = False
-    args.lev_norm = True
+    args.xmean = torch.Tensor([0.5,0.5,0.5])
+    args.xstd = torch.Tensor([1.,1.,1.])
+    args.yvars = ['qtot_next']
+    # args.yvars2 = ['qphys', 'theta_phys']
+    # args.yvars2 = ['theta_phys']
     args.region=args.data_region
-    args.train_on_x2 = False
-    args.no_xdiff = False
-    args.no_ydiff = False
-    args.xstoch = True
-    args.fmin = 0
-    args.fmax = 100
-    if args.train_on_x2:
-        args.in_features = (args.nlevs*((len(args.xvars)-3)+len(args.xvars2))+3)
-    else:
-        args.in_features = (args.nlevs*(len(args.xvars)-3)+3)
-
-    # args.in_features = (args.nlevs*2)
+    args.in_features = len(args.xmean)
     args.nb_classes = (args.nlevs*(len(args.yvars)))
-    # args.nb_classes = 1 #(args.nlevs*(len(args.yvars2)))
-    print("Inputs: {0} {1} Ouputs: {2}".format(args.xvars, args.xvars2, args.yvars))
 
     # args.hidden_size = 512 
     args.hidden_size = int(1.0 * args.in_features + args.nb_classes)
-    args.model_name = "qdiff_diag_normed_f0100_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_sum_{8}_stkd_tstoch1sig_lr1e4_tanh.tar".format(str(args.nb_hidden_layers).zfill(3),
-                                                                                        str(args.in_features).zfill(3),
-                                                                                        str(args.nb_classes).zfill(3),
-                                                                                        str(args.hidden_size).zfill(4),
-                                                                                        str(args.epochs).zfill(3),
-                                                                                        str(args.batch_size).zfill(5),
-                                                                                        args.identifier, 
-                                                                                        args.loss,
-                                                                                        args.normaliser
-                                                                                        )
+    args.model_name = "qgen_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_{8}_tanh.tar".format(str(args.nb_hidden_layers).zfill(3),
+                                                                                    str(args.in_features).zfill(3),
+                                                                                    str(args.nb_classes).zfill(3),
+                                                                                    str(args.hidden_size).zfill(4),
+                                                                                    str(args.epochs).zfill(3),
+                                                                                    str(args.batch_size).zfill(5),
+                                                                                    args.identifier, 
+                                                                                    args.loss,
+                                                                                    args.normaliser
+                                                                                    )
     print(args.model_name)
     # Get the data
     if args.isambard:
         args.locations={ "train_test_datadir":"/home/mo-ojamil/ML/CRM/data",
-                "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/torch/chkpoints",
+                "chkpnt_loc":"/home/mo-ojamil/ML/CRM/data/models/chkpts",
                 "hist_loc":"/home/mo-ojamil/ML/CRM/data/models",
                 "model_loc":"/home/mo-ojamil/ML/CRM/data/models/torch",
                 "normaliser_loc":"/home/mo-ojamil/ML/CRM/data/normaliser/{0}".format(args.normaliser)}
     else:
         args.locations={ "train_test_datadir":"/project/spice/radiation/ML/CRM/data/models/datain",
-                "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/torch/chkpoints",
+                "chkpnt_loc":"/project/spice/radiation/ML/CRM/data/models/chkpts/torch",
                 "hist_loc":"/project/spice/radiation/ML/CRM/data/models/history",
                 "model_loc":"/project/spice/radiation/ML/CRM/data/models/torch",
                 "normaliser_loc":"/project/spice/radiation/ML/CRM/data/models/normaliser/{0}".format(args.normaliser)}

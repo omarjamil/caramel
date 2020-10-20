@@ -25,70 +25,79 @@ def configure_optimizers(model):
     optimizer =  torch.optim.Adam(model.parameters(), lr=1.e-3)
     # optimizer =  torch.optim.SGD(mlp.parameters(), lr=0.01)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+    # scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer, base_lr=1.e-6, max_lr=0.1, cycle_momentum=False)
     # loss_function = torch.nn.MSELoss()
     return optimizer, scheduler
 
-def recursive_training_step(batch, batch_idx, model, loss_function, optimizer, device, recur_input_indx):
+def training_step(batch, batch_, batch_idx, model, loss_function, optimizer, device, input_indices=None):
     """
-    recur_input_indx: which of the inputs are to replaced by model output from the previous step 
     """
-    # print("In teacher force mode")
-    x, y, y2 = batch
-    x = x.to(device)
-    y = y.to(device)
-    output = []
-    output.append(model(x[0]))
-    for i in range(1,len(x)):
-        xmod = x.clone()
-        xmod[i,recur_input_indx] = output[i-1]
-        # print(xmod[i,:5], x[i,:5])
-        output.append(model(xmod[i]))
-    batched_output = torch.stack(output)
-    # print(batched_output.shape, y.shape)
-    loss = loss_function(batched_output, y, reduction='mean')
-    # print(loss.item())
+    x,y,x2 = batch
+    # qin = (x[0][list(range(1,len(x[0])-1,2)),:]).to(device)
+    # qout = (x[0][list(range(2,len(x[0]),2)),:]).to(device)
+    x_, y_  = batch_
+    x_ = torch.cat(x_,dim=1).to(device)
+    y_ = torch.cat(y_,dim=1).to(device)
+    # print(len(qin), len(qout), len(y_))
+    # output1,output2,output3,output4 = model(x_)
+    # output = (output1+output2+output3+output4)/4.
+    output1,output2,output3 = model(x_)
+    output = (output1+output2+output3)/3.
+    # print("ML", output)
+    # print("truth", y_)
+    # print(y_.shape)
+    # print(y_.shape[1]//2)
+    # qpredict = qin+(output[:,:(y_.shape[1]//2)]/1000.) 
+    # print(qout - qpredict)
+    # print(x_.shape, y_.shape, output.shape)
+    # print("In", x_[0,55:110])
+    # print("True", y_[0,:])
+    # print("Pred", output[0,:])
+    # diff_loss = loss_function(output,y_, reduction='mean')
+    avg_loss = loss_function(output,y_, reduction='mean')
+    loss1 = loss_function(output1,y_,reduction='mean')
+    # print(loss1.shape)
+    loss2 = loss_function(output2,y_,reduction='mean')
+    loss3 = loss_function(output3,y_,reduction='mean')
+    # loss4 = loss_function(output4,y_,reduction='mean')
+    
+    # diff_loss = loss1 + loss2 + loss3 + loss4 + avg_loss
+    diff_loss = loss1 + loss2 + loss3 + avg_loss
+    # qloss = loss_function(1000.*qpredict,1000.*qout, reduction='mean')
     optimizer.zero_grad()
+    # if torch.lt(qpredict,0.).any():
+        # print("-",end=' ')
+        # print(diff_loss.item(), qloss.item())
+        # loss = diff_loss + 1000.*qloss
+    # else:
+        # loss = diff_loss + qloss
+    # loss = diff_loss + qloss
+    loss = diff_loss
     loss.backward()
     optimizer.step()
     return loss
 
-def training_step(batch, batch_idx, model, loss_function, optimizer, device, input_indices=None):
+def validation_step(batch, batch_, batch_idx, model, loss_function, device, input_indices=None):
     """
     """
-    x, y, y2 = batch
-    if input_indices is not None:
-        y = (y[0] - x[0][...,input_indices])*100.
-        x = torch.cat(x,dim=1).to(device)
-        y = y.to(device)
-    else:
-        x = torch.cat(x,dim=1).to(device)
-        y = y.to(device)
-    output = model(x)
-    # print("Pred", output[0,0:5])
-    # loss = loss_function(output,y, reduction='mean')
-    diff_loss = loss_function(output,y, reduction='none')
-    loss = torch.sum(torch.mean(loss,dim=0))
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-    return loss
-
-def validation_step(batch, batch_idx, model, loss_function, device, input_indices=None):
-    """
-    """
-    x,y, y2 = batch
-    if input_indices is not None:
-        y = (y - x[0][...,input_indices])*100.
-        x = torch.cat(x,dim=1).to(device)
-        y = y.to(device)
-    else:
-        x = torch.cat(x,dim=1).to(device)
-        y = y.to(device)
+    x,y,x2 = batch
+    # qin = (x[0][list(range(1,len(x[0])-1,2)),:]).to(device)
+    # qout = (x[0][list(range(2,len(x[0]),2)),:]).to(device)
+    x_,y_ = batch_
+    x_ = torch.cat(x_,dim=1).to(device)
+    y_ = torch.cat(y_,dim=1).to(device)
     with torch.no_grad():
-        output = model(x)
+        # output1,output2,output3,output4 = model(x_)
+        # output = (output1+output2+output3+output4)/4.
+        output1,output2,output3 = model(x_)
+        output = (output1+output2+output3)/3.
+        # qpredict = qin+(output/1000.) 
         # print("True", y[0,0:5])
         # print("Pred", output[0,0:5])
-        loss = loss_function(output, y, reduction='mean')
+        diff_loss = loss_function(output,y_, reduction='mean')
+        # qloss = loss_function(1000.*qpredict,1000.*qout, reduction='mean')
+        # loss = diff_loss + qloss
+        loss = diff_loss
     return loss
 
 
@@ -108,7 +117,8 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 
 def set_model(args):
     # mlp = model.MLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    mlp = model.MLP_tanh(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    # mlp = model.MLP_tanh(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    mlp = model.MLP_multiout_tanh(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
     # skipindx = list(range(args.nlevs))
     # mlp = model.MLPSubSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size, skipindx)
@@ -147,7 +157,7 @@ def set_model(args):
 def train_dataloader(args):
     train_dataset_file = "{0}/train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
     train_dataset = data_io.ConcatDataset("train",args.nlevs, train_dataset_file, args.locations['normaliser_loc'], args.batch_size, xvars=args.xvars,
-             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm)
+             yvars=args.yvars, xvars2=args.xvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm)
     indices = list(range(train_dataset.__len__()))
     train_sampler = torch.utils.data.SubsetRandomSampler(indices)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_sampler=None, batch_size=None, sampler=train_sampler, shuffle=False)
@@ -156,39 +166,67 @@ def train_dataloader(args):
 def test_dataloader(args):
     test_dataset_file = "{0}/test_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
     test_dataset = data_io.ConcatDataset("test",args.nlevs, test_dataset_file, args.locations['normaliser_loc'], args.batch_size, xvars=args.xvars,
-             yvars=args.yvars, yvars2=args.yvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm)
+             yvars=args.yvars, xvars2=args.xvars2, samples_frac=args.samples_fraction, data_frac=args.data_fraction, no_norm=args.no_norm)
     indices = list(range(test_dataset.__len__()))
     test_sampler = torch.utils.data.SubsetRandomSampler(indices)
     validation_loader = torch.utils.data.DataLoader(test_dataset, batch_sampler=None, batch_size=None, sampler=test_sampler, shuffle=False)
     return validation_loader
 
 
+def create_diff_inout_vars(batch, xvar_multiplier, yvar_multiplier, train_on_x2=False):
+    x,y,x2 = batch
+    xlist = []
+    xdifflist = []
+
+    for v,m in zip(x, xvar_multiplier):
+        vdiff = (v[1:] - v[:-1])*m
+        xdifflist.append(vdiff)
+
+    if train_on_x2:
+        for v in (x2):
+            xdifflist.append(v[1:])
+
+    ylist = []
+    ydifflist = []
+    for v,m in zip(y,yvar_multiplier):
+        vdiff = (v[1:] - v[:-1])*m
+        ydifflist.append(vdiff)
+
+    for v in xdifflist:
+        # xlist.append(v[list(range(0,len(v)-1,2))])
+        xlist.append(v[list(range(0,len(v)-1,1))])
+
+    for v in ydifflist:
+        ylist.append(v[list(range(0,len(v)-1,1))])
+
+
+    # ylist = [difflist[0][list(range(1,len(difflist[0]),2))]]
+    # ylist = [difflist[1][list(range(1,len(difflist[1]),2))]]
+    # ylist = [difflist[0][list(range(1,len(difflist[0]),2))], difflist[1][list(range(1,len(difflist[1]),2))]]
+    return (xlist, ylist)
 
 def train_loop(model, loss_function, optimizer, scheduler, args):
     
     training_loss = []
     validation_loss = []
-    recur_input_indx = list(range(args.nlevs))
     train_ldr = train_dataloader(args)
     test_ldr = test_dataloader(args)
-    recursive_train_interval = 1.1
     input_indices = list(range(args.nlevs))
     for epoch in range(1, args.epochs + 1):
         ## Training
         train_loss = 0
         for batch_idx, batch in enumerate(train_ldr):
             # Sets the model into training mode
+            batch_ = create_diff_inout_vars(batch, args.xvar_multiplier, args.yvar_multiplier, train_on_x2=args.train_on_x2)
             model.train()
-            if batch_idx%1 == recursive_train_interval:
-                loss = recursive_training_step(batch, batch_idx, model, loss_function, optimizer, args.device, recur_input_indx)
-            else:
-                loss = training_step(batch, batch_idx, model, loss_function, optimizer, args.device, input_indices=input_indices)
+            
+            loss = training_step(batch, batch_, batch_idx, model, loss_function, optimizer, args.device, input_indices=input_indices)
             
             train_loss += loss.item()
             if batch_idx % args.log_interval == 0:
-                x,y, y2=batch
+                x,y, x2=batch
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.2e}'.format(epoch, 
-                batch_idx * len(x), len(train_ldr.dataset)*args.batch_size,100. * batch_idx / len(train_ldr),
+                batch_idx * len(x), len(train_ldr.dataset)*(args.batch_size/2.),100. * batch_idx / (len(train_ldr)),
                 loss.item() / len(x)))
         average_loss = train_loss / len(train_ldr.dataset)
         print('====> Epoch: {} Average loss: {:.2e}'.format(epoch, average_loss))
@@ -197,8 +235,9 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
         ## Testing
         test_loss = 0
         for batch_idx, batch in enumerate(test_ldr):
+            batch_ = create_diff_inout_vars(batch, args.xvar_multiplier, args.yvar_multiplier, train_on_x2=args.train_on_x2)
             model.eval()
-            loss = validation_step(batch, batch_idx, model, loss_function, args.device, input_indices=input_indices)
+            loss = validation_step(batch, batch_, batch_idx, model, loss_function, args.device, input_indices=input_indices)
             test_loss += loss.item()
         average_loss_val = test_loss / len(test_ldr.dataset) 
         print('====> validation loss: {:.2e}'.format(average_loss_val))
@@ -211,7 +250,7 @@ def train_loop(model, loss_function, optimizer, scheduler, args):
                 'training_loss':training_loss,
                 'validation_loss':validation_loss,
                 'arguments':args},
-                args.locations['model_loc']+'/'+checkpoint_name)
+                args.locations['chkpnt_loc']+'/'+checkpoint_name)
             # checkpoint_save(epoch, model, optimizer, training_loss, validation_loss, args.model_name, args.locations, args)            
      # Save the final model
     torch.save({'epoch':epoch,
