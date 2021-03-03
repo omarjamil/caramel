@@ -136,13 +136,16 @@ def multi_level(start_day: int, start_month: int, region: str, roseid:str):
     # list_stash_code = [4, 4, 10, 254, 12, 272, 273]
     # list_stream = ['c', 'd', 'c', 'c', 'c', 'c', 'c']
     #  qv, qcl, qcf, rain, graupel
+    list_stash_sec = [0]
+    list_stash_code = [4]
+    list_stream = ['c']
     # list_stashe_sec = [0,0,0,0,0]
     # list_stashe_code = [10,254,12,272,273]
     # list_stash_stream = ['c', 'c', 'c', 'c', 'c']
     # winds (u,v,w) density
-    list_stash_sec = [0,0,0,0,0]
-    list_stash_code = [2,3,150,253,408]
-    list_stream = ['e', 'e', 'e', 'f','f']
+    # list_stash_sec = [0,0,0,0,0]
+    # list_stash_code = [2,3,150,253,408]
+    # list_stream = ['e', 'e', 'e', 'f','f']
     ###############################################################
     # Below here are things you probably will not need to change.
     ###############################################################

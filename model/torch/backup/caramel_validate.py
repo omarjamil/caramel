@@ -49,23 +49,18 @@ def set_model(model_file, args):
     # n_inputs,n_outputs=140,70
     print(args.xvars)
     args.region=args.data_region
-    # in_features = (args.nlevs*(len(args.xvars)-3)+3)
-    in_features = (args.nlevs*(len(args.xvars)))
+    in_features = (args.nlevs*(len(args.xvars)-3)+3)
     print(in_features)
-    # if not args.train_on_y2:
-    #     nb_classes = (args.nlevs*(len(args.yvars)))
-    #     # nb_classes = 1 #(args.nlevs*(len(args.yvars)))
-    # else:
-    #     nb_classes = (args.nlevs*(len(args.yvars2)))
-    nb_classes = (args.nlevs*(len(args.yvars)))
+    if not args.train_on_y2:
+        nb_classes = (args.nlevs*(len(args.yvars)))
+        # nb_classes = 1 #(args.nlevs*(len(args.yvars)))
+    else:
+        nb_classes = (args.nlevs*(len(args.yvars2)))
     # in_features, nb_classes=(args.nlevs*4+3),(args.nlevs*2)
     # hidden_size = 512
     hidden_size = int(1. * in_features + nb_classes)
     # mlp = nn_model.MLP(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
-    # mlp = nn_model.MLPSkip(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
-    # mlp = nn_model.VAE(in_features)
-    # mlp = nn_model.AE(in_features)
-    mlp = nn_model.AE(args.in_features, args.latent_size)
+    mlp = nn_model.MLPSkip(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLPDrop(in_features, nb_classes, args.nb_hidden_layers, hidden_size)
     # Load the save model 
     print("Loading PyTorch model: {0}".format(model_file))
@@ -358,53 +353,39 @@ def evaluate_qt_next(model, datasetfile, args):
             hfile.create_dataset(k,data=v)
 
 def evaluate_qnext(model, datasetfile, args):
-    nn_data = data_io.Data_IO_validation(args.region, args.nlevs, datasetfile, args.locations['normaliser_loc'],
+    nn_data = data_io.Data_IO_validation(args.region, args.nlevs, datasetfile, args.locations['normaliser_loc'], 
                         xvars=args.xvars,
                         yvars=args.yvars,
-                        # yvars2=args.yvars2,
-                        add_adv=False,
-                        no_norm=False,
-                        fmin=0,
-                        fmax=100)
+                        yvars2=args.yvars2,
+                        add_adv=False)
     
     x,y,y2,xmean,xstd,ymean,ystd,ymean2,ystd2 = nn_data.get_data()
-    y = x.data.clone()
     # model = set_model(args)
-    # yp, mu, logvar = model(x)
-    yp_encoded,yp = model(x)
-    # print(mu[0,:],logvar[0,:])
+    yp = model(x)
     xinv = nn_data._inverse_transform(x,xmean,xstd)
     xinv_split = nn_data.split_data(xinv,xyz='x')
-    # yinv = nn_data._inverse_transform(y,ymean,ystd)
-    yinv = xinv.data.clone()
+    yinv = nn_data._inverse_transform(y,ymean,ystd)
 
-    ypinv = nn_data._inverse_transform(yp,xmean,xstd)
-    # yinv_split = nn_data.split_data(yinv,xyz='y')
-    yinv_split = yinv
-    # ypinv_split = nn_data.split_data(ypinv, xyz='y')
-    ypinv_split = ypinv
-    # y_split = nn_data.split_data(y, xyz='y')
-    y_split = y
-    # yp_split = nn_data.split_data(yp, xyz='y')
-    yp_split = yp
+    ypinv = nn_data._inverse_transform(yp,ymean,ystd)
+    yinv_split = nn_data.split_data(yinv,xyz='y')
+    ypinv_split = nn_data.split_data(ypinv, xyz='y')
+    y_split = nn_data.split_data(y, xyz='y')
+    yp_split = nn_data.split_data(yp, xyz='y')
 
     # y2inv = nn_data._inverse_transform(y2,ymean2,ystd2)
     # y2inv_split = nn_data.split_data(y2inv, xyz='y2')
     # ['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf']
     # ['qphys', 'theta_phys']
     qtot_denorm = xinv_split['qtot']
-    # theta_desnorm = xinv_split['theta']
+    theta_denorm = xinv_split['theta']
     # qadv_denorm = xinv_split['qadv']
     # theta_adv_denorm = xinv_split['theta_adv']
 
-    # qtotn_predict_denorm = ypinv_split['qtot_next']
-    # qtotn_test_denorm = yinv_split['qtot_next']
-    # qtotn_predict_norm = yp_split['qtot_next']
-    # qtotn_test_norm = y_split['qtot_next']
-    qtotn_predict_denorm = ypinv_split
-    qtotn_test_denorm = yinv_split
-    qtotn_predict_norm = yp_split
-    qtotn_test_norm = y_split
+    qtotn_predict_denorm = ypinv_split['qtot_next']
+    qtotn_test_denorm = yinv_split['qtot_next']
+    qtotn_predict_norm = yp_split['qtot_next']
+    qtotn_test_norm = y_split['qtot_next']
+    
     # qphys_denorm = y2inv_split['qphys']
     # theta_phys_denorm = y2inv_split['theta_phys']
     # qphys_ml = qtotn_predict_denorm - qtot_denorm - qadv_denorm
@@ -412,12 +393,12 @@ def evaluate_qnext(model, datasetfile, args):
 
     hfilename = args.model_name.replace('.tar','_qnext.hdf5')
 
-    output={'qtot_next_ml':qtotn_predict_denorm.data.numpy(),
-            'qtot_next':qtotn_test_denorm.data.numpy(), 
+    output={'qtotn_predict':qtotn_predict_denorm.data.numpy(),
+            'qtotn_test':qtotn_test_denorm.data.numpy(), 
             # 'thetan_predict':thetan_predict_denorm.data.numpy(),
             # 'thetan_test':thetan_test_denorm.data.numpy(),
-            # 'qtotn_predict_norm':qtotn_predict_norm.data.numpy(),
-            # 'qtotn_test_norm':qtotn_test_norm.data.numpy(), 
+            'qtotn_predict_norm':qtotn_predict_norm.data.numpy(),
+            'qtotn_test_norm':qtotn_test_norm.data.numpy(), 
             # 'thetan_predict_norm':thetan_predict_norm.data.numpy(),
             # 'thetan_test_norm':thetan_test_norm.data.numpy(),
             # 'qphys_ml':qphys_ml.data.numpy(), 
@@ -425,7 +406,7 @@ def evaluate_qnext(model, datasetfile, args):
             # 'theta_phys_ml':theta_phys_ml.data.numpy(), 
             # 'theta_phys':theta_phys_denorm.data.numpy(),
             'qtot':qtot_denorm.data.numpy(), 
-            # 'theta':theta_denorm.data.numpy()
+            'theta':theta_denorm.data.numpy()
             }
     
     with h5py.File(hfilename, 'w') as hfile:
@@ -499,10 +480,9 @@ def evaluate_tnext(model, datasetfile, args):
 
 if __name__ == "__main__":
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    model_file = model_loc+"qdiff_ae_normed_006_lyr_055_in_055_out_0110_hdn_050_epch_00150_btch_023001AQS_mse_023001AQS_normalise_z30_stkd.tar"
-    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_019.hdf5"
-    # normaliser_region = "023001AQ_standardise_mx"
-    normaliser_region = "023001AQS_normalise"
+    model_file = model_loc+"qnext_006_lyr_183_in_045_out_0228_hdn_030_epch_00500_btch_023001AQT_mse_163001AQT_normalise_skip.tar"
+    datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_000.hdf5"
+    normaliser_region = "163001AQT_normalise"
     data_region = "0N100W"
     args = set_args(model_file, normaliser_region, data_region)
     model = set_model(model_file, args)

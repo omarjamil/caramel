@@ -77,7 +77,7 @@ def set_model_t(model_file, args):
     nb_hidden_layers = args.nb_hidden_layers
     hidden_size = args.hidden_size
     # mlp = nn_model.MLP(in_features, nb_classes, nb_hidden_layers, hidden_size)
-    mlp = nn_model.MLP_tanh(in_features, nb_classes, nb_hidden_layers, hidden_size, scale=1.)
+    mlp = nn_model.MLP_tanh(in_features, nb_classes, nb_hidden_layers, hidden_size, scale=20.)
     # mlp = nn_model.MLP_sig(in_features, nb_classes, nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLP_BN_tanh(in_features, nb_classes, nb_hidden_layers, hidden_size)
     # mlp = nn_model.MLP_multiout_tanh(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
@@ -609,7 +609,8 @@ def scm_diff_enc(qmodel, tmodel, encmodelfile, datasetfile, qargs, targs, subdom
     one model for q prediction and nother for theta perdiction
     """
 
-    aemodel = nn_model.AE(qargs.nlevs)
+    # aemodel = nn_model.AE(qargs.nlevs)
+    aemodel = nn_model.AE(qargs.nlevs, qargs.latent_size)
     print(aemodel)
     print("Loading PyTorch model: {0}".format(encmodelfile))
     checkpoint = torch.load(encmodelfile, map_location=torch.device('cpu'))
@@ -712,7 +713,7 @@ def scm_diff_enc(qmodel, tmodel, encmodelfile, datasetfile, qargs, targs, subdom
     for t in range(1,len(qdiff)-1,1):
 
         typ_ = tmodel(txcopy[t-1].reshape(1,-1))
-        if t > 2:
+        if t > 0:
             qxcopy[t-1,:qargs.nlevs] = typ_
             # qxcopy[t-1,:qargs.nlevs] = qdiff_output[t-2]
             # qxcopy[t-1,qargs.nlevs:qargs.nlevs*2] = typ_
@@ -723,10 +724,10 @@ def scm_diff_enc(qmodel, tmodel, encmodelfile, datasetfile, qargs, targs, subdom
         # print("Model", qyp_enc[:])
         qyp_ = aemodel.decoder(qyp_enc)
         qxcopy[t,:qargs.nlevs] = qyp_
-        if t > 2:
+        if t > 0:
             txcopy[t,:targs.nlevs] = qyp_
 
-        if t > 2:
+        if t > 0:
             qnew = (qoutput[t-1] + qyp_[:qargs.nlevs]/torch.Tensor(qargs.yvar_multiplier)[:])*1.0+(qoutput[t-2]*0.0)
             tnew = (toutput[t-1] + typ_[:targs.nlevs]/torch.Tensor(targs.yvar_multiplier)[:])*1.0+(toutput[t-2]*0.0)
 
@@ -815,8 +816,10 @@ def scm_diff(qmodel, tmodel, datasetfile, qargs, targs, subdomain):
     # tyt_inverse = ty
     tyt_inverse = tnn_data._inverse_transform(ty,tymean,tystd)
     tyt_inverse_split = tnn_data.split_data(tyt_inverse, xyz='y')
-    qnext = qyt_split['qtot'][:-1]
-    qnext_inv = qyt_inverse_split['qtot'][:-1]
+    # qnext = qyt_split['qtot'][:-1]
+    # qnext_inv = qyt_inverse_split['qtot'][:-1]
+    qnext = qyt_split['qv'][:-1]
+    qnext_inv = qyt_inverse_split['qv'][:-1]
     tnext = tyt_split['theta'][:-1]
     tnext_inv = tyt_inverse_split['theta'][:-1]
 
@@ -824,7 +827,8 @@ def scm_diff(qmodel, tmodel, datasetfile, qargs, targs, subdomain):
     qx_inv_split = qnn_data._inverse_transform_split(qx_split,qxmean,qxstd,xyz='x')
     # qx_inv_split = qnn_data.split_data(qx,xyz='x')
     # tx_inv_split = tnn_data.split_data(tx,xyz='x')
-    qtot_inv = tx_inv_split['qtot'][:-1]
+    # qtot_inv = tx_inv_split['qtot'][:-1]
+    qtot_inv = tx_inv_split['qv'][:-1]
     theta_inv = qx_inv_split['theta'][:-1]
     
     qoutput = []
@@ -916,19 +920,23 @@ def scm_diff(qmodel, tmodel, datasetfile, qargs, targs, subdomain):
 
 def main(subdomain):
     model_loc = "/project/spice/radiation/ML/CRM/data/models/torch/"
-    qmodel_file = model_loc+"qdiff_diag_normed_f0100_006_lyr_333_in_045_out_0378_hdn_050_epch_00150_btch_023001AQS_mse_sum_023001AQS_normalise_stkd_tstoch1sig_lr1e4_enc.tar"
-    tmodel_file = model_loc+"tdiff_diag_normed_008_lyr_333_in_055_out_0388_hdn_050_epch_00150_btch_023001AQS_mse_sum_023001AQS_normalise_stkd_xstoch_tanh.tar"
-    aemodel_file = model_loc+"qdiff_ae_stoch_normed_006_lyr_055_in_055_out_0110_hdn_050_epch_00150_btch_023001AQS_mse_023001AQS_normalise_stkd.tar"
+    qmodel_file = model_loc+"qdiff_diag_normed_f0100_006_lyr_333_in_020_out_0353_hdn_050_epch_00150_btch_023001AQS_mse_sum_023001AQS_normalise_stkd_xstoch_lr1e4_20enc.tar"
+    tmodel_file = model_loc+"tdiff_diag_normed_f0100_008_lyr_333_in_055_out_0388_hdn_030_epch_00150_btch_023001AQS_mse_sum_023001AQS_normalise_stkd_xstoch_20tanh.tar"
+    aemodel_file = model_loc+"qdiff_ae_normed_006_lyr_055_in_055_out_0110_hdn_050_epch_00150_btch_023001AQS_mse_023001AQS_normalise_z20_stkd.tar"
     # datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100WD/validation_data_0N100WD_{0}.hdf5".format(str(subdomain).zfill(3))
     datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W/validation_data_0N100W_{0}.hdf5".format(str(subdomain).zfill(3))
+    # datasetfile = "/project/spice/radiation/ML/CRM/data/models/datain/validation_0N100W_Qv/validation_data_0N100W_Qv_{0}.hdf5".format(str(subdomain).zfill(3))
     # normaliser_region = "023001AQT_normalise_60_glb"
     # normaliser_region = "023001AQT_standardise_mx"
     # normaliser_region = "023001AQT_normalise"
     normaliser_region = "023001AQS_normalise"
+    # normaliser_region = "023001AQS_Qv_normalise"
     # normaliser_region = "023001AQSD_normalise"
+    # data_region = "0N100W"
     data_region = "0N100W"
     qargs = set_args(qmodel_file, normaliser_region, data_region)
     targs = set_args(tmodel_file, normaliser_region, data_region)
+
     qmodel = set_model_q(qmodel_file, qargs)
     tmodel = set_model_t(tmodel_file, targs)
     # scm_diff(qmodel, tmodel, datasetfile, qargs, targs, subdomain)
@@ -938,7 +946,7 @@ def main(subdomain):
     # scm_diff_adv(qmodel, tmodel, datasetfile, qargs, targs)
 
 if __name__ == "__main__":
-    i = 63
+    i = 11
     main(i)
     # for i in range(64):
         # main(i)

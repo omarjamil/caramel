@@ -18,9 +18,10 @@ class NormalizersData(object):
         # self.qphys_normaliser_std = h5py.File('{0}/q_phys.hdf5'.format(location),'r')
         # self.tphys_normaliser_std = h5py.File('{0}/t_phys.hdf5'.format(location),'r')
         self.q_normaliser_std = h5py.File('{0}/q_tot.hdf5'.format(location),'r')
+        # self.qv_normaliser_std = h5py.File('{0}/specific_humidity.hdf5'.format(location),'r')
         self.t_normaliser_std = h5py.File('{0}/air_potential_temperature.hdf5'.format(location),'r')
-        self.qadv_normaliser_std = h5py.File('{0}/q_adv.hdf5'.format(location),'r')
-        self.tadv_normaliser_std = h5py.File('{0}/t_adv.hdf5'.format(location),'r')
+        # self.qadv_normaliser_std = h5py.File('{0}/q_adv.hdf5'.format(location),'r')
+        # self.tadv_normaliser_std = h5py.File('{0}/t_adv.hdf5'.format(location),'r')
         self.sw_toa_normaliser_std = h5py.File('{0}/toa_incoming_shortwave_flux.hdf5'.format(location),'r')
         self.upshf_normaliser_std = h5py.File('{0}/surface_upward_sensible_heat_flux.hdf5'.format(location),'r')
         self.uplhf_normaliser_std = h5py.File('{0}/surface_upward_latent_heat_flux.hdf5'.format(location),'r')
@@ -33,9 +34,10 @@ class NormalizersData(object):
         # self.qphys_mean = torch.tensor(self.qphys_normaliser_std['mean_'][:])
         # self.tphys_mean = torch.tensor(self.tphys_normaliser_std['mean_'][:])
         self.q_mean = torch.tensor(self.q_normaliser_std['mean_'][:])
+        # self.qv_mean = torch.tensor(self.qv_normaliser_std['mean_'][:])
         self.t_mean = torch.tensor(self.t_normaliser_std['mean_'][:])
-        self.qadv_mean = torch.tensor(self.qadv_normaliser_std['mean_'][:])
-        self.tadv_mean = torch.tensor(self.tadv_normaliser_std['mean_'][:])
+        # self.qadv_mean = torch.tensor(self.qadv_normaliser_std['mean_'][:])
+        # self.tadv_mean = torch.tensor(self.tadv_normaliser_std['mean_'][:])
         self.sw_toa_mean = torch.tensor(self.sw_toa_normaliser_std['mean_'][:])
         self.upshf_mean = torch.tensor(self.uplhf_normaliser_std['mean_'][:])
         self.uplhf_mean = torch.tensor(self.uplhf_normaliser_std['mean_'][:])
@@ -48,9 +50,10 @@ class NormalizersData(object):
         # self.qphys_stdscale = torch.from_numpy(self.qphys_normaliser_std['scale_'][:])
         # self.tphys_stdscale = torch.from_numpy(self.tphys_normaliser_std['scale_'][:])
         self.q_stdscale = torch.from_numpy(self.q_normaliser_std['scale_'][:])
+        # self.qv_stdscale = torch.from_numpy(self.qv_normaliser_std['scale_'][:])
         self.t_stdscale = torch.from_numpy(self.t_normaliser_std['scale_'][:])
-        self.qadv_stdscale = torch.from_numpy(self.qadv_normaliser_std['scale_'][:])
-        self.tadv_stdscale = torch.from_numpy(self.tadv_normaliser_std['scale_'][:])
+        # self.qadv_stdscale = torch.from_numpy(self.qadv_normaliser_std['scale_'][:])
+        # self.tadv_stdscale = torch.from_numpy(self.tadv_normaliser_std['scale_'][:])
         self.sw_toa_stdscale = torch.tensor(self.sw_toa_normaliser_std['scale_'][:])
         self.upshf_stdscale = torch.tensor(self.uplhf_normaliser_std['scale_'][:])
         self.uplhf_stdscale = torch.tensor(self.uplhf_normaliser_std['scale_'][:])
@@ -63,9 +66,10 @@ class NormalizersData(object):
         # self.qphys_mean_np = self.qphys_normaliser_std['mean_'][:]
         # self.tphys_mean_np = self.tphys_normaliser_std['mean_'][:]
         self.q_mean_np = self.q_normaliser_std['mean_'][:]
+        # self.qv_mean_np = self.qv_normaliser_std['mean_'][:]
         self.t_mean_np = self.t_normaliser_std['mean_'][:]
-        self.qadv_mean_np = self.qadv_normaliser_std['mean_'][:]
-        self.tadv_mean_np = self.tadv_normaliser_std['mean_'][:]
+        # self.qadv_mean_np = self.qadv_normaliser_std['mean_'][:]
+        # self.tadv_mean_np = self.tadv_normaliser_std['mean_'][:]
         self.sw_toa_mean_np = self.sw_toa_normaliser_std['mean_'][:]
         self.upshf_mean_np = self.uplhf_normaliser_std['mean_'][:]
         self.uplhf_mean_np = self.uplhf_normaliser_std['mean_'][:]
@@ -78,9 +82,10 @@ class NormalizersData(object):
         # self.qphys_stdscale_np = self.qphys_normaliser_std['scale_'][:]
         # self.tphys_stdscale_np = self.tphys_normaliser_std['scale_'][:]
         self.q_stdscale_np = self.q_normaliser_std['scale_'][:]
+        # self.qv_stdscale_np = self.qv_normaliser_std['scale_'][:]
         self.t_stdscale_np = self.t_normaliser_std['scale_'][:]
-        self.qadv_stdscale_np = self.qadv_normaliser_std['scale_'][:]
-        self.tadv_stdscale_np = self.tadv_normaliser_std['scale_'][:]
+        # self.qadv_stdscale_np = self.qadv_normaliser_std['scale_'][:]
+        # self.tadv_stdscale_np = self.tadv_normaliser_std['scale_'][:]
         self.sw_toa_stdscale_np = self.sw_toa_normaliser_std['scale_'][:]
         self.upshf_stdscale_np = self.uplhf_normaliser_std['scale_'][:]
         self.uplhf_stdscale_np = self.uplhf_normaliser_std['scale_'][:]
@@ -100,7 +105,7 @@ class Data_IO_validation(object):
     def __init__(self, region, nlevs, dataset_file, normaliser, 
                 xvars=['qtot', 'qadv', 'theta', 'theta_adv', 'sw_toa', 'shf', 'lhf', 'p', 'rho', 'xwind', 'ywind', 'zwind'],
                 yvars=['qtot_next', 'theta_next'],
-                yvars2=['qtot_next', 'theta_next'], add_adv=False, no_norm=False, fmin=0, fmax=10):
+                yvars2=['qtot', 'theta'], add_adv=False, no_norm=False, fmin=0, fmax=10):
         self.region = region
         self.nlevs = nlevs
         self.nn_norm = NormalizersData(normaliser)
@@ -135,12 +140,13 @@ class Data_IO_validation(object):
 
         print("Reading dataset file: {0}".format(dataset_file))
         dataset=h5py.File(dataset_file,'r')
+        # self.qv_test = dataset["specific_humidity_test"]
         self.q_tot_test = dataset["q_tot_test"]
-        self.q_tot_diff_test = dataset["q_tot_diff_test"]
-        self.q_tot_adv_test = dataset["q_adv_test"]
+        # self.q_tot_diff_test = dataset["q_tot_diff_test"]
+        # self.q_tot_adv_test = dataset["q_adv_test"]
         self.theta_test = dataset["air_potential_temperature_test"]
-        self.theta_diff_test = dataset["air_potential_temperature_diff_test"]
-        self.theta_adv_test = dataset["t_adv_test"]
+        # self.theta_diff_test = dataset["air_potential_temperature_diff_test"]
+        # self.theta_adv_test = dataset["t_adv_test"]
         self.sw_toa_test = dataset["toa_incoming_shortwave_flux_test"]
         self.shf_test = dataset["surface_upward_sensible_heat_flux_test"]
         self.lhf_test = dataset["surface_upward_latent_heat_flux_test"]
@@ -156,9 +162,10 @@ class Data_IO_validation(object):
         self.norm_slc = slice(self.nlevs)
         self.xdata_and_norm = {
                                 'qtot_test':[self.q_tot_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
-                                'qadv_test':[self.q_tot_adv_test[:self.npoints, :self.nlevs], self.nn_norm.qadv_mean, self.nn_norm.qadv_stdscale],
+                                # 'qv_test':[self.qv_test[:self.npoints, :self.nlevs], self.nn_norm.qv_mean, self.nn_norm.qv_stdscale],
+                                # 'qadv_test':[self.q_tot_adv_test[:self.npoints, :self.nlevs], self.nn_norm.qadv_mean, self.nn_norm.qadv_stdscale],
                                 'theta_test':[self.theta_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale],
-                                'theta_adv_test':[self.theta_adv_test[:self.npoints, :self.nlevs], self.nn_norm.tadv_mean, self.nn_norm.tadv_stdscale],
+                                # 'theta_adv_test':[self.theta_adv_test[:self.npoints, :self.nlevs], self.nn_norm.tadv_mean, self.nn_norm.tadv_stdscale],
                                 'sw_toa_test':[self.sw_toa_test[:self.npoints], self.nn_norm.sw_toa_mean, self.nn_norm.sw_toa_stdscale],
                                 'shf_test':[self.shf_test[:self.npoints], self.nn_norm.upshf_mean, self.nn_norm.upshf_stdscale],
                                 'lhf_test':[self.lhf_test[:self.npoints], self.nn_norm.uplhf_mean, self.nn_norm.uplhf_stdscale],
@@ -171,14 +178,15 @@ class Data_IO_validation(object):
         self.ydata_and_norm = {
                                 # 'qphys_test':[self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.qphys_mean, self.nn_norm.qphys_stdscale],
                                 'qtot_test':[self.q_tot_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                # 'qv_test':[self.qv_test[:self.npoints, :self.nlevs], self.nn_norm.qv_mean, self.nn_norm.qv_stdscale],
                                 'theta_test':[self.theta_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale],
                                 # 'qphys_test':[self.qphys_test[:self.npoints, :3], self.nn_norm.qphys_mean[norm_slc3], self.nn_norm.qphys_stdscale[norm_slc3]],
                                 # 'theta_phys_test':[self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.tphys_mean, self.nn_norm.tphys_stdscale],
                                 # 'qtot_next_test':[self.q_tot_test[:self.npoints, :self.nlevs]+self.q_tot_adv_test[:self.npoints, :self.nlevs]+self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
-                                'qtot_next_test':[self.q_tot_test[:self.npoints-1, :self.nlevs]+self.q_tot_diff_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                # 'qtot_next_test':[self.q_tot_test[:self.npoints-1, :self.nlevs]+self.q_tot_diff_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
                                 # 'qtot_next_test':[self.q_tot_test[:self.npoints, :1]+self.q_tot_adv_test[:self.npoints, :1]+self.qphys_test[:self.npoints, :1], self.nn_norm.q_mean[norm_slc1], self.nn_norm.q_stdscale[norm_slc1]],
                                 # 'theta_next_test':[self.theta_test[:self.npoints, :self.nlevs]+self.theta_adv_test[:self.npoints, :self.nlevs]+self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale]
-                                'theta_next_test':[self.theta_test[:self.npoints-1, :self.nlevs]+self.theta_diff_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale]
+                                # 'theta_next_test':[self.theta_test[:self.npoints-1, :self.nlevs]+self.theta_diff_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale]
                                 }
         start_idx = 0
         for x in self.xvars:
@@ -611,10 +619,10 @@ class Data_IO_validation_x2(object):
         print("Reading dataset file: {0}".format(dataset_file))
         dataset=h5py.File(dataset_file,'r')
         self.q_tot_test = dataset["q_tot_test"]
-        self.q_tot_diff_test = dataset["q_tot_diff_test"]
+        # self.q_tot_diff_test = dataset["q_tot_diff_test"]
         self.q_tot_adv_test = dataset["q_adv_test"]
         self.theta_test = dataset["air_potential_temperature_test"]
-        self.theta_diff_test = dataset["air_potential_temperature_diff_test"]
+        # self.theta_diff_test = dataset["air_potential_temperature_diff_test"]
         self.theta_adv_test = dataset["t_adv_test"]
         self.sw_toa_test = dataset["toa_incoming_shortwave_flux_test"]
         self.shf_test = dataset["surface_upward_sensible_heat_flux_test"]
@@ -650,10 +658,10 @@ class Data_IO_validation_x2(object):
                                 # 'qphys_test':[self.qphys_test[:self.npoints, :3], self.nn_norm.qphys_mean[norm_slc3], self.nn_norm.qphys_stdscale[norm_slc3]],
                                 'theta_phys_test':[self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.tphys_mean, self.nn_norm.tphys_stdscale],
                                 # 'qtot_next_test':[self.q_tot_test[:self.npoints, :self.nlevs]+self.q_tot_adv_test[:self.npoints, :self.nlevs]+self.qphys_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
-                                'qtot_next_test':[self.q_tot_test[:self.npoints-1, :self.nlevs]+self.q_tot_diff_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
+                                # 'qtot_next_test':[self.q_tot_test[:self.npoints-1, :self.nlevs]+self.q_tot_diff_test[:self.npoints, :self.nlevs], self.nn_norm.q_mean, self.nn_norm.q_stdscale],
                                 # 'qtot_next_test':[self.q_tot_test[:self.npoints, :1]+self.q_tot_adv_test[:self.npoints, :1]+self.qphys_test[:self.npoints, :1], self.nn_norm.q_mean[norm_slc1], self.nn_norm.q_stdscale[norm_slc1]],
                                 # 'theta_next_test':[self.theta_test[:self.npoints, :self.nlevs]+self.theta_adv_test[:self.npoints, :self.nlevs]+self.theta_phys_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale]
-                                'theta_next_test':[self.theta_test[:self.npoints-1, :self.nlevs]+self.theta_diff_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale]
+                                # 'theta_next_test':[self.theta_test[:self.npoints-1, :self.nlevs]+self.theta_diff_test[:self.npoints, :self.nlevs], self.nn_norm.t_mean, self.nn_norm.t_stdscale]
                                 }
         start_idx = 0
         for x in self.xvars:

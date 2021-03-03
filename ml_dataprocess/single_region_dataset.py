@@ -9,6 +9,7 @@ from itertools import chain
 from scipy import stats
 
 nn_data_stashes = {
+    10:'specific_humidity',
     4:"air_potential_temperature",
     99181:"t_adv",
     99182:"q_adv",
@@ -326,7 +327,7 @@ def nn_dataset_per_subdomain_raw(region:str, in_prefix="031525", suite_id="u-br8
         data_std_split = raw_data
         train_test_datadir = "{0}/models/datain/".format(crm_data)
         
-        fname = 'validation_data_{0}D_{1}.hdf5'.format(region, str(subdomain).zfill(3))
+        fname = 'validation_data_{0}_Qv_{1}.hdf5'.format(region, str(subdomain).zfill(3))
         # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
         with h5py.File(train_test_datadir+fname, 'w') as hfile:
             i = 0
@@ -405,4 +406,4 @@ if __name__ == "__main__":
     # nn_dataset(region, in_prefix="030405", suite_id="u-br800", truncate=False, global_profile=True)
     # nn_dataset_per_subdomain(region, in_prefix="0203040506070809101112131415", suite_id="u-bs573_conc", truncate=False, global_profile=True)
     # nn_dataset_per_subdomain_raw(region, in_prefix="3h_0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False)
-    nn_dataset_per_subdomain_raw(region, in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False, diff_vars=True)
+    nn_dataset_per_subdomain_raw(region, in_prefix="0203040506070809101112131415", suite_id="u-bs572_20170101-15_conc", truncate=False, diff_vars=False)

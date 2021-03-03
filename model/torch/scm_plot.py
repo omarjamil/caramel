@@ -12,8 +12,8 @@ def visualise_scm_predictions_q(np_file, savename):
 
     data = h5py.File(np_file, 'r')
     
-    q_ml = data['qtot_next_ml'][:2000,:].T
-    q_ = data['qtot_next'][:2000,:].T
+    q_ml = data['qtot_next_ml'][:250,:].T
+    q_ = data['qtot_next'][:250,:].T
     q_persistence = np.zeros(q_.T.shape)
     q_persistence[:] = data['qtot_next'][0,:]
     q_persistence = q_persistence.T
@@ -83,8 +83,8 @@ def visualise_scm_predictions_t(np_file, savename):
 
     data = h5py.File(np_file, 'r')
     
-    t_ml = data['theta_next_ml'][:2000,:].T
-    t_ = data['theta_next'][:2000,:].T
+    t_ml = data['theta_next_ml'][:250,:].T
+    t_ = data['theta_next'][:250,:].T
     t_persistence = np.zeros(t_.T.shape)
     t_persistence[:] = t_.T[0,:]
     t_persistence = t_persistence.T
@@ -204,8 +204,9 @@ def scm_column_error(np_file, savename, error_type="mse"):
     ax = axs
     ax.plot(ml_error[:], label='ML')
     ax.plot(persistence_error[:], label='Persitence')
-    ax.set_title('{0}'.format(error_type))
+    ax.set_title(f'q {error_type}')
     ax.set_xlabel('Timesteps (10min)')
+    ax.set_ylabel('RMSE')
     ax.legend()
 
     figname = savename+"/"+savename+"_column_{0}_q.png".format(error_type)
@@ -248,8 +249,9 @@ def scm_column_error_t(np_file, savename, error_type="mse"):
     ax = axs
     ax.plot(ml_error[:], label='ML')
     ax.plot(persistence_error[:], label='Persitence')
-    ax.set_title('{0}'.format(error_type))
+    ax.set_title(f'$\theta$ {error_type}')
     ax.set_xlabel('Timesteps (10min)')
+    ax.set_xlabel('RMSE')
     ax.legend()
 
     figname = savename+"/"+savename+"_column_{0}_theta.png".format(error_type)
@@ -430,12 +432,12 @@ def visualise_scm_predictions_qt(np_file, figname):
 def visualise_tseries(npfile,level, savename):
     # data = np.load(np_file)
     data = h5py.File(npfile, 'r')
-    q_ml = data['qtot_next_ml'][:2000]
+    q_ml = data['qtot_next_ml'][:250]
     # q_ml = data['qtot_ml'][:2000]
-    q_ = data['qtot_next'][:2000]
+    q_ = data['qtot_next'][:250]
     # q_ = data['qtot'][:2000]
 
-    qpersist = np.zeros(data['qtot'][:2000].shape)
+    qpersist = np.zeros(data['qtot'][:250].shape)
     qpersist[:] = data['qtot'][0]
 
     q_y_lim = (np.min(q_[:,level]), np.max(q_[:,level]))
@@ -476,9 +478,9 @@ def visualise_tseries(npfile,level, savename):
 def visualise_tseries_t(npfile,level, savename):
     # data = np.load(np_file)
     data = h5py.File(npfile, 'r')
-    t_ml = data['theta_next_ml'][:2000]
-    t_ = data['theta_next'][:2000]
-    tpersist = np.zeros(data['theta'][:2000].shape)
+    t_ml = data['theta_next_ml'][:500]
+    t_ = data['theta_next'][:500]
+    tpersist = np.zeros(data['theta'][:500].shape)
     tpersist[:] = data['theta'][0]
 
 
@@ -1151,11 +1153,11 @@ def plot_outdistn(datasetfile, savename):
 
 
 if __name__ == "__main__":
-    model_name="qdiff_aeovr_stoch_normed_006_lyr_055_in_055_out_0110_hdn_050_epch_00150_btch_023001AQS_mse_023001AQS_normalise_stkd_qnext"
+    model_name="qdiff_diag_normed_f0100_006_lyr_333_in_020_out_0353_hdn_050_epch_00150_btch_023001AQS_mse_sum_023001AQS_normalise_stkd_xstoch_lr1e4_20enc_scm_2m_011"
     location = "/project/spice/radiation/ML/CRM/data/models/torch/"
     model_file = location+model_name+".tar"
     # model_loss(model_file)
-    model_name = "qdiff_diag_normed_f0100_006_lyr_333_in_045_out_0378_hdn_050_epch_00150_btch_023001AQS_mse_sum_023001AQS_normalise_stkd_tstoch1sig_lr1e4_enc_scm_2m_063"
+    # model_name = "qdiff_ae_stoch_normed_006_lyr_055_in_055_out_0110_hdn_050_epch_00150_btch_023001AQS_mse_023001AQS_normalise_z25_stkd_qnext"
     try:
         os.makedirs(model_name)
     except OSError:

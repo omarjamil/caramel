@@ -13,9 +13,10 @@ from itertools import chain
 from scipy import stats
 
 nn_data_stashes = {
+    10:"specific_humidity",
     4:"air_potential_temperature",
-    99181:"t_adv",
-    99182:"q_adv",
+    # 99181:"t_adv",
+    # 99182:"q_adv",
     99821:"q_tot",
     1207:"toa_incoming_shortwave_flux",
     3217:"surface_upward_sensible_heat_flux",
@@ -46,7 +47,7 @@ nn_data_stashes = {
 #     253:"m01s00i253",
 #     408:"air_pressure",
 #     150:"upward_air_velocity"
-   
+
 # }
 
 multi_stashes = {
@@ -149,7 +150,7 @@ def standardise_data_transform(dataset: np.array([]), region: str, save_fname: s
             scale = np.array([np.std(dataset)])
     params = {"mean_":mean, "scale_":scale}
     with h5py.File(save_location+save_fname, 'w') as hfile:
-        for k, v in params.items():  
+        for k, v in params.items():
             hfile.create_dataset(k,data=v)
     results = (dataset - mean)/scale
     if return_raw:
@@ -481,7 +482,7 @@ def timeseries_surface_level_files(in_prefix="031525", suite_id="u-bj775_", new_
 def combine_subdomains(region: str, in_prefix="031525", suite_id="u-br800"):
     """
     After combining data from all the regions
-    now combine data from all the subregions into a single dataset per stash 
+    now combine data from all the subregions into a single dataset per stash
     """
     stashes = {**surface_stashes, **multi_stashes}
     # stashes = {**multi_stashes}
@@ -490,7 +491,7 @@ def combine_subdomains(region: str, in_prefix="031525", suite_id="u-br800"):
         outfile = "{0}/{1}_days_{2}_km1p5_ra1m_30x30_{3}.nc".format(inoutdir, in_prefix, region, str(s).zfill(5))
         var_ = None
         var_cube = None
-        
+
         for subdomain in range(64):
             infile = "{0}/{1}_days_{2}_km1p5_ra1m_30x30_subdomain_{3}_{4}.nc".format(inoutdir, in_prefix, region, str(subdomain).zfill(3),str(s).zfill(5))
             print("{0}".format(infile))
@@ -521,7 +522,7 @@ def combine_subdomains(region: str, in_prefix="031525", suite_id="u-br800"):
 def nn_dataset_raw(region:str, in_prefix="031525", suite_id="u-br800", truncate: bool=False):
     """
     Create dataset. This save raw data as well as normalised
-    """   
+    """
     # NN input data
     data_labels = []
     raw_data = []
@@ -544,7 +545,7 @@ def nn_dataset_raw(region:str, in_prefix="031525", suite_id="u-br800", truncate:
         raw_var = var
         data_labels.append(nn_data_stashes[s])
         raw_data.append(raw_var)
-    
+
     data_labels = list(chain(*zip(data_labels,data_labels)))
     train_test_datadir = "{0}/models/datain/".format(crm_data)
 
@@ -572,7 +573,7 @@ def nn_dataset_raw(region:str, in_prefix="031525", suite_id="u-br800", truncate:
 def cnn_dataset_raw(region:str, in_prefix="031525", suite_id="u-br800", block=7):
     """
     Create CNN dataset. This save raw data as well as normalised
-    """   
+    """
     # NN input data
     nn_var_names = {
         4:"air_potential_temperature",
@@ -609,7 +610,7 @@ def cnn_dataset_raw(region:str, in_prefix="031525", suite_id="u-br800", block=7)
     for v in raw_data_dict:
         data_labels.append(v)
         raw_data.append(raw_data_dict[v])
-    
+
     data_labels = list(chain(*zip(data_labels,data_labels)))
     train_test_datadir = "{0}/models/datain/".format(crm_data)
 
@@ -638,7 +639,7 @@ def cnn_dataset_raw(region:str, in_prefix="031525", suite_id="u-br800", block=7)
 def nn_dataset_std(region:str, in_prefix="031525", suite_id="u-br800", truncate: bool=False):
     """
     Create dataset for the neural network training and testing
-    """   
+    """
     # NN input data
     data_labels = []
     data = []
@@ -658,13 +659,13 @@ def nn_dataset_std(region:str, in_prefix="031525", suite_id="u-br800", truncate:
         normed_var = standardise_data_transform(var, region, save_fname=std_fname, return_raw=False, levs=False)
         data_labels.append(nn_data_stashes[s])
         data.append(normed_var)
-    
+
     data_std_split = train_test_split(*data, shuffle=True, test_size=0.1, random_state=18)
     # data_std_split = train_test_split(*data, shuffle=False, random_state=18)
     data_labels = list(chain(*zip(data_labels,data_labels)))
 
     train_test_datadir = "{0}/models/datain/".format(crm_data)
-    
+
     fname = 'train_test_data_{0}_scalar_std.hdf5'.format(region)
     # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
     with h5py.File(train_test_datadir+fname, 'w') as hfile:
@@ -723,15 +724,16 @@ def save_standardisemx_data_vars(dataset: np.array([]), region: str, save_fname:
 
     params = {"mean_":mean, "scale_":scale}
     with h5py.File(save_location+save_fname, 'w') as hfile:
-        for k, v in params.items():  
+        for k, v in params.items():
             hfile.create_dataset(k,data=v)
 
 def nn_dataset_stacked_raw(region:str, in_prefix="031525", suite_id="u-br800", diff_vars=False):
     """
     Create CNN dataset. This save raw data as well as normalised
-    """   
+    """
     # NN input data
     nn_var_names = {
+        10:"specific_humidity",
         4:"air_potential_temperature",
         99181:"t_adv",
         99182:"q_adv",
@@ -779,12 +781,12 @@ def nn_dataset_stacked_raw(region:str, in_prefix="031525", suite_id="u-br800", d
     for v in raw_data_dict:
         data_labels.append(v)
         raw_data.append(raw_data_dict[v])
-    
+
     data_labels = list(chain(*zip(data_labels,data_labels)))
     train_test_datadir = "{0}/models/datain/".format(crm_data)
 
     raw_data_split = train_test_split(*raw_data, shuffle=True, random_state=18, test_size=0.1)
-    fname = 'train_test_data_{0}_stacked_raw_diff.hdf5'.format(region)
+    fname = 'train_test_data_{0}_Qv_stacked_raw.hdf5'.format(region)
     # fname = 'train_test_data_{0}_noshuffle_std.hdf5'.format(region)
     with h5py.File(train_test_datadir+fname, 'w') as hfile:
         i = 0
@@ -824,7 +826,7 @@ def save_standardise_data_vars(dataset: np.array([]), region: str, save_fname: s
             q1 = np.quantile(dataset, 0.10, axis=0)
             scale = q2 - q1
         else:
-           
+
             mean = np.array([np.mean(dataset, axis=0)])
             std = np.array([np.std(dataset, axis=0)])
             scale = std
@@ -840,7 +842,7 @@ def save_standardise_data_vars(dataset: np.array([]), region: str, save_fname: s
             scale = np.array([np.std(dataset)])
     params = {"mean_":mean, "scale_":scale}
     with h5py.File(save_location+save_fname, 'w') as hfile:
-        for k, v in params.items():  
+        for k, v in params.items():
             hfile.create_dataset(k,data=v)
 
 def save_normalise_data_vars(dataset: np.array([]), region: str, save_fname: str="std_fit.hdf5", levs: bool=True, final_lev=70):
@@ -869,16 +871,16 @@ def save_normalise_data_vars(dataset: np.array([]), region: str, save_fname: str
     else:
         mean = np.ones((1,dataset.shape[1])) * np.array([np.min(dataset)])
         scale = np.ones((1,dataset.shape[1])) * (np.array([np.max(dataset) - np.min(dataset)]))
-        
+
     params = {"mean_":mean, "scale_":scale}
     with h5py.File(save_location+save_fname, 'w') as hfile:
-        for k, v in params.items():  
+        for k, v in params.items():
             hfile.create_dataset(k,data=v)
 
 # def nn_normalisation_vars(region:str, in_prefix="031525", suite_id="u-br800"):
 #     """
 #     Save data normalisation variables
-#     """   
+#     """
 #     # NN input data
 
 #     for s in nn_data_stashes:
@@ -898,12 +900,13 @@ def save_normalise_data_vars(dataset: np.array([]), region: str, save_fname: str
 def nn_normalisation_vars(region:str, in_file):
     """
     Save data normalisation variables
-    """   
+    """
     # NN input data
     data_stashes = {
+    10:"specific_humidity",
     4:"air_potential_temperature",
-    99181:"t_adv",
-    99182:"q_adv",
+    # 99181:"t_adv",
+    # 99182:"q_adv",
     99821:"q_tot",
     1207:"toa_incoming_shortwave_flux",
     3217:"surface_upward_sensible_heat_flux",
@@ -929,12 +932,12 @@ def nn_normalisation_vars(region:str, in_file):
         save_normalise_data_vars(var, region, save_fname=std_fname, levs=True)
 
 if __name__ == "__main__":
-    # Run the following in order 
+    # Run the following in order
     # u-bs572 has January runs so 021501AQ
     # u-bs573 has July runs so 0201507AQ
-    in_prefix = "161718192021222324252627282930"
-    suite_id = "u-bs572_20170116-30_conc"
-    new_region = "163001AQS"
+    # in_prefix = "161718192021222324252627282930"
+    # suite_id = "u-bs572_20170116-30_conc"
+    # new_region = "163001AQS"
     # in_prefix = "0203040506070809101112131415"
     # suite_id = "u-bs572_20170101-15_conc"
     # new_region = "021501AQS"
@@ -945,9 +948,9 @@ if __name__ == "__main__":
     # nn_dataset_stacked_raw(new_region, in_prefix=in_prefix, suite_id=suite_id, diff_vars=True)
     # nn_dataset_std(new_region, in_prefix=in_prefix, suite_id=suite_id, truncate=False)
     # nn_normalisation_vars(new_region, in_prefix=in_prefix, suite_id=suite_id)
-    
-    new_region = "023001AQSD"
-    in_file = "train_data_023001AQS_diff.hdf5"
+
+    new_region = "023001AQS_Qv"
+    in_file = "train_test_data_023001AQS_Qv_stacked_raw_diff.hdf5"
     nn_normalisation_vars(new_region, in_file)
 
     # Stack subdomains data
@@ -959,7 +962,7 @@ if __name__ == "__main__":
     # new_region = "021501AQS"
     # stack_multi_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
     # stack_surface_level_files(in_prefix=in_prefix, suite_id=suite_id, new_region=new_region)
-    
+
     # in_prefix = "161718192021222324252627282930"
     # suite_id = "u-bs572_20170116-30_conc"
     # new_region = "163001AQTT3"

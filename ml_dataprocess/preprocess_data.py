@@ -376,8 +376,8 @@ if __name__ == "__main__":
     region = sys.argv[2]
     stash = sys.argv[3]
     # suite_id="u-bs572_20170116-30_conc"
-    suite_id ="u-bs572_20170101-15_conc"
-    # suite_id="u-bs572_20170101-15_pp"
+    # suite_id ="u-bs572_20170101-15_conc"
+    suite_id="u-bs572_20170101-15_pp"
     # suite_id = "u-bs572_20170116-30_pp"
 
     # stashes = [16004, 12181, 10, 12182, 254,12183,12,12184,272,12189,273,12190] #T, qv, qcl, qcf, qg
@@ -390,7 +390,7 @@ if __name__ == "__main__":
     elif argument == '2':
         fname="{0}-{1}-{2}-{3}-pp-".format(suite_id,region,argument,stash)
         tmpf = tempfile.NamedTemporaryFile(prefix=fname,suffix='.lck',dir='/scratch/ojamil/slurmlock',delete=False)
-        ret = main_combine_files(region, stashes, suite_id, days_range=range(15,16), month=1)
+        ret = main_combine_files(region, stashes, suite_id, days_range=range(2,16), month=1)
         if ret == 0:
             os.remove(tmpf.name)
     elif argument == '3':

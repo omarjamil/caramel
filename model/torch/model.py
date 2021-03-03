@@ -826,6 +826,7 @@ class AE(torch.nn.Module):
         print("Model AE")
         self.act = act()
         self.tanh = torch.nn.Tanh()
+        self.sigmoid = torch.nn.Sigmoid()
         self.latent_size = latent_size
         # self.fc1 = torch.nn.Linear(in_features, 50)
         # self.fc2 = torch.nn.Linear(50, 30)
@@ -870,6 +871,7 @@ class AE(torch.nn.Module):
         # x = self.act(self.fc21(x))
         x = self.act(self.fc3(x))
         x = self.act(self.fc31(x))
+        # x = self.sigmoid(self.fc31(x))
         return x
 
     def decoder(self,x):
@@ -892,22 +894,29 @@ class AE(torch.nn.Module):
 ########   VAE    #######
 
 class VAE(torch.nn.Module):
-    def __init__(self, in_features, act=torch.nn.ReLU):
+    def __init__(self, in_features, latent_size, act=torch.nn.ReLU):
         super(VAE, self).__init__()
         print("Model VAE")
+        self.latent_size = latent_size
         self.act = act()
         self.fc1 = torch.nn.Linear(in_features, 50)
-        self.fc2 = torch.nn.Linear(50, 10)
-        self.fc31 = torch.nn.Linear(10, 5)
-        self.fc32 = torch.nn.Linear(10, 5)
-        self.fc4 = torch.nn.Linear(5, 10)
-        self.fc5 = torch.nn.Linear(10, 50)
+        self.fc2 = torch.nn.Linear(50, 50)
+        self.fc2a = torch.nn.Linear(50, 50)
+        self.fc21 = torch.nn.Linear(50, 30)
+        self.fc31 = torch.nn.Linear(30, self.latent_size)
+        self.fc32 = torch.nn.Linear(30, self.latent_size)
+        self.fc4 = torch.nn.Linear(self.latent_size, 30)
+        self.fc5 = torch.nn.Linear(30, 50)
+        self.fc51 = torch.nn.Linear(50, 50)
+        self.fc5a = torch.nn.Linear(50, 50)
         self.fc6 = torch.nn.Linear(50, in_features)
 
     def encode(self, x):
         h1 = self.act(self.fc1(x))
         h2 = self.act(self.fc2(h1))
-        return self.fc31(h2), self.fc32(h2)
+        h3 = self.act(self.fc2a(h2))
+        h4 = self.act(self.fc21(h3))
+        return self.fc31(h4), self.fc32(h4)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5*logvar)
@@ -917,7 +926,9 @@ class VAE(torch.nn.Module):
     def decode(self, z):
         h4 = self.act(self.fc4(z))
         h5 = self.act(self.fc5(h4))
-        return self.fc6(h5)
+        h6 = self.act(self.fc51(h5))
+        h7 = self.act(self.fc5a(h6))
+        return self.fc6(h7)
         # return torch.sigmoid(self.fc4(h3))
 
     def forward(self, x):

@@ -78,13 +78,14 @@ def set_args():
     # args.xvars = ['qtot', 'theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
     # args.xvar_multiplier = [10000., 10., 0.1, 1.e-10, 1., 1., 10., 1., 0.1, 0.01]
     # args.xvars = ['qtot', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
+    args.xvars = ['qv', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
     # args.xvar_multiplier = [1000., 0.01, 1.e-11, 0.1, 0.1, 10., 0.1, 0.01, 0.001]
     # args.xvars2 = ['qadv']
     # args.xvar_multiplier = [1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000., 1000.]
     # args.xvars2 = ['theta_adv']
-    args.xvars2 = ['qadv']
+    args.xvars2 = ['qtot']
     # args.xvars2 = ['qadv','theta_adv']
-    args.xvars = ['theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
+    # args.xvars = ['theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
     # args.xvars = ['qtot','theta', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
     # args.xvar_multiplier = [100., 0.1, 1.e-10, 1., 1., 1000., 1., 0.1, 0.01]
     # args.xvars = ['qtot', 'p', 'rho', 'xwind', 'ywind', 'zwind', 'shf', 'lhf','sw_toa']
@@ -99,10 +100,11 @@ def set_args():
     # args.yvars = ['qtot_next', 'theta_next']
     # args.yvars = ['qtot_next', 'theta_next']
     # args.yvars = ['theta_next']
-    args.yvars = ['qtot']
+    # args.yvars = ['qtot']
+    # args.yvars = ['qv']
     # args.yvar_multiplier = [1000.]
     # args.yvar_multiplier = [100.]
-    # args.yvars = ['theta']
+    args.yvars = ['theta']
     # args.yvar_multiplier = [100.]
     args.yvar_multiplier = [1.]
     # args.yvar_multiplier = [10000.]
@@ -129,7 +131,7 @@ def set_args():
 
     # args.hidden_size = 512 
     args.hidden_size = int(1.0 * args.in_features + args.nb_classes)
-    args.model_name = "qdiff_diag_normed_f0100_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_sum_{8}_stkd_tstoch1sig_lr1e4_tanh.tar".format(str(args.nb_hidden_layers).zfill(3),
+    args.model_name = "tdiff_qv_diag_normed_f0100_{0}_lyr_{1}_in_{2}_out_{3}_hdn_{4}_epch_{5}_btch_{6}_{7}_sum_{8}_stkd_tstoch1sig_lr1e4_tanh.tar".format(str(args.nb_hidden_layers).zfill(3),
                                                                                         str(args.in_features).zfill(3),
                                                                                         str(args.nb_classes).zfill(3),
                                                                                         str(args.hidden_size).zfill(4),

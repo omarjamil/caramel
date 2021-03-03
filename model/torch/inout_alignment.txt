@@ -1,0 +1,20 @@
+qin_0     qin_1      qin_2      qin_3
+    dqin_0      dqin_1     dqin_2
+
+tin_0     tin_1       tin_2     tin_3
+    dtin_0      dtin_1        dtin_2
+
+qn_0      qn_1       qn_2        qn_3
+    dqn_0       dqn_1      dqn_2
+
+tn_0      tn_1       tn_2         tn_3
+    dtn_0       dtn_2      dtn_3    
+
+qa_0      qa_1       qa_2     qa 3
+ta_0      ta_1       ta_2     ta_3
+
+
+f(dqin_0, qa_1) -> dtn_0
+            tn_0 + dtn_0 = tn_1
+f(dtin_0, ta_1) -> dqn_0
+             qn_0 + dqn_0 = qn_2

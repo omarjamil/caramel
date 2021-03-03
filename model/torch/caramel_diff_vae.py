@@ -22,46 +22,63 @@ def minkowski_error(prediction, target, minkowski_parameter=1.5):
     return loss
 
 def configure_optimizers(model):
-    optimizer =  torch.optim.Adam(model.parameters(), lr=1.e-4)
+    optimizer =  torch.optim.Adam(model.parameters(), lr=1.e-3)
     # optimizer =  torch.optim.SGD(mlp.parameters(), lr=0.01)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
     # loss_function = torch.nn.MSELoss()
     return optimizer, scheduler
 
-def training_step(batch, batch_, batch_idx, model, aemodel, loss_function, optimizer, device, input_indices=None):
+def kld_loss(mu, logvar):
+    # see Appendix B from VAE paper:
+    # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
+    # https://arxiv.org/abs/1312.6114
+    # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    return KLD
+
+def reconstruction_loss(recon_x,x):
+    l1_loss = torch.nn.functional.l1_loss
+    MAE = l1_loss(recon_x,x,reduction='mean')
+    return MAE
+
+def loss_function(recon_x, x, mu, logvar):
+    
+    recon_loss = reconstruction_loss(recon_x, x)
+    kld = kld_loss(mu, logvar)
+
+    return recon_loss, kld
+
+def training_step(batch, batch_, batch_idx, model, optimizer, device, input_indices=None):
     """
     """
     x,y,x2 = batch
     x_, y_  = batch_
     x_ = torch.cat(x_,dim=1).to(device)
     y_ = torch.cat(y_,dim=1).to(device)
-    yenc = aemodel.encoder(y_)
-    ydec = aemodel.decoder(yenc)
-    # yenc,ydec = aemodel(y_)
-    output = model(x_)
-    # print("Model", output[0,:])
-    # print("Enc", yenc[0,:])
-    diff_loss = loss_function(output,yenc, reduction='mean')
+    decoded, mu, logvar = model(x_)
+    # print(decoded[:3,0],y_[:3,0])
+    recon_loss, kld = loss_function(decoded,x_, mu, logvar)
+    loss = recon_loss + kld
+    # qloss = loss_function(1000.*qpredict,1000.*qout, reduction='mean')
     optimizer.zero_grad()
-    loss = diff_loss
     loss.backward()
     optimizer.step()
     return loss
 
-def validation_step(batch, batch_, batch_idx, model, aemodel, loss_function, device, input_indices=None):
+def validation_step(batch, batch_, batch_idx, model, device, input_indices=None):
     """
     """
     x,y,x2 = batch
+    # qin = (x[0][list(range(1,len(x[0])-1,2)),:]).to(device)
+    # qout = (x[0][list(range(2,len(x[0]),2)),:]).to(device)
     x_,y_ = batch_
     x_ = torch.cat(x_,dim=1).to(device)
     y_ = torch.cat(y_,dim=1).to(device)
     with torch.no_grad():
-        output = model(x_)
-        yenc,ydec = aemodel(y_)
-        # print("step")
-        # print("output", output[0])
-        # print("enc", yenc[0])
-        loss = loss_function(output,yenc, reduction='mean')
+        decoded, mu, logvar = model(x_)
+        # print(decoded[:3,0],y_[:3,0])
+        recon_loss, kld = loss_function(decoded,x_, mu, logvar)
+        loss = recon_loss + kld
     return loss
 
 
@@ -80,38 +97,10 @@ def checkpoint_save(epoch: int, nn_model: model, nn_optimizer: torch.optim, trai
 
 
 def set_model(args):
-    mlp = model.MLP_RELU(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    # mlp = model.MLP_tanh(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size,scale=1.)
-    aemodel = model.AE(args.nlevs, args.latent_size)
-    # print(aemodel)
-    print("Loading PyTorch model: {0}".format(args.aemodel_file))
-    checkpoint = torch.load(args.locations['model_loc']+"/"+args.aemodel_file, map_location=args.device)
-    # print(checkpoint['model_state_dict'])
-    aemodel.load_state_dict(checkpoint['model_state_dict'])
-    aemodel.to(args.device)
-    aemodel.eval() 
-    print("Model's state_dict:")
-    for param_tensor in aemodel.state_dict():
-        print(param_tensor, "\t", aemodel.state_dict()[param_tensor].size())
-    # mlp = model.MLP_sig(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    # mlp = model.MLP_BN_tanh(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    # mlp = model.MLPSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    # skipindx = list(range(args.nlevs))
-    # mlp = model.MLPSubSkip(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size, skipindx)
-    # mlp = model.MLPDrop(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    # mlp = model.MLP_BN(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
-    # mlp = model.ResMLP(args.in_features, args.nb_classes, args.nb_hidden_layers, args.hidden_size)
+    mlp = model.VAE(args.in_features, args.latent_size)
     pytorch_total_params = sum(p.numel() for p in mlp.parameters() if p.requires_grad)
     print("Number of traninable parameter: {0}".format(pytorch_total_params))
-
-    if args.loss == "mae":
-        loss_function = torch.nn.functional.l1_loss #torch.nn.L1Loss()
-    elif args.loss == "mse":
-        loss_function = torch.nn.functional.mse_loss #torch.nn.MSELoss()
-    elif args.loss == "mink":
-        loss_function = minkowski_error
-    elif args.loss == "huber":
-        loss_function = torch.nn.functional.smooth_l1_loss
+   
     optimizer, scheduler = configure_optimizers(mlp)
 
     if args.warm_start is not None:
@@ -129,7 +118,7 @@ def set_model(args):
     for param_tensor in mlp.state_dict():
         print(param_tensor, "\t", mlp.state_dict()[param_tensor].size())
     
-    return mlp, aemodel, loss_function, optimizer, scheduler
+    return mlp, optimizer, scheduler
 
 def train_dataloader(args):
     train_dataset_file = "{0}/train_data_{1}.hdf5".format(args.locations["train_test_datadir"],args.region)
@@ -150,62 +139,23 @@ def test_dataloader(args):
     return validation_loader
 
 
-def create_diff_inout_vars(batch, xvar_multiplier, yvar_multiplier, train_on_x2=False, no_xdiff=False, no_ydiff=False, xstoch=True):
+def create_diff_inout_vars(batch, xvar_multiplier, yvar_multiplier, xstoch=False):
     x,y,x2 = batch
     xlist = []
     xdifflist = []
 
-    if no_xdiff:
-        for v,m in zip(x, xvar_multiplier):
-            xdifflist.append(v[1:]*m)
-    else:
-        for v,m in zip(x, xvar_multiplier):
-            vdiff = (v[1:] - v[:-1])*m
-            xdifflist.append(vdiff)
-
-    if train_on_x2:
-        for v in (x2):
-            xdifflist.append(v[1:])
-
+    for v,m in zip(x, xvar_multiplier):
+        vdiff = (v[1:] - v[:-1])*m
+        xdifflist.append(vdiff)
+    
     ylist = []
     ydifflist = []
-    if no_ydiff:
-        for v,m in zip(y, yvar_multiplier):
-            ydifflist.append(v[1:]*m)
-    else:
-        for v,m in zip(y,yvar_multiplier):
-            vdiff = (v[1:] - v[:-1])*m
-            ydifflist.append(vdiff)
+    for v,m in zip(y,yvar_multiplier):
+        vdiff = (v[1:] - v[:-1])*m
+        ydifflist.append(vdiff)
 
-    # Stochastic perturbation of prognostic inputs
-    # mean0 = torch.mean(xdifflist[0],dim=0)/5.
-    # std0 = torch.std(xdifflist[0],dim=0)/10.
-    # rand0 = torch.normal(mean0,std0)
-    # mean1 = torch.mean(xdifflist[1],dim=0)/5.
-    # std1 = torch.std(xdifflist[1],dim=0)/10.
-    # rand1 = torch.normal(mean1,std1)
-    # print("mean",mean)
-    # print("std",std)
-    # print("rand",rand)
-    # print("before", xdifflist[0][0])
-    # xdifflist[0] = xdifflist[0] + rand0
-    # xdifflist[1] = xdifflist[1] + rand1
-
-    # print("after", xdifflist[0][0])
-
-    # Stochastic perturbation of all inputs
     if xstoch:
         for i,v in enumerate(xdifflist):
-            # vmean = torch.mean(v,dim=0)/5.
-            # vstd = torch.std(v,dim=0)/10.
-            # vrand = torch.normal(vmean,vstd)
-            # if i == 0:
-            #     vmean = torch.mean(v,dim=0)
-            #     vstd = torch.std(v,dim=0)
-            #     # vrand = torch.normal(vmean,vstd)/10.
-            #     vrand = torch.normal(vmean,vstd)
-            #     # print("var {0} mean {1} std {2} vrand {3}".format(v[0,:], vmean, vstd, vrand))
-            #     v = v + vrand
             vmean = torch.mean(v,dim=0)
             vstd = torch.std(v,dim=0)
             # vrand = torch.normal(vmean,vstd)/10.
@@ -219,16 +169,11 @@ def create_diff_inout_vars(batch, xvar_multiplier, yvar_multiplier, train_on_x2=
             xlist.append(v[list(range(0,len(v)-1,1))])
 
     for v in ydifflist:
-        # ylist.append(v[list(range(1,len(v),1))])
         ylist.append(v[list(range(0,len(v)-1,1))])
 
-
-    # ylist = [difflist[0][list(range(1,len(difflist[0]),2))]]
-    # ylist = [difflist[1][list(range(1,len(difflist[1]),2))]]
-    # ylist = [difflist[0][list(range(1,len(difflist[0]),2))], difflist[1][list(range(1,len(difflist[1]),2))]]
     return (xlist, ylist)
 
-def train_loop(model, aemodel, loss_function, optimizer, scheduler, args):
+def train_loop(model, optimizer, scheduler, args):
     
     training_loss = []
     validation_loss = []
@@ -240,10 +185,10 @@ def train_loop(model, aemodel, loss_function, optimizer, scheduler, args):
         train_loss = 0
         for batch_idx, batch in enumerate(train_ldr):
             # Sets the model into training mode
-            batch_ = create_diff_inout_vars(batch, args.xvar_multiplier, args.yvar_multiplier, train_on_x2=args.train_on_x2, no_xdiff=args.no_xdiff, no_ydiff=args.no_ydiff, xstoch=args.xstoch)
+            batch_ = create_diff_inout_vars(batch, args.xvar_multiplier, args.yvar_multiplier, xstoch=args.xstoch)
             model.train()
             
-            loss = training_step(batch, batch_, batch_idx, model, aemodel, loss_function, optimizer, args.device, input_indices=input_indices)
+            loss = training_step(batch, batch_, batch_idx, model, optimizer, args.device, input_indices=input_indices)
             
             train_loss += loss.item()
             if batch_idx % args.log_interval == 0:
@@ -258,9 +203,9 @@ def train_loop(model, aemodel, loss_function, optimizer, scheduler, args):
         ## Testing
         test_loss = 0
         for batch_idx, batch in enumerate(test_ldr):
-            batch_ = create_diff_inout_vars(batch, args.xvar_multiplier, args.yvar_multiplier, train_on_x2=args.train_on_x2, no_xdiff=args.no_xdiff, no_ydiff=args.no_ydiff, xstoch=args.xstoch)
+            batch_ = create_diff_inout_vars(batch, args.xvar_multiplier, args.yvar_multiplier)
             model.eval()
-            loss = validation_step(batch, batch_, batch_idx, model, aemodel, loss_function, args.device, input_indices=input_indices)
+            loss = validation_step(batch, batch_, batch_idx, model, args.device, input_indices=input_indices)
             test_loss += loss.item()
         average_loss_val = test_loss / len(test_ldr.dataset) 
         print('====> validation loss: {:.2e}'.format(average_loss_val))
